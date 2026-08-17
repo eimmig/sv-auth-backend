@@ -1,0 +1,93 @@
+{
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "Setup do projeto",
+      "description": "Inicializar projeto Spring Boot 4.x (Java 25) com Maven, pacotes domain/application/adapter/config (arquitetura hexagonal - ver docs/CONVENTIONS.md), conexao com banco Postgres 'auth' schema-per-tenant (tenant_<slug>, ver docs/DECISIONS-LOG.md 2026-08-02), Flyway configurado para migracao lazy por schema (verifica/roda migracoes pendentes do schema resolvido antes de atender a chamada, nao uma lista fixa no boot - ver docs/CONVENTIONS.md secao 'Migrations'), JaCoCo com gate de 80% vinculado a fase verify. MessageSource/ResourceBundle configurado para i18n de erros (pt-BR/en-US/es, ver docs/CONVENTIONS.md secao 'Internacionalizacao').",
+      "dependencies": [],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    },
+    {
+      "id": "feat-002",
+      "name": "Entidades USER e TELEGRAM_ACCOUNT",
+      "description": "Migrations e mapeamento das entidades USER (id, name, email UK dentro do schema do tenant - nao globalmente, passwordHash, role admin/member, createdAt - SEM coluna tenantId, o schema ja e o tenant) e TELEGRAM_ACCOUNT (id, userId FK 1:1, telegramUserId, linkedAt). Ver docs/services/auth-service.md e docs/DATA-MODEL.md.",
+      "dependencies": [
+        "feat-001"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    },
+    {
+      "id": "feat-003",
+      "name": "Provisionamento de tenant (rota admin)",
+      "description": "Rota administrativa que cria um tenant novo: schema tenant_<slug> neste servico, roda as migrations nele, cria o primeiro usuario admin@<slug> (role=admin) com senha aleatoria e mustChangePassword=true. Restrita ao operador da plataforma via header X-Admin-Api-Key (segredo estatico, ver docs/API-CONTRACTS.md) - NAO e autocadastro publico. Orquestracao: 3 chamadas manuais separadas do operador (auth-service primeiro, depois bets-service, depois stats-service, mesma X-Admin-Api-Key) - este servico NAO chama os outros dois em codigo (decisao de 2026-08-02, ver docs/DECISIONS-LOG.md item 3). USER ganha coluna mustChangePassword (boolean) - backend bloqueia qualquer acao do admin recem-criado ate a senha ser trocada.",
+      "dependencies": [
+        "feat-002"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    },
+    {
+      "id": "feat-004",
+      "name": "RF01 - Criacao de usuario dentro do tenant",
+      "description": "Endpoint de criacao de usuario (nome, e-mail, senha) DENTRO de um tenant ja existente, com hashing seguro de senha e validacao de e-mail unico dentro do schema (nao globalmente). Restrito a quem esta autenticado como role=admin daquele tenant - precisa de checagem de autorizacao por role, nao so a existencia da coluna. Reinterpretacao do RF01 original do TCC1 (ver docs/DECISIONS-LOG.md) - o TCC1 nao previa hierarquia de usuarios nem essa restricao.",
+      "dependencies": [
+        "feat-003"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    },
+    {
+      "id": "feat-005",
+      "name": "RF02 - Autenticacao com token PASETO",
+      "description": "Login recebe slug do tenant + email + senha (email so e unico dentro do schema do tenant, ver docs/DECISIONS-LOG.md item 5) para resolver o schema antes de validar a senha. Emissao de token PASETO com claims de userId e tenantId (slug). Endpoint/mecanismo de validacao consumido exclusivamente pelo services/api-gateway (epic-008) - ver docs/API-CONTRACTS.md secao 'Confianca entre servicos'. auth-service nao expoe um filtro para os outros servicos Java validarem o token diretamente; eles confiam em X-User-Id/X-Tenant-Id injetados pelo api-gateway.",
+      "dependencies": [
+        "feat-004"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    },
+    {
+      "id": "feat-006",
+      "name": "RF05 (suporte) - Vinculo de conta Telegram",
+      "description": "Endpoint autenticado (PASETO) para o usuario logado gerar um codigo de vinculo de curta duracao - grava em PENDING_TELEGRAM_LINK (schema public, alem do schema do tenant). Endpoint interno (chamado por telegram-integration via api-gateway, sem PASETO) que confirma o vinculo (telegramUserId + codigo): busca PENDING_TELEGRAM_LINK e, numa unica transacao, cria/atualiza TELEGRAM_ACCOUNT no schema do tenant e faz upsert em TELEGRAM_LINK (schema public). GET /api/v1/telegram-accounts/{telegramUserId} - lookup interno usado pelo api-gateway, consulta TELEGRAM_LINK diretamente (404 se nao houver vinculo). Duas tabelas novas no schema public (TELEGRAM_LINK, PENDING_TELEGRAM_LINK) resolvem o lookup sem varrer schemas - ver docs/DECISIONS-LOG.md item 15 e docs/DATA-MODEL.md.",
+      "dependencies": [
+        "feat-005"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    },
+    {
+      "id": "feat-007",
+      "name": "Pipeline de CI (GitHub Actions + SonarCloud)",
+      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 5 passos: validacao de CHANGELOG.md atualizado, validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn package), testes unitarios + cobertura (mvn test jacoco:report), qualidade/cobertura no SonarCloud (mvn sonar:sonar, projectKey sv-auth-backend). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. So funciona de fato apos este repositorio existir no GitHub e o setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) estar feito - ver docs/CI-CD.md secao 'Setup pendente'.",
+      "dependencies": [
+        "feat-001"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
+    }
+  ]
+}
