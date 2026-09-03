@@ -83,7 +83,7 @@
         {
           "id": "feat-001.6",
           "name": "Health checks do Actuator",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-16",
           "detail": "Necessario para o healthcheck do docker-compose e para confirmar que o servico sobe de fato.",
           "checklist": [
@@ -96,7 +96,7 @@
         {
           "id": "feat-001.7",
           "name": ".env.example e logging estruturado",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-17",
           "detail": ".env.example restrito ao que feat-001 realmente le - variaveis de PASETO/X-Admin-Api-Key ficam para as features que as implementam (feat-003/feat-005/feat-006), evitando documentar algo que nada consome ainda.",
           "checklist": [
