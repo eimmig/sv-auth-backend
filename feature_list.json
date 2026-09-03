@@ -5,7 +5,7 @@
       "name": "Setup do projeto",
       "description": "Inicializar projeto Spring Boot 4.x (Java 25) com Maven, pacotes domain/application/adapter/config (arquitetura hexagonal - ver docs/CONVENTIONS.md), conexao com banco Postgres 'auth' schema-per-tenant (tenant_<slug>, ver docs/DECISIONS-LOG.md 2026-08-02), Flyway configurado para migracao lazy por schema (verifica/roda migracoes pendentes do schema resolvido antes de atender a chamada, nao uma lista fixa no boot - ver docs/CONVENTIONS.md secao 'Migrations'), JaCoCo com gate de 80% vinculado a fase verify. MessageSource/ResourceBundle configurado para i18n de erros (pt-BR/en-US/es, ver docs/CONVENTIONS.md secao 'Internacionalizacao').",
       "dependencies": [],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE. Achados corrigidos no plano antes da implementacao: (MAJOR) o mecanismo de 'migracao lazy por schema' misturava migrar-se-pendente com criar-schema - corrigido para o filtro de requisicao nunca criar schema (criacao de tenant e exclusiva da rota admin de feat-003, sem autocadastro, ver docs/services/auth-service.md); (MAJOR) o plano original inventava um port TenantSchemaResolver em vez do nome que docs/TESTING.md ja fixa para a fixture de teste de integracao (ProvisionTenantSchemaUseCase) - corrigido para um caso de uso dividido em ensureSchemaExists (criacao, reservado para feat-003 e fixtures de teste) e migrateIfPending (so migra schema ja existente, chamado pelo filtro por requisicao, erro se o schema nao existir); (MAJOR) o plano fabricava uma exception de dominio ficticia so para satisfazer o item de DoD do teste de i18n - corrigido para um teste unitario direto do MessageSource nos tres locales, sem inventar logica de negocio que feat-002/feat-004 ainda nao possuem; (MAJOR) a lista de dependencias do pom.xml gerado via Spring Initializr esquecia spring-boot-starter-test e os modulos Testcontainers (postgresql, junit-jupiter) exigidos pela classe base de teste de docs/TESTING.md - sem eles a subtask de teste nao compilaria; (MINOR) .env.example do plano documentava variaveis que feat-001 ainda nao le (chave PASETO, X-Admin-Api-Key) - restrito ao que o codigo desta feature realmente consome, deixando feat-003/feat-005/feat-006 acrescentarem as proprias variaveis quando implementadas. Verificado: Docker (Testcontainers) nao esta rodando nesta maquina agora - nao bloqueia trabalho de subtask (gate delas e a CI no GitHub, com Docker disponivel), so precisa estar ativo antes do gate final de merge feature->develop (./init.sh local). Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
       "jira": "SV-10",
       "subtasks": [
@@ -124,7 +124,7 @@
         {
           "id": "feat-001.9",
           "name": "Corrigir falso positivo do GitGuardian em .env.example",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-19",
           "detail": "Descoberta so no gate final (PR feature/SV-10 -> develop, primeira vez que .env.example passa por um evento de pull_request - GitGuardian so roda em PR, nao em push direto): GitGuardian marca DB_PASSWORD=troque-esta-senha-auth como 'Generic Password' por parecer uma senha real, apesar do comentario do proprio arquivo dizer para trocar o valor.",
           "checklist": [
@@ -135,7 +135,7 @@
         }
       ],
       "evidence": {
-        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 8 subtasks SV-11..SV-18, 9 PRs mergeados incluindo uma subtask.8 dividida em duas rodadas de commit).",
+        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 9 subtasks SV-11..SV-19 - a 9a descoberta so no gate final, ver abaixo -, 10 PRs mergeados).",
         "secoes": [
           {
             "titulo": "Verificacao real executada",
@@ -162,7 +162,8 @@
               "/code-review (antes de cada PR de subtask, regra nova desta sessao) achou e corrigiu, todos confirmados antes do merge: erro do filtro de tenant em texto puro em vez de RFC 7807 (feat-001.3); Flyway rodando scan de classpath + lock a cada requisicao sem cache (feat-001.3); AcceptHeaderLocaleResolver sem supportedLocales aceitando qualquer Accept-Language verbatim em vez de cair no default pt-BR (feat-001.5); MDC.put posicionado depois do migrateIfPending, deixando de fora o log mais util - a tentativa de tenant rejeitado (feat-001.7).",
               "Test Suite Auditor (feat-001.8): TenantSchemaName (regra de dominio) so tinha cobertura indireta via um teste do filtro web - adicionado TenantSchemaNameTest dedicado.",
               "Persistence Auditor (feat-001.8): migrateIfPending consultava information_schema.schemata a cada requisicao mesmo apos confirmar o schema. Primeira correcao (cache tambem do exists() na camada de aplicacao) foi pega pelo /code-review antes do merge: um schema derrubado em runtime continuaria autorizando requisicoes ate o processo reiniciar, silenciosamente - revertida. Fixado certo: exists() nunca cacheado (seguranca, barato), so o Flyway (custo, ja cacheado desde feat-001.3) permanece pulavel.",
-              "3 gotchas reais de Spring Boot 4.1/Boot 4-split-starters descobertos so em runtime, sem documentacao previa disponivel: nomes de artefato mudaram (spring-boot-starter-webmvc, *-test por starter em vez de um so spring-boot-starter-test); Jackson passou para o namespace tools.jackson.* (Jackson 3) em vez de com.fasterxml.jackson.*; TestRestTemplate exige spring-boot-restclient extra (RestTemplateBuilder) que este servico nao tem - contornado testando com java.net.http.HttpClient puro em vez de adicionar a dependencia so para isso."
+              "3 gotchas reais de Spring Boot 4.1/Boot 4-split-starters descobertos so em runtime, sem documentacao previa disponivel: nomes de artefato mudaram (spring-boot-starter-webmvc, *-test por starter em vez de um so spring-boot-starter-test); Jackson passou para o namespace tools.jackson.* (Jackson 3) em vez de com.fasterxml.jackson.*; TestRestTemplate exige spring-boot-restclient extra (RestTemplateBuilder) que este servico nao tem - contornado testando com java.net.http.HttpClient puro em vez de adicionar a dependencia so para isso.",
+              "feat-001.9: GitGuardian (check do GitHub App, fora do ci.yml deste harness) marcou o valor de exemplo de .env.example como 'Generic Password' - so apareceu no gate final porque o check so roda em evento de pull_request, e nenhuma PR anterior tinha tocado esse arquivo depois dele existir com esse valor. Corrigido trocando para um placeholder sem formato de senha (CHANGE_ME)."
             ]
           },
           {
