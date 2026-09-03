@@ -132,10 +132,26 @@
           ],
           "validation": "GitGuardian Security Checks verde na PR feature/SV-10 -> develop.",
           "owner": "agente"
+        },
+        {
+          "id": "feat-001.10",
+          "name": "Resolver achados reais do SonarCloud vistos so na PR develop->main",
+          "status": "done",
+          "jira": "SV-20",
+          "detail": "SonarCloud so calcula quality gate pra branch main (confirmado via API: 'Organization is not allowed to access data from non main branches' pra develop) - nenhuma PR anterior teve gate calculado de verdade. A PR develop->main (aberta pelo usuario) revelou 6 achados reais: 1 vulnerability MAJOR (SQL dinamico em JdbcFlywayTenantSchemaGateway.create, ja validado por regex mas sem supressao documentada), 1 code smell BLOCKER (teste sem assertion), 4 minor (catch sem uso, import nao usado, isEqualTo(0) em vez de isZero()).",
+          "checklist": [
+            "java:S2077: NOSONAR com justificativa no create() - identificador ja validado por regex antes de chegar ali.",
+            "java:S2699: assertThatCode(...).doesNotThrowAnyException() em vez de chamada sem assertion.",
+            "java:S7467 (x2): catch sem uso vira unnamed pattern (catch (Excecao _)).",
+            "java:S1128: remover import nao usado (sobrou de refactor anterior).",
+            "java:S5838: isEqualTo(0) vira isZero()."
+          ],
+          "validation": "SonarCloud Code Analysis verde na PR develop -> main.",
+          "owner": "agente"
         }
       ],
       "evidence": {
-        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 9 subtasks SV-11..SV-19 - a 9a descoberta so no gate final, ver abaixo -, 10 PRs mergeados).",
+        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 10 subtasks SV-11..SV-20 - as duas ultimas descobertas so no gate, apos a story ja ter fechado uma vez, ver abaixo -, 12 PRs mergeados no total).",
         "secoes": [
           {
             "titulo": "Verificacao real executada",
@@ -164,7 +180,7 @@
               "Persistence Auditor (feat-001.8): migrateIfPending consultava information_schema.schemata a cada requisicao mesmo apos confirmar o schema. Primeira correcao (cache tambem do exists() na camada de aplicacao) foi pega pelo /code-review antes do merge: um schema derrubado em runtime continuaria autorizando requisicoes ate o processo reiniciar, silenciosamente - revertida. Fixado certo: exists() nunca cacheado (seguranca, barato), so o Flyway (custo, ja cacheado desde feat-001.3) permanece pulavel.",
               "3 gotchas reais de Spring Boot 4.1/Boot 4-split-starters descobertos so em runtime, sem documentacao previa disponivel: nomes de artefato mudaram (spring-boot-starter-webmvc, *-test por starter em vez de um so spring-boot-starter-test); Jackson passou para o namespace tools.jackson.* (Jackson 3) em vez de com.fasterxml.jackson.*; TestRestTemplate exige spring-boot-restclient extra (RestTemplateBuilder) que este servico nao tem - contornado testando com java.net.http.HttpClient puro em vez de adicionar a dependencia so para isso.",
               "feat-001.9: GitGuardian (check do GitHub App, fora do ci.yml deste harness) marcou o valor de exemplo de .env.example como 'Generic Password' - so apareceu no gate final porque o check so roda em evento de pull_request, e nenhuma PR anterior tinha tocado esse arquivo depois dele existir com esse valor. Corrigido trocando para um placeholder sem formato de senha (CHANGE_ME).",
-              "Pos-merge (branch bugfix/sonar-gitguardian-post-merge, apos a story ja fechada): a PR develop->main (aberta pelo usuario) revelou achados que so aparecem nesse par especifico - SonarCloud so calcula quality gate pra branch main (confirmado via API: 'Organization is not allowed to access data from non main branches' pra qualquer outra branch), entao nenhuma PR anterior (todas contra feature/SV-10 ou develop) teve gate calculado de verdade. 6 achados reais do Sonar (1 vulnerability MAJOR - SQL dinamico em JdbcFlywayTenantSchemaGateway.create, ja validado por regex mas sem supressao documentada -, 1 code smell BLOCKER - teste sem assertion -, 4 minor) corrigidos. GitGuardian mostrou 4 ocorrencias em vez de 2: as outras 2 eram um erro proprio - o texto de evidencia de feat-001.9 citava o valor exato da senha de exemplo antiga ao descrever o achado, e isso gerou um novo disparo contra feature_list.json. Corrigido sem repetir o valor."
+              "feat-001.10 (SV-20): a PR develop->main (aberta pelo usuario) revelou achados que so aparecem nesse par especifico - SonarCloud so calcula quality gate pra branch main (confirmado via API: 'Organization is not allowed to access data from non main branches' pra qualquer outra branch), entao nenhuma PR anterior (todas contra feature/SV-10 ou develop) teve gate calculado de verdade. 6 achados reais corrigidos (detalhe no checklist da subtask): 1 vulnerability MAJOR (SQL dinamico em JdbcFlywayTenantSchemaGateway.create, ja validado por regex mas sem supressao documentada), 1 code smell BLOCKER (teste sem assertion), 4 minor. Branch bugfix/sonar-gitguardian-post-merge (a partir de develop, nao de uma branch de story - a story ja tinha fechado uma vez quando isso foi descoberto). De quebra, GitGuardian mostrou 4 ocorrencias em vez de 2 nessa mesma PR: as outras 2 eram um erro proprio - o texto de evidencia de feat-001.9 citava o valor exato da senha de exemplo antiga ao descrever o achado, gerando um novo disparo contra feature_list.json. Corrigido sem repetir o valor."
             ]
           },
           {
