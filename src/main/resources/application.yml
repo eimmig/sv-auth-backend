@@ -41,6 +41,16 @@ management:
       # (ver infra/docker-compose.yml), nao expostos ao publico via api-gateway.
       show-details: always
 
+# Logs estruturados em JSON (docs/OBSERVABILITY-AND-CONFIG.md) - formato nativo do
+# Spring Boot (structured logging), sem dependencia extra de encoder. correlationId
+# e injetado no MDC pelo api-gateway (feat-008, ainda nao existe) e propagado por
+# quem chama este servico; tenantId e injetado aqui mesmo por TenantSchemaFilter,
+# ja que e este filtro que resolve X-Tenant-Id.
+logging:
+  structured:
+    format:
+      console: ecs
+
 ---
 spring:
   config:
