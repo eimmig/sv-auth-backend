@@ -42,10 +42,13 @@ public class JdbcFlywayTenantSchemaGateway implements TenantSchemaGateway {
 
 	@Override
 	public void create(TenantSchemaName schema) {
-		// Identificador nao pode ser bind parameter em DDL - seguro porque TenantSchemaName
-		// ja validou o charset (regex) no construtor; aspas duplas cobrem o hifen, invalido
-		// num identificador Postgres sem aspas.
-		jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS \"" + schema.value() + "\"");
+		// NOSONAR java:S2077 - identificador nao pode ser bind parameter em DDL (JDBC so
+		// parametriza valor, nunca nome de schema/tabela/coluna). Seguro porque
+		// TenantSchemaName ja validou o charset (regex ^[a-z][a-z0-9-]{1,55}$) no
+		// construtor antes deste metodo ser alcancavel - nenhum caractere de aspas,
+		// ponto-e-virgula ou espaco passa por essa validacao. Aspas duplas na DDL cobrem
+		// o hifen, invalido num identificador Postgres sem aspas.
+		jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS \"" + schema.value() + "\""); // NOSONAR
 	}
 
 	@Override

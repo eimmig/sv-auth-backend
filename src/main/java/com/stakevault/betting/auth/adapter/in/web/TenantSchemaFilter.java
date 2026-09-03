@@ -63,7 +63,7 @@ public class TenantSchemaFilter extends OncePerRequestFilter {
 		TenantSchemaName schema;
 		try {
 			schema = TenantSchemaName.fromSlug(tenantSlug);
-		} catch (IllegalArgumentException e) {
+		} catch (IllegalArgumentException _) {
 			// Sem schema valido, nao ha tenantId para por no MDC - so o slug bruto do
 			// header, que ja aparece implicito na propria mensagem de erro abaixo.
 			writeProblem(response, request, HttpServletResponse.SC_BAD_REQUEST,
@@ -78,7 +78,7 @@ public class TenantSchemaFilter extends OncePerRequestFilter {
 		MDC.put(TENANT_MDC_KEY, schema.value());
 		try {
 			provisionTenantSchema.migrateIfPending(tenantSlug);
-		} catch (TenantSchemaNotFoundException e) {
+		} catch (TenantSchemaNotFoundException _) {
 			writeProblem(response, request, HttpServletResponse.SC_NOT_FOUND,
 					"tenant-not-found", "Tenant nao encontrado", "Nenhum tenant provisionado para o X-Tenant-Id informado.");
 			MDC.remove(TENANT_MDC_KEY);
