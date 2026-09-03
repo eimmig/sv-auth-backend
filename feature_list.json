@@ -55,7 +55,7 @@
         {
           "id": "feat-001.4",
           "name": "Gate de cobertura JaCoCo 80%",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-14",
           "detail": "mvn verify precisa falhar abaixo de 80% de cobertura de linha - e o que ./init.sh deste servico ja assume.",
           "checklist": [
@@ -68,7 +68,7 @@
         {
           "id": "feat-001.5",
           "name": "Scaffold de i18n (MessageSource) e teste smoke",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-15",
           "detail": "Prova a fiacao de MessageSource/ResourceBundle sem fabricar excecao de dominio ficticia - o teste real de title/detail mudando por Accept-Language fica para a primeira feature com erro de negocio de verdade (feat-004).",
           "checklist": [
