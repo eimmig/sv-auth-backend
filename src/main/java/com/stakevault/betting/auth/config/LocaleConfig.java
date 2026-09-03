@@ -8,12 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
-/**
- * Locale resolvido pelo header Accept-Language, restrito aos 3 idiomas suportados -
- * ver docs/CONVENTIONS.md "Internacionalizacao (i18n)". Sem supportedLocales,
- * AcceptHeaderLocaleResolver aceita qualquer locale do header verbatim (ex.: fr-FR),
- * o que quebraria o fallback deterministico para pt-BR exigido pela convencao.
- */
+/** Accept-Language restrito aos 3 locales suportados; fora disso cai em pt-BR. */
 @Configuration
 public class LocaleConfig {
 

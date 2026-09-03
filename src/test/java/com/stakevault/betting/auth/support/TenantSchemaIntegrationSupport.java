@@ -14,11 +14,7 @@ import com.stakevault.betting.auth.TestcontainersConfiguration;
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
 
-/**
- * Provisiona um schema de tenant de teste (slug unico por classe) chamando o mesmo caso
- * de uso de producao - ver docs/TESTING.md secao "Schema-per-tenant nos testes de
- * integracao". Schema derrubado ao final de cada teste.
- */
+/** Provisiona um schema de tenant de teste (slug unico por classe), derrubado no final. */
 @SpringBootTest
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)

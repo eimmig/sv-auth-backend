@@ -2,11 +2,7 @@ package com.stakevault.betting.auth.adapter.in.web;
 
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 
-/**
- * Schema do tenant resolvido para a requisicao atual, guardado pelo
- * {@link TenantSchemaFilter}. Consumido pelo resolvedor de multi-tenancy do Hibernate
- * quando entidades JPA existirem (feat-002) - por ora, so guarda o valor.
- */
+/** Schema do tenant resolvido para a requisicao atual. Preenchido por TenantSchemaFilter. */
 public final class TenantContextHolder {
 
 	private static final ThreadLocal<TenantSchemaName> CURRENT = new ThreadLocal<>();

@@ -15,13 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.stakevault.betting.auth.TestcontainersConfiguration;
 
-/**
- * Prova que os dois endpoints de docs/OBSERVABILITY-AND-CONFIG.md respondem, e que a
- * prontidao inclui a checagem de conexao com o Postgres (indicador "db"), nao so o
- * ciclo de vida da aplicacao. HttpClient puro do JDK em vez de TestRestTemplate: esse
- * exige spring-boot-restclient no classpath (RestTemplateBuilder), dependencia extra
- * que este servico nao usa em nenhum outro lugar.
- */
+/** liveness e readiness (com checagem de Postgres) respondem. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)

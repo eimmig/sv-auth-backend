@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +20,6 @@ public class JdbcFlywayTenantSchemaGateway implements TenantSchemaGateway {
 
 	private final JdbcTemplate jdbcTemplate;
 	private final DataSource dataSource;
-
-	// TenantSchemaFilter chama migrate() a cada requisicao com X-Tenant-Id (migracao
-	// lazy). Sem isso, cada requisicao pagaria scan de classpath + lock advisory do
-	// Flyway de novo, mesmo sem nada pendente. Escopo de JVM: reinicio (= deploy) e
-	// o unico jeito de uma migration nova ser pega por um schema ja cacheado aqui -
-	// aceitavel porque deploy ja reinicia o processo.
 	private final Set<String> migratedSchemas = ConcurrentHashMap.newKeySet();
 
 	public JdbcFlywayTenantSchemaGateway(DataSource dataSource) {
@@ -41,29 +36,26 @@ public class JdbcFlywayTenantSchemaGateway implements TenantSchemaGateway {
 	}
 
 	@Override
-	public void create(TenantSchemaName schema) {
-		// NOSONAR java:S2077 - identificador nao pode ser bind parameter em DDL (JDBC so
-		// parametriza valor, nunca nome de schema/tabela/coluna). Seguro porque
-		// TenantSchemaName ja validou o charset (regex ^[a-z][a-z0-9-]{1,55}$) no
-		// construtor antes deste metodo ser alcancavel - nenhum caractere de aspas,
-		// ponto-e-virgula ou espaco passa por essa validacao. Aspas duplas na DDL cobrem
-		// o hifen, invalido num identificador Postgres sem aspas.
-		jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS \"" + schema.value() + "\""); // NOSONAR
+	public void createAndMigrate(TenantSchemaName schema) {
+		flywayFor(schema, true).migrate();
+		migratedSchemas.add(schema.value());
 	}
 
 	@Override
-	public void migrate(TenantSchemaName schema) {
+	public void migrateExistingOnly(TenantSchemaName schema) {
 		if (migratedSchemas.contains(schema.value())) {
 			return;
 		}
-		Flyway.configure()
+		flywayFor(schema, false).migrate();
+		migratedSchemas.add(schema.value());
+	}
+
+	private Flyway flywayFor(TenantSchemaName schema, boolean createSchemas) {
+		FluentConfiguration config = Flyway.configure()
 				.dataSource(dataSource)
 				.schemas(schema.value())
-				.locations(MIGRATION_LOCATION)
-				.load()
-				.migrate();
-		// So marca depois do migrate() nao lancar - uma migration com erro nunca fica
-		// presa como "ja migrada", e a proxima requisicao tenta de novo.
-		migratedSchemas.add(schema.value());
+				.createSchemas(createSchemas)
+				.locations(MIGRATION_LOCATION);
+		return config.load();
 	}
 }

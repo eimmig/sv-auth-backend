@@ -13,26 +13,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. Changelog - ver docs/CI-CD.md (vault local, nao versionado neste repo)
+      # 1. Changelog - so no PR pra develop/main, ver docs/CI-CD.md
       - name: Validar atualizacao do CHANGELOG.md
-        # So roda na PR story -> develop/main: cada linha de CHANGELOG.md (uma por issue do
-        # Jira) e escrita por tools/jira_story.py no momento em que a issue e criada - ou seja,
-        # ANTES da branch daquela subtask nascer. O diff de um PR subtask -> story nunca toca
-        # o arquivo (a linha ja estava la), entao exigir o toque tambem ali quebraria por
-        # sequenciamento, nao por esquecimento real.
         if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: .github/scripts/validate-changelog.sh CHANGELOG.md
 
-      # 2. Chaves de traducao - ver docs/CONVENTIONS.md secao "Internacionalizacao (i18n)"
+      # 2. i18n - guarda propria, ver docs/CI-CD.md
       - name: Validar chaves de traducao (pt-BR/en-US/es)
-        # Guarda por arquivo-marcador PROPRIO deste passo (nao o pom.xml dos demais): feat-001
-        # deste servico foi dividida em subtasks incrementais (ver plan_review), entao pom.xml
-        # existe varias subtasks antes das mensagens de i18n (feat-001.5) - com o guard geral
-        # de pom.xml, os PRs intermediarios quebrariam so por sequenciamento, sem defeito real.
-        # Liga sozinho quando messages_pt_BR.properties passar a existir.
         if: hashFiles('src/main/resources/messages_pt_BR.properties') != ''
         run: |
           python3 .github/scripts/validate-i18n-keys.py --format properties \
@@ -40,10 +30,8 @@ jobs:
             --file en-US=src/main/resources/messages_en_US.properties \
             --file es=src/main/resources/messages_es.properties
 
+      # Guarda por arquivo-marcador (pom.xml) - ver docs/CI-CD.md
       - uses: actions/setup-java@v4
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != ''
         with:
           distribution: temurin
@@ -52,38 +40,20 @@ jobs:
 
       # 3. Build
       - name: Build
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != ''
         run: mvn -B -DskipTests package
 
       # 4. Testes unitarios + cobertura
       - name: Testes unitarios e cobertura
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
-        #
-        # "mvn verify", nao "jacoco:report" como goal solto - ver docs/CI-CD.md "Gotcha...
-        # feat-001.1" (plugin so entra no pom.xml numa subtask posterior).
         if: hashFiles('pom.xml') != ''
         run: mvn -B verify
 
-      # 5. Qualidade de codigo e cobertura (SonarCloud)
+      # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md
       - name: SonarCloud
-        # Pulado em PR de subtask: cobertura parcial de uma feature em andamento
-        # reprovaria o quality gate sem indicar defeito real.
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != '' && (github.event_name != 'pull_request' || github.base_ref == 'develop' || github.base_ref == 'main')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # Coordenadas completas do plugin, nao o atalho "sonar:sonar": o prefixo "sonar" so
-        # resolve se org.sonarsource.scanner.maven estiver em <pluginGroups> do settings.xml
-        # ou ja referenciado no pom.xml - nenhum dos dois e o caso aqui, e o erro e sempre
-        # "No plugin found for prefix 'sonar'", nunca falha de analise. Ver docs/CI-CD.md.
         run: >
           mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
           -Dsonar.projectKey=eimmig_sv-auth-backend

@@ -148,10 +148,24 @@
           ],
           "validation": "SonarCloud Code Analysis verde na PR develop -> main.",
           "owner": "agente"
+        },
+        {
+          "id": "feat-001.11",
+          "name": "Remover SQL de DDL escrito a mao; cortar comentarios longos",
+          "status": "done",
+          "jira": "SV-21",
+          "detail": "Pedido do usuario apos revisar o codigo entregue: (a) JdbcFlywayTenantSchemaGateway.create() concatenava DDL a mao (CREATE SCHEMA IF NOT EXISTS + aspas), suprimido com NOSONAR em feat-001.10 - o usuario achou 'horrivel e gambiarrento', com razao: Flyway ja tem createSchemas(boolean), que cria o schema como parte do proprio migrate(), sem SQL escrito a mao nem supressao; (b) varios arquivos (TenantSchemaFilter, application.yml, ci.yml, testes) tinham blocos de comentario de 3-6 linhas explicando racional - contra a propria convencao do projeto (CLAUDE.md, e agora tambem docs/CONVENTIONS.md 'Comentario em codigo, minimalista') de no maximo uma linha.",
+          "checklist": [
+            "TenantSchemaGateway.create()+migrate() viram createAndMigrate() (createSchemas=true) e migrateExistingOnly() (createSchemas=false) - nenhum SQL de DDL escrito a mao restante, so a query parametrizada de exists().",
+            "ProvisionTenantSchemaService e os testes atualizados pro novo contrato do gateway.",
+            "Comentarios de mais de uma linha cortados em todo arquivo tocado nesta feature (main e test)."
+          ],
+          "validation": "./init.sh verde; nenhum bloco de comentario com mais de uma linha nos arquivos desta feature.",
+          "owner": "agente"
         }
       ],
       "evidence": {
-        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 10 subtasks SV-11..SV-20 - as duas ultimas descobertas so no gate, apos a story ja ter fechado uma vez, ver abaixo -, 12 PRs mergeados no total).",
+        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 11 subtasks SV-11..SV-21 - as tres ultimas descobertas so apos a story ja ter fechado uma vez, ver abaixo -, 13 PRs mergeados no total).",
         "secoes": [
           {
             "titulo": "Verificacao real executada",
@@ -180,7 +194,8 @@
               "Persistence Auditor (feat-001.8): migrateIfPending consultava information_schema.schemata a cada requisicao mesmo apos confirmar o schema. Primeira correcao (cache tambem do exists() na camada de aplicacao) foi pega pelo /code-review antes do merge: um schema derrubado em runtime continuaria autorizando requisicoes ate o processo reiniciar, silenciosamente - revertida. Fixado certo: exists() nunca cacheado (seguranca, barato), so o Flyway (custo, ja cacheado desde feat-001.3) permanece pulavel.",
               "3 gotchas reais de Spring Boot 4.1/Boot 4-split-starters descobertos so em runtime, sem documentacao previa disponivel: nomes de artefato mudaram (spring-boot-starter-webmvc, *-test por starter em vez de um so spring-boot-starter-test); Jackson passou para o namespace tools.jackson.* (Jackson 3) em vez de com.fasterxml.jackson.*; TestRestTemplate exige spring-boot-restclient extra (RestTemplateBuilder) que este servico nao tem - contornado testando com java.net.http.HttpClient puro em vez de adicionar a dependencia so para isso.",
               "feat-001.9: GitGuardian (check do GitHub App, fora do ci.yml deste harness) marcou o valor de exemplo de .env.example como 'Generic Password' - so apareceu no gate final porque o check so roda em evento de pull_request, e nenhuma PR anterior tinha tocado esse arquivo depois dele existir com esse valor. Corrigido trocando para um placeholder sem formato de senha (CHANGE_ME).",
-              "feat-001.10 (SV-20): a PR develop->main (aberta pelo usuario) revelou achados que so aparecem nesse par especifico - SonarCloud so calcula quality gate pra branch main (confirmado via API: 'Organization is not allowed to access data from non main branches' pra qualquer outra branch), entao nenhuma PR anterior (todas contra feature/SV-10 ou develop) teve gate calculado de verdade. 6 achados reais corrigidos (detalhe no checklist da subtask): 1 vulnerability MAJOR (SQL dinamico em JdbcFlywayTenantSchemaGateway.create, ja validado por regex mas sem supressao documentada), 1 code smell BLOCKER (teste sem assertion), 4 minor. Branch bugfix/sonar-gitguardian-post-merge (a partir de develop, nao de uma branch de story - a story ja tinha fechado uma vez quando isso foi descoberto). De quebra, GitGuardian mostrou 4 ocorrencias em vez de 2 nessa mesma PR: as outras 2 eram um erro proprio - o texto de evidencia de feat-001.9 citava o valor exato da senha de exemplo antiga ao descrever o achado, gerando um novo disparo contra feature_list.json. Corrigido sem repetir o valor."
+              "feat-001.10 (SV-20): a PR develop->main (aberta pelo usuario) revelou achados que so aparecem nesse par especifico - SonarCloud so calcula quality gate pra branch main (confirmado via API: 'Organization is not allowed to access data from non main branches' pra qualquer outra branch), entao nenhuma PR anterior (todas contra feature/SV-10 ou develop) teve gate calculado de verdade. 6 achados reais corrigidos (detalhe no checklist da subtask): 1 vulnerability MAJOR (SQL dinamico em JdbcFlywayTenantSchemaGateway.create, ja validado por regex mas sem supressao documentada), 1 code smell BLOCKER (teste sem assertion), 4 minor. Branch bugfix/sonar-gitguardian-post-merge (a partir de develop, nao de uma branch de story - a story ja tinha fechado uma vez quando isso foi descoberto). De quebra, GitGuardian mostrou 4 ocorrencias em vez de 2 nessa mesma PR: as outras 2 eram um erro proprio - o texto de evidencia de feat-001.9 citava o valor exato da senha de exemplo antiga ao descrever o achado, gerando um novo disparo contra feature_list.json. Corrigido sem repetir o valor.",
+              "feat-001.11 (SV-21): usuario revisou o codigo entregue e pediu duas mudancas de convencao (agora em docs/CONVENTIONS.md 'Titulo do PR' e 'Comentario em codigo, minimalista') e uma correcao pontual. A pontual: JdbcFlywayTenantSchemaGateway.create() (SQL de DDL concatenado a mao, suprimido com NOSONAR em feat-001.10) foi substituido por Flyway.createSchemas(true) - a propria lib cria o schema como parte do migrate(), sem string de DDL escrita a mao. TenantSchemaGateway.create()+migrate() viraram createAndMigrate()/migrateExistingOnly(). Comentarios de mais de uma linha cortados em todos os arquivos desta feature (main e test) - o racional que estava neles (gotchas, achados de review) ja vive nas mensagens de commit e neste campo evidence, nao precisa duplicar no codigo."
             ]
           },
           {
