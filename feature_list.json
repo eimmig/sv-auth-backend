@@ -40,7 +40,7 @@
         {
           "id": "feat-001.3",
           "name": "Provisionamento de schema de tenant e migracao lazy",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-13",
           "detail": "Caso de uso unico dividido em duas operacoes, para nao duplicar logica entre o filtro de requisicao e a futura rota admin de feat-003 - ver docs/TESTING.md (fixture chama o mesmo caso de uso de producao, nome ProvisionTenantSchemaUseCase).",
           "checklist": [
@@ -55,7 +55,7 @@
         {
           "id": "feat-001.4",
           "name": "Gate de cobertura JaCoCo 80%",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-14",
           "detail": "mvn verify precisa falhar abaixo de 80% de cobertura de linha - e o que ./init.sh deste servico ja assume.",
           "checklist": [
