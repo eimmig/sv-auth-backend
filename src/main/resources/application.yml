@@ -34,7 +34,12 @@ management:
       group:
         readiness:
           include: readinessState, db
-      show-details: when-authorized
+      # "always", nao "when-authorized": nao ha Spring Security configurado ainda
+      # (feat-005), entao "when-authorized" nunca teria um principal para autorizar
+      # e sempre esconderia os componentes - o oposto do que a prontidao promete
+      # (checagem de Postgres visivel). Estes endpoints sao para orquestrador/infra
+      # (ver infra/docker-compose.yml), nao expostos ao publico via api-gateway.
+      show-details: always
 
 ---
 spring:
