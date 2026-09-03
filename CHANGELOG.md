@@ -17,3 +17,4 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-16](https://stakevault.atlassian.net/browse/SV-16) - Health checks do Actuator
 - [SV-17](https://stakevault.atlassian.net/browse/SV-17) - .env.example e logging estruturado
 - [SV-18](https://stakevault.atlassian.net/browse/SV-18) - CHANGELOG e verificacao final
+- [SV-19](https://stakevault.atlassian.net/browse/SV-19) - Corrigir falso positivo do GitGuardian em .env.example

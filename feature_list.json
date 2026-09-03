@@ -125,7 +125,7 @@
           "id": "feat-001.9",
           "name": "Corrigir falso positivo do GitGuardian em .env.example",
           "status": "not-started",
-          "jira": "",
+          "jira": "SV-19",
           "detail": "Descoberta so no gate final (PR feature/SV-10 -> develop, primeira vez que .env.example passa por um evento de pull_request - GitGuardian so roda em PR, nao em push direto): GitGuardian marca DB_PASSWORD=troque-esta-senha-auth como 'Generic Password' por parecer uma senha real, apesar do comentario do proprio arquivo dizer para trocar o valor.",
           "checklist": [
             "Trocar o valor de exemplo para um placeholder que nao tem formato de senha real (ex.: CHANGE_ME), sem mudar o nome da variavel nem o comentario."
