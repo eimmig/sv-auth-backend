@@ -37,6 +37,14 @@ class JdbcFlywayTenantSchemaGatewayIntegrationTest extends TenantSchemaIntegrati
 	}
 
 	@Test
+	void migrateIfPending_naSegundaChamadaUsaOCache() {
+		assertThatCode(() -> {
+			provisionTenantSchema.migrateIfPending(tenantSlug);
+			provisionTenantSchema.migrateIfPending(tenantSlug);
+		}).doesNotThrowAnyException();
+	}
+
+	@Test
 	void migrateIfPending_lancaExceptionSemCriarSchemaQuandoTenantNaoProvisionado() {
 		String slugInexistente = "test-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 		TenantSchemaName schemaInexistente = TenantSchemaName.fromSlug(slugInexistente);
