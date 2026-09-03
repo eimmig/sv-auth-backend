@@ -26,7 +26,7 @@
         {
           "id": "feat-001.2",
           "name": "Conexao Postgres com profiles dev/test/prod",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-12",
           "detail": "application.yml por profile, sem nenhum profile apontar para infraestrutura real por engano.",
           "checklist": [
@@ -40,7 +40,7 @@
         {
           "id": "feat-001.3",
           "name": "Provisionamento de schema de tenant e migracao lazy",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-13",
           "detail": "Caso de uso unico dividido em duas operacoes, para nao duplicar logica entre o filtro de requisicao e a futura rota admin de feat-003 - ver docs/TESTING.md (fixture chama o mesmo caso de uso de producao, nome ProvisionTenantSchemaUseCase).",
           "checklist": [
