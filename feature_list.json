@@ -68,7 +68,7 @@
         {
           "id": "feat-001.5",
           "name": "Scaffold de i18n (MessageSource) e teste smoke",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-15",
           "detail": "Prova a fiacao de MessageSource/ResourceBundle sem fabricar excecao de dominio ficticia - o teste real de title/detail mudando por Accept-Language fica para a primeira feature com erro de negocio de verdade (feat-004).",
           "checklist": [
@@ -83,7 +83,7 @@
         {
           "id": "feat-001.6",
           "name": "Health checks do Actuator",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-16",
           "detail": "Necessario para o healthcheck do docker-compose e para confirmar que o servico sobe de fato.",
           "checklist": [
