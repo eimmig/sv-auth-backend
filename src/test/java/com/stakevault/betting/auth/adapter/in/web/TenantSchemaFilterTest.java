@@ -14,6 +14,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import tools.jackson.databind.ObjectMapper;
+import com.stakevault.betting.auth.config.TenantContextHolder;
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.TenantSchemaNotFoundException;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
