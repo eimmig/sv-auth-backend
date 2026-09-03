@@ -7,6 +7,12 @@ serviço adiciona uma entrada em `[Unreleased]` — verificado automaticamente p
 
 ## [Unreleased]
 
+### Added
+
+- Esqueleto do projeto Spring Boot 4.1.1 (Java 25, Maven), gerado via Spring Initializr e
+  reorganizado no layout hexagonal (`domain/{model,port/in,port/out}`, `application/`,
+  `adapter/{in/web,out/persistence}`, `config/`) definido em `docs/CONVENTIONS.md`.
+
 ### Fixed
 
 - Chave do projeto no SonarCloud corrigida para `eimmig_sv-auth-backend`. O SonarCloud gera a chave como

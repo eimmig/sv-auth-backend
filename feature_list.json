@@ -12,7 +12,7 @@
         {
           "id": "feat-001.1",
           "name": "Bootstrap do pom.xml e esqueleto hexagonal",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-11",
           "detail": "Gera o projeto Spring Boot via Spring Initializr e reorganiza para o layout hexagonal ja decidido em docs/CONVENTIONS.md, em vez de deixar o esqueleto padrao do Initializr.",
           "checklist": [
