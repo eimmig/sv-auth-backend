@@ -268,9 +268,10 @@
           "name": "Entidades JPA e adapters de persistencia",
           "status": "not-started",
           "jira": "SV-26",
-          "detail": "Mapeamento JPA das duas tabelas + implementacao dos ports/out definidos em feat-002.3, traduzindo entidade JPA <-> record de dominio.",
+          "detail": "Mapeamento JPA das duas tabelas + implementacao dos ports/out definidos em feat-002.3, traduzindo entidade JPA <-> record de dominio. Achado do /code-review em feat-002.3: Role.ADMIN/MEMBER (Java, maiusculo) nao pode usar o mapeamento default @Enumerated(EnumType.STRING) - a migration de feat-002.2 tem CHECK (role IN ('admin','member')), minusculo; precisa de AttributeConverter<Role,String> (ou equivalente) fazendo o de-para, nao a serializacao default do enum.",
           "checklist": [
             "adapter/out/persistence/UserJpaEntity.java e TelegramAccountJpaEntity.java com Lombok (@Getter/@Setter/@NoArgsConstructor/@AllArgsConstructor).",
+            "AttributeConverter<Role, String> (ou @Convert equivalente) mapeando ADMIN/MEMBER <-> 'admin'/'member' - nao usar @Enumerated(EnumType.STRING) puro (grava maiusculo, viola o CHECK da migration).",
             "Spring Data JPA repositories (UserJpaRepository, TelegramAccountJpaRepository).",
             "Classes implementando UserRepository/TelegramAccountRepository (port/out) que mapeiam JPA <-> domain."
           ],
