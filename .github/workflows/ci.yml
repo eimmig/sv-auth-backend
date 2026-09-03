@@ -15,9 +15,12 @@ jobs:
 
       # 1. Changelog - ver docs/CI-CD.md (vault local, nao versionado neste repo)
       - name: Validar atualizacao do CHANGELOG.md
-        # Todo PR valida, inclusive subtask -> branch da story: cada subtarefa adiciona a
-        # propria linha em [Unreleased], que se acumula ate o merge em develop.
-        if: github.event_name == 'pull_request'
+        # So roda na PR story -> develop/main: cada linha de CHANGELOG.md (uma por issue do
+        # Jira) e escrita por tools/jira_story.py no momento em que a issue e criada - ou seja,
+        # ANTES da branch daquela subtask nascer. O diff de um PR subtask -> story nunca toca
+        # o arquivo (a linha ja estava la), entao exigir o toque tambem ali quebraria por
+        # sequenciamento, nao por esquecimento real.
+        if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -25,10 +28,12 @@ jobs:
 
       # 2. Chaves de traducao - ver docs/CONVENTIONS.md secao "Internacionalizacao (i18n)"
       - name: Validar chaves de traducao (pt-BR/en-US/es)
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
-        if: hashFiles('pom.xml') != ''
+        # Guarda por arquivo-marcador PROPRIO deste passo (nao o pom.xml dos demais): feat-001
+        # deste servico foi dividida em subtasks incrementais (ver plan_review), entao pom.xml
+        # existe varias subtasks antes das mensagens de i18n (feat-001.5) - com o guard geral
+        # de pom.xml, os PRs intermediarios quebrariam so por sequenciamento, sem defeito real.
+        # Liga sozinho quando messages_pt_BR.properties passar a existir.
+        if: hashFiles('src/main/resources/messages_pt_BR.properties') != ''
         run: |
           python3 .github/scripts/validate-i18n-keys.py --format properties \
             --file pt-BR=src/main/resources/messages_pt_BR.properties \
@@ -58,8 +63,11 @@ jobs:
         # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
         # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
         # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
+        #
+        # "mvn verify", nao "jacoco:report" como goal solto - ver docs/CI-CD.md "Gotcha...
+        # feat-001.1" (plugin so entra no pom.xml numa subtask posterior).
         if: hashFiles('pom.xml') != ''
-        run: mvn -B test jacoco:report
+        run: mvn -B verify
 
       # 5. Qualidade de codigo e cobertura (SonarCloud)
       - name: SonarCloud
@@ -72,8 +80,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # Coordenadas completas do plugin, nao o atalho "sonar:sonar": o prefixo "sonar" so
+        # resolve se org.sonarsource.scanner.maven estiver em <pluginGroups> do settings.xml
+        # ou ja referenciado no pom.xml - nenhum dos dois e o caso aqui, e o erro e sempre
+        # "No plugin found for prefix 'sonar'", nunca falha de analise. Ver docs/CI-CD.md.
         run: >
-          mvn -B sonar:sonar
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
           -Dsonar.projectKey=eimmig_sv-auth-backend
           -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
           -Dsonar.host.url=https://sonarcloud.io
