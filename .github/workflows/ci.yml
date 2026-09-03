@@ -25,10 +25,12 @@ jobs:
 
       # 2. Chaves de traducao - ver docs/CONVENTIONS.md secao "Internacionalizacao (i18n)"
       - name: Validar chaves de traducao (pt-BR/en-US/es)
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
-        if: hashFiles('pom.xml') != ''
+        # Guarda por arquivo-marcador PROPRIO deste passo (nao o pom.xml dos demais): feat-001
+        # deste servico foi dividida em subtasks incrementais (ver plan_review), entao pom.xml
+        # existe varias subtasks antes das mensagens de i18n (feat-001.5) - com o guard geral
+        # de pom.xml, os PRs intermediarios quebrariam so por sequenciamento, sem defeito real.
+        # Liga sozinho quando messages_pt_BR.properties passar a existir.
+        if: hashFiles('src/main/resources/messages_pt_BR.properties') != ''
         run: |
           python3 .github/scripts/validate-i18n-keys.py --format properties \
             --file pt-BR=src/main/resources/messages_pt_BR.properties \
