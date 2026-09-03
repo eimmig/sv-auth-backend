@@ -27,6 +27,17 @@ public class ProvisionTenantSchemaService implements ProvisionTenantSchemaUseCas
 
 	@Override
 	public void migrateIfPending(String tenantSlug) {
+		// gateway.exists() roda sempre, sem cache: e a checagem de seguranca que
+		// confirma que o tenant ainda esta provisionado a cada requisicao (barato -
+		// uma linha indexada de information_schema.schemata). So gateway.migrate()
+		// e cacheado (JdbcFlywayTenantSchemaGateway) - isso e custo (scan de
+		// classpath + lock do Flyway), nao seguranca, entao pode ser pulado com
+		// seguranca quando ja se sabe que o schema esta em dia.
+		//
+		// Uma versao anterior desta classe tambem cacheava o resultado do exists()
+		// aqui - /code-review pegou antes do merge: um schema derrubado em runtime
+		// (DROP SCHEMA manual, por exemplo) continuaria autorizando requisicoes ate
+		// o processo reiniciar, silenciosamente. Revertido.
 		TenantSchemaName schema = TenantSchemaName.fromSlug(tenantSlug);
 		if (!gateway.exists(schema)) {
 			throw new TenantSchemaNotFoundException(schema);
