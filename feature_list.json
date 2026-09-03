@@ -5,10 +5,123 @@
       "name": "Setup do projeto",
       "description": "Inicializar projeto Spring Boot 4.x (Java 25) com Maven, pacotes domain/application/adapter/config (arquitetura hexagonal - ver docs/CONVENTIONS.md), conexao com banco Postgres 'auth' schema-per-tenant (tenant_<slug>, ver docs/DECISIONS-LOG.md 2026-08-02), Flyway configurado para migracao lazy por schema (verifica/roda migracoes pendentes do schema resolvido antes de atender a chamada, nao uma lista fixa no boot - ver docs/CONVENTIONS.md secao 'Migrations'), JaCoCo com gate de 80% vinculado a fase verify. MessageSource/ResourceBundle configurado para i18n de erros (pt-BR/en-US/es, ver docs/CONVENTIONS.md secao 'Internacionalizacao').",
       "dependencies": [],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE. Achados corrigidos no plano antes da implementacao: (MAJOR) o mecanismo de 'migracao lazy por schema' misturava migrar-se-pendente com criar-schema - corrigido para o filtro de requisicao nunca criar schema (criacao de tenant e exclusiva da rota admin de feat-003, sem autocadastro, ver docs/services/auth-service.md); (MAJOR) o plano original inventava um port TenantSchemaResolver em vez do nome que docs/TESTING.md ja fixa para a fixture de teste de integracao (ProvisionTenantSchemaUseCase) - corrigido para um caso de uso dividido em ensureSchemaExists (criacao, reservado para feat-003 e fixtures de teste) e migrateIfPending (so migra schema ja existente, chamado pelo filtro por requisicao, erro se o schema nao existir); (MAJOR) o plano fabricava uma exception de dominio ficticia so para satisfazer o item de DoD do teste de i18n - corrigido para um teste unitario direto do MessageSource nos tres locales, sem inventar logica de negocio que feat-002/feat-004 ainda nao possuem; (MAJOR) a lista de dependencias do pom.xml gerado via Spring Initializr esquecia spring-boot-starter-test e os modulos Testcontainers (postgresql, junit-jupiter) exigidos pela classe base de teste de docs/TESTING.md - sem eles a subtask de teste nao compilaria; (MINOR) .env.example do plano documentava variaveis que feat-001 ainda nao le (chave PASETO, X-Admin-Api-Key) - restrito ao que o codigo desta feature realmente consome, deixando feat-003/feat-005/feat-006 acrescentarem as proprias variaveis quando implementadas. Verificado: Docker (Testcontainers) nao esta rodando nesta maquina agora - nao bloqueia trabalho de subtask (gate delas e a CI no GitHub, com Docker disponivel), so precisa estar ativo antes do gate final de merge feature->develop (./init.sh local). Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-10",
+      "subtasks": [
+        {
+          "id": "feat-001.1",
+          "name": "Bootstrap do pom.xml e esqueleto hexagonal",
+          "status": "not-started",
+          "jira": "SV-11",
+          "detail": "Gera o projeto Spring Boot via Spring Initializr e reorganiza para o layout hexagonal ja decidido em docs/CONVENTIONS.md, em vez de deixar o esqueleto padrao do Initializr.",
+          "checklist": [
+            "curl para start.spring.io: Spring Boot 4.1.0, Java 25, Maven, groupId com.eduardoimmig.betting, artifactId auth-service.",
+            "Dependencias: web, data-jpa, postgresql, validation, actuator, flyway-core, spring-boot-starter-test, org.testcontainers:postgresql, org.testcontainers:junit-jupiter, spring-dotenv.",
+            "Mover para domain/{model,port/in,port/out}, application/, adapter/{in/web,out/persistence}, config/ - domain/ nunca importa org.springframework.* nem jakarta.persistence.*."
+          ],
+          "validation": "mvn compile passa; estrutura de pacotes confere com docs/CONVENTIONS.md.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.2",
+          "name": "Conexao Postgres com profiles dev/test/prod",
+          "status": "not-started",
+          "jira": "SV-12",
+          "detail": "application.yml por profile, sem nenhum profile apontar para infraestrutura real por engano.",
+          "checklist": [
+            "dev le de .env via spring-dotenv ou variaveis do docker-compose.yml.",
+            "test usa valores fixos consumidos pelo Testcontainers.",
+            "Banco auth, sem lista fixa de schemas migrados no boot (flyway.enabled=false)."
+          ],
+          "validation": "Aplicacao sobe em profile dev/test sem erro de conexao (com Postgres disponivel).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.3",
+          "name": "Provisionamento de schema de tenant e migracao lazy",
+          "status": "not-started",
+          "jira": "SV-13",
+          "detail": "Caso de uso unico dividido em duas operacoes, para nao duplicar logica entre o filtro de requisicao e a futura rota admin de feat-003 - ver docs/TESTING.md (fixture chama o mesmo caso de uso de producao, nome ProvisionTenantSchemaUseCase).",
+          "checklist": [
+            "application/ProvisionTenantSchemaUseCase.ensureSchemaExists(slug): CREATE SCHEMA IF NOT EXISTS tenant_<slug> + Flyway migrate completo. Nao exposto por HTTP nesta feature - reservado para feat-003 e para fixtures de teste.",
+            "migrateIfPending(slug): Flyway migrate escopado a um schema JA existente; erro (nao criacao) se o schema nao existir.",
+            "Filtro/interceptor em adapter/in/web: le X-Tenant-Id, deriva tenant_<slug>, chama migrateIfPending, define o schema ativo da conexao (SET search_path ou multi-tenant Hibernate) antes do controller.",
+            "Classe base de teste (src/test/java/.../support/) com Testcontainers Postgres: fixture chama ensureSchemaExists com slug unico test_<uuid>, dropa o schema no teardown."
+          ],
+          "validation": "Teste de integracao confirma: schema provisionado roda o filtro sem migracao pendente (zero migrations); X-Tenant-Id apontando para schema inexistente e rejeitado, nunca cria schema.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.4",
+          "name": "Gate de cobertura JaCoCo 80%",
+          "status": "not-started",
+          "jira": "SV-14",
+          "detail": "mvn verify precisa falhar abaixo de 80% de cobertura de linha - e o que ./init.sh deste servico ja assume.",
+          "checklist": [
+            "Plugin JaCoCo Maven vinculado a fase verify.",
+            "Regra de cobertura de linha 80%."
+          ],
+          "validation": "mvn verify falha propositalmente com cobertura artificialmente baixa, depois passa com os testes reais das outras subtasks.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.5",
+          "name": "Scaffold de i18n (MessageSource) e teste smoke",
+          "status": "not-started",
+          "jira": "SV-15",
+          "detail": "Prova a fiacao de MessageSource/ResourceBundle sem fabricar excecao de dominio ficticia - o teste real de title/detail mudando por Accept-Language fica para a primeira feature com erro de negocio de verdade (feat-004).",
+          "checklist": [
+            "messages_pt_BR.properties, messages_en_US.properties, messages_es.properties.",
+            "LocaleResolver a partir de Accept-Language, default pt-BR sem header reconhecido.",
+            "@RestControllerAdvice esqueleto para futura traducao RFC 7807 (estrutura, sem excecao mapeada ainda).",
+            "Teste unitario: MessageSource.getMessage de uma chave smoke nos tres locales."
+          ],
+          "validation": "Teste unitario passa nos tres locales.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.6",
+          "name": "Health checks do Actuator",
+          "status": "not-started",
+          "jira": "SV-16",
+          "detail": "Necessario para o healthcheck do docker-compose e para confirmar que o servico sobe de fato.",
+          "checklist": [
+            "/actuator/health (liveness).",
+            "/actuator/health/readiness incluindo checagem de conexao Postgres."
+          ],
+          "validation": "Ambos os endpoints respondem 200 com Postgres disponivel.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.7",
+          "name": ".env.example e logging estruturado",
+          "status": "not-started",
+          "jira": "SV-17",
+          "detail": ".env.example restrito ao que feat-001 realmente le - variaveis de PASETO/X-Admin-Api-Key ficam para as features que as implementam (feat-003/feat-005/feat-006), evitando documentar algo que nada consome ainda.",
+          "checklist": [
+            ".env.example com apenas credenciais de conexao Postgres.",
+            "logback-spring.xml com encoder JSON.",
+            "Chaves de MDC reservadas para X-Correlation-Id/X-Tenant-Id (propagacao real comeca quando existir chamador - api-gateway/feat-006)."
+          ],
+          "validation": "Aplicacao sobe e loga em JSON estruturado.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.8",
+          "name": "CHANGELOG e verificacao final",
+          "status": "not-started",
+          "jira": "SV-18",
+          "detail": "Fecha a feature com o gate real do harness, nao so com os testes isolados de cada subtask.",
+          "checklist": [
+            "Entrada em CHANGELOG.md [Unreleased].",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json e ../../feature_list.json (raiz, epic-002) atualizados com evidence.",
+          "owner": "agente"
+        }
+      ],
       "evidence": ""
     },
     {
