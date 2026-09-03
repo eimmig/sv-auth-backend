@@ -60,8 +60,16 @@ jobs:
         # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
         # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
         # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
+        #
+        # "mvn verify" (nao "test jacoco:report" como goal solto): o plugin JaCoCo so entra
+        # no pom.xml na subtask que configura o gate de cobertura (mesma feat-001 dividida em
+        # subtasks incrementais, ver docs/CI-CD.md "Gotcha... feat-001.1"), e chamar o goal
+        # jacoco:report antes disso falha com "No plugin found for prefix 'jacoco'". Vinculando
+        # prepare-agent/report/check as fases do lifecycle (nao invocando goals soltos), "mvn
+        # verify" roda os testes normalmente ate la e passa a gerar+checar cobertura sozinho
+        # assim que o plugin for configurado, sem precisar editar este workflow de novo.
         if: hashFiles('pom.xml') != ''
-        run: mvn -B test jacoco:report
+        run: mvn -B verify
 
       # 5. Qualidade de codigo e cobertura (SonarCloud)
       - name: SonarCloud
