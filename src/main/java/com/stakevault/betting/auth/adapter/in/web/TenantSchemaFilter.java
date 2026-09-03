@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import tools.jackson.databind.ObjectMapper;
+import com.stakevault.betting.auth.config.TenantContextScope;
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.TenantSchemaNotFoundException;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
@@ -63,11 +64,9 @@ public class TenantSchemaFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		TenantContextHolder.set(schema);
-		try {
+		try (TenantContextScope scope = TenantContextScope.open(schema)) {
 			chain.doFilter(request, response);
 		} finally {
-			TenantContextHolder.clear();
 			MDC.remove(TENANT_MDC_KEY);
 		}
 	}
