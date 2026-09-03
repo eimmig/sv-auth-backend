@@ -70,4 +70,22 @@ class ProvisionTenantSchemaServiceTest {
 		verify(gateway, never()).migrate(any());
 		verify(gateway, never()).create(any());
 	}
+
+	@Test
+	void migrateIfPending_confereExistenciaEmTodaChamadaMesmoRepetida() {
+		// gateway.exists() nunca e cacheado aqui de proposito: e a checagem de
+		// seguranca que confirma que o tenant ainda esta provisionado a cada
+		// requisicao. Um schema derrubado entre a primeira e a segunda chamada
+		// (DROP SCHEMA manual, por exemplo) precisa continuar sendo rejeitado -
+		// achado do Persistence Auditor numa versao anterior desta classe que
+		// cacheava esse resultado e deixava de rejeitar depois do primeiro sucesso.
+		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true, false);
+		service.migrateIfPending("acme");
+
+		assertThatThrownBy(() -> service.migrateIfPending("acme"))
+				.isInstanceOf(TenantSchemaNotFoundException.class);
+
+		verify(gateway, times(2)).exists(new TenantSchemaName("tenant_acme"));
+		verify(gateway, times(1)).migrate(new TenantSchemaName("tenant_acme"));
+	}
 }
