@@ -10,6 +10,16 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+  # i18n (docs/CONVENTIONS.md "Internacionalizacao"): pt-BR/en-US/es sempre em
+  # sincronia (messages_*.properties, basename "messages" ja e o default do Spring
+  # Boot). fallback-to-system-locale=false evita depender do locale do SO do
+  # servidor quando o Accept-Language nao casa com nenhum dos tres. O resolvedor
+  # de locale (accept-header restrito aos 3 suportados, default pt-BR) e um bean
+  # explicito em config/LocaleConfig - AcceptHeaderLocaleResolver sem
+  # supportedLocales aceita qualquer locale do header (ex.: fr-FR) sem cair no
+  # default, o que quebraria essa garantia se deixado so na property.
+  messages:
+    fallback-to-system-locale: false
 
 ---
 spring:
