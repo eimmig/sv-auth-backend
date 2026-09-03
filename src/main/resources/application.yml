@@ -1,31 +1,16 @@
 spring:
   application:
     name: auth-service
-  # Migracao lazy por schema (nao uma lista fixa no boot) - ver docs/CONVENTIONS.md
-  # secao "Migrations". O schema de cada requisicao e migrado sob demanda pelo
-  # filtro que resolve X-Tenant-Id (feat-001.3), nao pelo Flyway no startup.
+  # Migracao lazy por schema (feat-001.3 le X-Tenant-Id), nao lista fixa no boot.
   flyway:
     enabled: false
   jpa:
     hibernate:
       ddl-auto: none
     open-in-view: false
-  # i18n (docs/CONVENTIONS.md "Internacionalizacao"): pt-BR/en-US/es sempre em
-  # sincronia (messages_*.properties, basename "messages" ja e o default do Spring
-  # Boot). fallback-to-system-locale=false evita depender do locale do SO do
-  # servidor quando o Accept-Language nao casa com nenhum dos tres. O resolvedor
-  # de locale (accept-header restrito aos 3 suportados, default pt-BR) e um bean
-  # explicito em config/LocaleConfig - AcceptHeaderLocaleResolver sem
-  # supportedLocales aceita qualquer locale do header (ex.: fr-FR) sem cair no
-  # default, o que quebraria essa garantia se deixado so na property.
   messages:
     fallback-to-system-locale: false
 
-# Health checks (docs/OBSERVABILITY-AND-CONFIG.md): /actuator/health (liveness) e
-# /actuator/health/readiness (readiness). "readinessState" sozinho so reflete o
-# ciclo de vida da aplicacao (ApplicationAvailabilityBean) - "db" e incluido a mais
-# para a prontidao tambem cobrir a conexao com o Postgres, que e o que
-# infra/docker-compose.yml usa no healthcheck de servicos dependentes.
 management:
   endpoint:
     health:
@@ -34,18 +19,8 @@ management:
       group:
         readiness:
           include: readinessState, db
-      # "always", nao "when-authorized": nao ha Spring Security configurado ainda
-      # (feat-005), entao "when-authorized" nunca teria um principal para autorizar
-      # e sempre esconderia os componentes - o oposto do que a prontidao promete
-      # (checagem de Postgres visivel). Estes endpoints sao para orquestrador/infra
-      # (ver infra/docker-compose.yml), nao expostos ao publico via api-gateway.
       show-details: always
 
-# Logs estruturados em JSON (docs/OBSERVABILITY-AND-CONFIG.md) - formato nativo do
-# Spring Boot (structured logging), sem dependencia extra de encoder. correlationId
-# e injetado no MDC pelo api-gateway (feat-008, ainda nao existe) e propagado por
-# quem chama este servico; tenantId e injetado aqui mesmo por TenantSchemaFilter,
-# ja que e este filtro que resolve X-Tenant-Id.
 logging:
   structured:
     format:
@@ -66,18 +41,13 @@ spring:
   config:
     activate:
       on-profile: test
-  # Sem spring.datasource aqui de proposito: o Testcontainers (@ServiceConnection,
-  # ver TestcontainersConfiguration) injeta url/usuario/senha do container efemero
-  # em runtime - declarar valores fixos aqui so criaria uma segunda fonte da
-  # verdade que o Testcontainers ja sobrescreve.
+  # Datasource vem do Testcontainers (@ServiceConnection) em runtime.
 
 ---
 spring:
   config:
     activate:
       on-profile: prod
-  # Nenhuma variavel tem valor default (mesma regra de infra/docker-compose.yml)
-  # - sem elas configuradas o boot falha em vez de apontar para algo acidental.
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USER}

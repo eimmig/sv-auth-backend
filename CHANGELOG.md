@@ -19,3 +19,4 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-18](https://stakevault.atlassian.net/browse/SV-18) - CHANGELOG e verificacao final
 - [SV-19](https://stakevault.atlassian.net/browse/SV-19) - Corrigir falso positivo do GitGuardian em .env.example
 - [SV-20](https://stakevault.atlassian.net/browse/SV-20) - Resolver achados reais do SonarCloud vistos so na PR develop->main
+- [SV-21](https://stakevault.atlassian.net/browse/SV-21) - Remover SQL de DDL escrito a mao; cortar comentarios longos
