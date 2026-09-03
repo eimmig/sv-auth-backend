@@ -1,4 +1,4 @@
-package com.eduardoimmig.betting.auth;
+package com.stakevault.betting.auth;
 
 import org.springframework.boot.SpringApplication;
 
