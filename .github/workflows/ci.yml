@@ -15,9 +15,12 @@ jobs:
 
       # 1. Changelog - ver docs/CI-CD.md (vault local, nao versionado neste repo)
       - name: Validar atualizacao do CHANGELOG.md
-        # Todo PR valida, inclusive subtask -> branch da story: cada subtarefa adiciona a
-        # propria linha em [Unreleased], que se acumula ate o merge em develop.
-        if: github.event_name == 'pull_request'
+        # So roda na PR story -> develop/main: cada linha de CHANGELOG.md (uma por issue do
+        # Jira) e escrita por tools/jira_story.py no momento em que a issue e criada - ou seja,
+        # ANTES da branch daquela subtask nascer. O diff de um PR subtask -> story nunca toca
+        # o arquivo (a linha ja estava la), entao exigir o toque tambem ali quebraria por
+        # sequenciamento, nao por esquecimento real.
+        if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
