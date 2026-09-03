@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: auth-service
+  # Migracao lazy por schema (nao uma lista fixa no boot) - ver docs/CONVENTIONS.md
+  # secao "Migrations". O schema de cada requisicao e migrado sob demanda pelo
+  # filtro que resolve X-Tenant-Id (feat-001.3), nao pelo Flyway no startup.
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth}
+    username: ${DB_USER:auth_user}
+    password: ${DB_PASSWORD}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  # Sem spring.datasource aqui de proposito: o Testcontainers (@ServiceConnection,
+  # ver TestcontainersConfiguration) injeta url/usuario/senha do container efemero
+  # em runtime - declarar valores fixos aqui so criaria uma segunda fonte da
+  # verdade que o Testcontainers ja sobrescreve.
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  # Nenhuma variavel tem valor default (mesma regra de infra/docker-compose.yml)
+  # - sem elas configuradas o boot falha em vez de apontar para algo acidental.
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
