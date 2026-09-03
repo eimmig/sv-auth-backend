@@ -21,6 +21,26 @@ spring:
   messages:
     fallback-to-system-locale: false
 
+# Health checks (docs/OBSERVABILITY-AND-CONFIG.md): /actuator/health (liveness) e
+# /actuator/health/readiness (readiness). "readinessState" sozinho so reflete o
+# ciclo de vida da aplicacao (ApplicationAvailabilityBean) - "db" e incluido a mais
+# para a prontidao tambem cobrir a conexao com o Postgres, que e o que
+# infra/docker-compose.yml usa no healthcheck de servicos dependentes.
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState, db
+      # "always", nao "when-authorized": nao ha Spring Security configurado ainda
+      # (feat-005), entao "when-authorized" nunca teria um principal para autorizar
+      # e sempre esconderia os componentes - o oposto do que a prontidao promete
+      # (checagem de Postgres visivel). Estes endpoints sao para orquestrador/infra
+      # (ver infra/docker-compose.yml), nao expostos ao publico via api-gateway.
+      show-details: always
+
 ---
 spring:
   config:
