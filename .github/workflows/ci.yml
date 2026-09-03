@@ -82,8 +82,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # Coordenadas completas do plugin, nao o atalho "sonar:sonar": o prefixo "sonar" so
+        # resolve se org.sonarsource.scanner.maven estiver em <pluginGroups> do settings.xml
+        # ou ja referenciado no pom.xml - nenhum dos dois e o caso aqui, e o erro e sempre
+        # "No plugin found for prefix 'sonar'", nunca falha de analise. Ver docs/CI-CD.md.
         run: >
-          mvn -B sonar:sonar
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
           -Dsonar.projectKey=eimmig_sv-auth-backend
           -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
           -Dsonar.host.url=https://sonarcloud.io
