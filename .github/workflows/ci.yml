@@ -13,32 +13,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. Changelog - ver docs/CI-CD.md (vault local, nao versionado neste repo)
+      # 1. Changelog - so no PR pra develop/main, ver docs/CI-CD.md
       - name: Validar atualizacao do CHANGELOG.md
-        # Todo PR valida, inclusive subtask -> branch da story: cada subtarefa adiciona a
-        # propria linha em [Unreleased], que se acumula ate o merge em develop.
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: .github/scripts/validate-changelog.sh CHANGELOG.md
 
-      # 2. Chaves de traducao - ver docs/CONVENTIONS.md secao "Internacionalizacao (i18n)"
+      # 2. i18n - guarda propria, ver docs/CI-CD.md
       - name: Validar chaves de traducao (pt-BR/en-US/es)
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
-        if: hashFiles('pom.xml') != ''
+        if: hashFiles('src/main/resources/messages_pt_BR.properties') != ''
         run: |
           python3 .github/scripts/validate-i18n-keys.py --format properties \
             --file pt-BR=src/main/resources/messages_pt_BR.properties \
             --file en-US=src/main/resources/messages_en_US.properties \
             --file es=src/main/resources/messages_es.properties
 
+      # Guarda por arquivo-marcador (pom.xml) - ver docs/CI-CD.md
       - uses: actions/setup-java@v4
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != ''
         with:
           distribution: temurin
@@ -47,33 +40,22 @@ jobs:
 
       # 3. Build
       - name: Build
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != ''
         run: mvn -B -DskipTests package
 
       # 4. Testes unitarios + cobertura
       - name: Testes unitarios e cobertura
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != ''
-        run: mvn -B test jacoco:report
+        run: mvn -B verify
 
-      # 5. Qualidade de codigo e cobertura (SonarCloud)
+      # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md
       - name: SonarCloud
-        # Pulado em PR de subtask: cobertura parcial de uma feature em andamento
-        # reprovaria o quality gate sem indicar defeito real.
-        # Guarda por arquivo-marcador: enquanto o projeto nao existe (repositorio so com
-        # harness), este passo e pulado em vez de falhar. Liga sozinho no feat-001 deste
-        # servico, quando o marcador passa a existir. Ver docs/CI-CD.md.
         if: hashFiles('pom.xml') != '' && (github.event_name != 'pull_request' || github.base_ref == 'develop' || github.base_ref == 'main')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          mvn -B sonar:sonar
-          -Dsonar.projectKey=sv-auth-backend
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
+          -Dsonar.projectKey=eimmig_sv-auth-backend
           -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
           -Dsonar.host.url=https://sonarcloud.io
