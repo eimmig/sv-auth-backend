@@ -5,7 +5,7 @@
       "name": "Setup do projeto",
       "description": "Inicializar projeto Spring Boot 4.x (Java 25) com Maven, pacotes domain/application/adapter/config (arquitetura hexagonal - ver docs/CONVENTIONS.md), conexao com banco Postgres 'auth' schema-per-tenant (tenant_<slug>, ver docs/DECISIONS-LOG.md 2026-08-02), Flyway configurado para migracao lazy por schema (verifica/roda migracoes pendentes do schema resolvido antes de atender a chamada, nao uma lista fixa no boot - ver docs/CONVENTIONS.md secao 'Migrations'), JaCoCo com gate de 80% vinculado a fase verify. MessageSource/ResourceBundle configurado para i18n de erros (pt-BR/en-US/es, ver docs/CONVENTIONS.md secao 'Internacionalizacao').",
       "dependencies": [],
-      "status": "done",
+      "status": "in-progress",
       "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE. Achados corrigidos no plano antes da implementacao: (MAJOR) o mecanismo de 'migracao lazy por schema' misturava migrar-se-pendente com criar-schema - corrigido para o filtro de requisicao nunca criar schema (criacao de tenant e exclusiva da rota admin de feat-003, sem autocadastro, ver docs/services/auth-service.md); (MAJOR) o plano original inventava um port TenantSchemaResolver em vez do nome que docs/TESTING.md ja fixa para a fixture de teste de integracao (ProvisionTenantSchemaUseCase) - corrigido para um caso de uso dividido em ensureSchemaExists (criacao, reservado para feat-003 e fixtures de teste) e migrateIfPending (so migra schema ja existente, chamado pelo filtro por requisicao, erro se o schema nao existir); (MAJOR) o plano fabricava uma exception de dominio ficticia so para satisfazer o item de DoD do teste de i18n - corrigido para um teste unitario direto do MessageSource nos tres locales, sem inventar logica de negocio que feat-002/feat-004 ainda nao possuem; (MAJOR) a lista de dependencias do pom.xml gerado via Spring Initializr esquecia spring-boot-starter-test e os modulos Testcontainers (postgresql, junit-jupiter) exigidos pela classe base de teste de docs/TESTING.md - sem eles a subtask de teste nao compilaria; (MINOR) .env.example do plano documentava variaveis que feat-001 ainda nao le (chave PASETO, X-Admin-Api-Key) - restrito ao que o codigo desta feature realmente consome, deixando feat-003/feat-005/feat-006 acrescentarem as proprias variaveis quando implementadas. Verificado: Docker (Testcontainers) nao esta rodando nesta maquina agora - nao bloqueia trabalho de subtask (gate delas e a CI no GitHub, com Docker disponivel), so precisa estar ativo antes do gate final de merge feature->develop (./init.sh local). Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
       "jira": "SV-10",
       "subtasks": [
@@ -119,6 +119,18 @@
             "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
           ],
           "validation": "./init.sh sai 0; feature_list.json e ../../feature_list.json (raiz, epic-002) atualizados com evidence.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-001.9",
+          "name": "Corrigir falso positivo do GitGuardian em .env.example",
+          "status": "not-started",
+          "jira": "",
+          "detail": "Descoberta so no gate final (PR feature/SV-10 -> develop, primeira vez que .env.example passa por um evento de pull_request - GitGuardian so roda em PR, nao em push direto): GitGuardian marca DB_PASSWORD=troque-esta-senha-auth como 'Generic Password' por parecer uma senha real, apesar do comentario do proprio arquivo dizer para trocar o valor.",
+          "checklist": [
+            "Trocar o valor de exemplo para um placeholder que nao tem formato de senha real (ex.: CHANGE_ME), sem mudar o nome da variavel nem o comentario."
+          ],
+          "validation": "GitGuardian Security Checks verde na PR feature/SV-10 -> develop.",
           "owner": "agente"
         }
       ],
