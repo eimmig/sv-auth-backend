@@ -5,7 +5,7 @@
       "name": "Setup do projeto",
       "description": "Inicializar projeto Spring Boot 4.x (Java 25) com Maven, pacotes domain/application/adapter/config (arquitetura hexagonal - ver docs/CONVENTIONS.md), conexao com banco Postgres 'auth' schema-per-tenant (tenant_<slug>, ver docs/DECISIONS-LOG.md 2026-08-02), Flyway configurado para migracao lazy por schema (verifica/roda migracoes pendentes do schema resolvido antes de atender a chamada, nao uma lista fixa no boot - ver docs/CONVENTIONS.md secao 'Migrations'), JaCoCo com gate de 80% vinculado a fase verify. MessageSource/ResourceBundle configurado para i18n de erros (pt-BR/en-US/es, ver docs/CONVENTIONS.md secao 'Internacionalizacao').",
       "dependencies": [],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE. Achados corrigidos no plano antes da implementacao: (MAJOR) o mecanismo de 'migracao lazy por schema' misturava migrar-se-pendente com criar-schema - corrigido para o filtro de requisicao nunca criar schema (criacao de tenant e exclusiva da rota admin de feat-003, sem autocadastro, ver docs/services/auth-service.md); (MAJOR) o plano original inventava um port TenantSchemaResolver em vez do nome que docs/TESTING.md ja fixa para a fixture de teste de integracao (ProvisionTenantSchemaUseCase) - corrigido para um caso de uso dividido em ensureSchemaExists (criacao, reservado para feat-003 e fixtures de teste) e migrateIfPending (so migra schema ja existente, chamado pelo filtro por requisicao, erro se o schema nao existir); (MAJOR) o plano fabricava uma exception de dominio ficticia so para satisfazer o item de DoD do teste de i18n - corrigido para um teste unitario direto do MessageSource nos tres locales, sem inventar logica de negocio que feat-002/feat-004 ainda nao possuem; (MAJOR) a lista de dependencias do pom.xml gerado via Spring Initializr esquecia spring-boot-starter-test e os modulos Testcontainers (postgresql, junit-jupiter) exigidos pela classe base de teste de docs/TESTING.md - sem eles a subtask de teste nao compilaria; (MINOR) .env.example do plano documentava variaveis que feat-001 ainda nao le (chave PASETO, X-Admin-Api-Key) - restrito ao que o codigo desta feature realmente consome, deixando feat-003/feat-005/feat-006 acrescentarem as proprias variaveis quando implementadas. Verificado: Docker (Testcontainers) nao esta rodando nesta maquina agora - nao bloqueia trabalho de subtask (gate delas e a CI no GitHub, com Docker disponivel), so precisa estar ativo antes do gate final de merge feature->develop (./init.sh local). Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
       "jira": "SV-10",
       "subtasks": [
@@ -110,7 +110,7 @@
         {
           "id": "feat-001.8",
           "name": "CHANGELOG e verificacao final",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-18",
           "detail": "Fecha a feature com o gate real do harness, nao so com os testes isolados de cada subtask.",
           "checklist": [
@@ -122,7 +122,47 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": {
+        "resumo": "Entregue em 2026-09-03 (branch feature/SV-10, story SV-10 com 8 subtasks SV-11..SV-18, 9 PRs mergeados incluindo uma subtask.8 dividida em duas rodadas de commit).",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "./init.sh (mvn verify, JaCoCo 80% incluso) verde localmente com Docker ativo - 22 testes, 0 falhas.",
+              "CI verde em todos os 9 PRs de subtask (subtask/SV-11..SV-18 -> feature/SV-10), confirmado com gh run watch a cada push.",
+              "Guarda por arquivo-marcador validada em produto real pela primeira vez (i18n ligou sozinho no PR de SV-15, Sonar/coverage ligaram sozinhos no PR de feature/SV-10 -> develop aberto pelo usuario)."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "groupId corrigido de com.eduardoimmig.betting para com.stakevault.betting a meio da feature (pedido do usuario) - renomeado em pom.xml e nos 11 arquivos Java ja commitados, docs/CONVENTIONS.md atualizado para os proximos servicos Java nascerem certos.",
+              "Convencao de CHANGELOG.md reescrita a meio da feature (pedido do usuario): de Keep a Changelog com prosa para uma linha por issue do Jira (link + titulo), escrita automaticamente por tools/jira_story.py. Gate de CHANGELOG na CI mudou de 'todo PR' para 'so PR story->develop', ja documentado em docs/CI-CD.md.",
+              "spring-dotenv (citado no checklist de feat-001.2) nao foi adicionado - dependencia sem atividade recente compativel com Spring Boot 4.1/Spring 7; usado o padrao de variavel de ambiente direto (${DB_HOST:localhost} etc.), ja suficiente para dev/test/prod.",
+              "@RestControllerAdvice esqueleto (citado no checklist de feat-001.5) nao foi criado - feat-001 nao tem nenhuma excecao de negocio real ainda para mapear; criar a classe vazia seria scaffolding sem uso ate feat-004. TenantSchemaFilter (feat-001.3) ja resolve seus proprios dois erros em RFC 7807 diretamente, sem precisar da advice."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 4 achados MAJOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "Durante feat-001.1: guarda de i18n presa a pom.xml quebraria todo PR intermediario antes de feat-001.5 existir - corrigida com marcador proprio. Mesmo padrao de bug em 'jacoco:report' como goal solto (plugin so entra em feat-001.4) - trocado para 'mvn verify'. Terceira armadilha pre-existente desde epic-009: 'mvn sonar:sonar' nunca resolve sem pluginGroups/pom - trocado para coordenadas completas do plugin. As tres documentadas em docs/CI-CD.md para os outros 5 repositorios.",
+              "/code-review (antes de cada PR de subtask, regra nova desta sessao) achou e corrigiu, todos confirmados antes do merge: erro do filtro de tenant em texto puro em vez de RFC 7807 (feat-001.3); Flyway rodando scan de classpath + lock a cada requisicao sem cache (feat-001.3); AcceptHeaderLocaleResolver sem supportedLocales aceitando qualquer Accept-Language verbatim em vez de cair no default pt-BR (feat-001.5); MDC.put posicionado depois do migrateIfPending, deixando de fora o log mais util - a tentativa de tenant rejeitado (feat-001.7).",
+              "Test Suite Auditor (feat-001.8): TenantSchemaName (regra de dominio) so tinha cobertura indireta via um teste do filtro web - adicionado TenantSchemaNameTest dedicado.",
+              "Persistence Auditor (feat-001.8): migrateIfPending consultava information_schema.schemata a cada requisicao mesmo apos confirmar o schema. Primeira correcao (cache tambem do exists() na camada de aplicacao) foi pega pelo /code-review antes do merge: um schema derrubado em runtime continuaria autorizando requisicoes ate o processo reiniciar, silenciosamente - revertida. Fixado certo: exists() nunca cacheado (seguranca, barato), so o Flyway (custo, ja cacheado desde feat-001.3) permanece pulavel.",
+              "3 gotchas reais de Spring Boot 4.1/Boot 4-split-starters descobertos so em runtime, sem documentacao previa disponivel: nomes de artefato mudaram (spring-boot-starter-webmvc, *-test por starter em vez de um so spring-boot-starter-test); Jackson passou para o namespace tools.jackson.* (Jackson 3) em vez de com.fasterxml.jackson.*; TestRestTemplate exige spring-boot-restclient extra (RestTemplateBuilder) que este servico nao tem - contornado testando com java.net.http.HttpClient puro em vez de adicionar a dependencia so para isso."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer (PASS, sem achados), Test Suite Auditor e Persistence Auditor rodados - os dois ultimos com achados reais corrigidos, ver secao acima.",
+              "/code-review (skill builtin, nao claude-code-skills) rodado antes de cada uma das 8 PRs de subtask - regra nova registrada em docs/CONVENTIONS.md e docs/AGENT-SKILLS.md nesta mesma sessao, a pedido do usuario.",
+              "tools/jira_story.py ganhou escrita automatica de linha de CHANGELOG.md (funcao append_changelog_lines, testada localmente antes de uso real) - primeira vez que o script escreve em algo alem de feature_list.json."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-002",
