@@ -223,7 +223,7 @@
         {
           "id": "feat-002.1",
           "name": "Lombok e reorganizacao de TenantContextHolder",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-23",
           "detail": "Preparacao antes do restante da feature: Lombok so e permitido em adapter/out/persistence/ (docs/CONVENTIONS.md), e o Plan Reviewer apontou que TenantContextHolder precisa sair de adapter/in/web/ antes do wiring de multi-tenancy (feat-002.5) para nao criar acoplamento adapter-a-adapter de tras para frente.",
           "checklist": [
@@ -236,7 +236,7 @@
         {
           "id": "feat-002.2",
           "name": "Migration Flyway: tabelas users e telegram_accounts",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-24",
           "detail": "Primeira migration real do servico (db/migration estava vazio desde feat-001). Nomes fisicos users/telegram_accounts (nao user/telegram_account - USER e palavra reservada no Postgres), divergencia do nome logico do ERD documentada no mesmo commit por pedido do Plan Reviewer.",
           "checklist": [
@@ -250,7 +250,7 @@
         {
           "id": "feat-002.3",
           "name": "Modelo de dominio e ports/out",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-25",
           "detail": "domain/ puro (sem import de framework) - Role, User, TelegramAccount como record (imutaveis, ver docs/CONVENTIONS.md). Ports/out sao o contrato de persistencia que a propria suite de testes desta feature consome (nao ha caso de uso/endpoint ainda - reservado para feat-003/004).",
           "checklist": [
@@ -266,44 +266,43 @@
         {
           "id": "feat-002.4",
           "name": "Entidades JPA e adapters de persistencia",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-26",
-          "detail": "Mapeamento JPA das duas tabelas + implementacao dos ports/out definidos em feat-002.3, traduzindo entidade JPA <-> record de dominio. Achado do /code-review em feat-002.3: Role.ADMIN/MEMBER (Java, maiusculo) nao pode usar o mapeamento default @Enumerated(EnumType.STRING) - a migration de feat-002.2 tem CHECK (role IN ('admin','member')), minusculo; precisa de AttributeConverter<Role,String> (ou equivalente) fazendo o de-para, nao a serializacao default do enum.",
+          "detail": "Mapeamento JPA das duas tabelas + implementacao dos ports/out definidos em feat-002.3, traduzindo entidade JPA <-> record de dominio. Achado do /code-review em feat-002.3: Role.ADMIN/MEMBER (Java, maiusculo) nao pode usar o mapeamento default @Enumerated(EnumType.STRING) - a migration de feat-002.2 tem CHECK (role IN ('admin','member')), minusculo; resolvido com AttributeConverter<Role,String>. Descoberta real durante a implementacao (nao coberta pelo plan_review original): o gate de cobertura JaCoCo (mvn verify, obrigatorio em toda PR de subtask, nao so no merge final - ver ci.yml passo 4) so passa com teste de integracao de verdade tocando o codigo novo, e um teste de integracao de JPA so funciona com o roteamento de schema (feat-002.5) ja existindo - as duas subtasks sao interdependentes na pratica, absorvidas nesta (ver feat-002.5).",
           "checklist": [
-            "adapter/out/persistence/UserJpaEntity.java e TelegramAccountJpaEntity.java com Lombok (@Getter/@Setter/@NoArgsConstructor/@AllArgsConstructor).",
-            "AttributeConverter<Role, String> (ou @Convert equivalente) mapeando ADMIN/MEMBER <-> 'admin'/'member' - nao usar @Enumerated(EnumType.STRING) puro (grava maiusculo, viola o CHECK da migration).",
+            "adapter/out/persistence/UserJpaEntity.java e TelegramAccountJpaEntity.java com Lombok (@Getter/@Setter/@NoArgsConstructor) - Persistable<UUID> em vez de @AllArgsConstructor puro (achado do /code-review: id pre-preenchido pelo dominio faz Spring Data tratar todo save() como merge()+SELECT sem isso).",
+            "AttributeConverter<Role, String> mapeando ADMIN/MEMBER <-> 'admin'/'member'.",
             "Spring Data JPA repositories (UserJpaRepository, TelegramAccountJpaRepository).",
-            "Classes implementando UserRepository/TelegramAccountRepository (port/out) que mapeiam JPA <-> domain."
+            "Classes implementando UserRepository/TelegramAccountRepository (port/out) que mapeiam JPA <-> domain.",
+            "RoleAttributeConverterTest (unitario) + JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest (integracao, via TenantSchemaIntegrationSupport + TenantContextScope) - save/find basicos, cobertura volta de 71.9% para 97.5%."
           ],
-          "validation": "mvn compile passa; estrutura confere com docs/CONVENTIONS.md (Lombok restrito a adapter/out/persistence/).",
+          "validation": "mvn verify verde (JaCoCo 80% ok, 97.5% real).",
           "owner": "agente"
         },
         {
           "id": "feat-002.5",
           "name": "Multi-tenancy do Hibernate por schema",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-27",
-          "detail": "Feature que introduz o primeiro uso real de JPA no servico - ate feat-001, todo acesso a schema era via JdbcTemplate/Flyway cru (TenantContextHolder existia mas nada o consumia). Sem isso, consultas JPA cairiam no schema padrao da conexao em vez de rotear por tenant. Antes de implementar, confirmar a chave de configuracao exata contra a doc/javadoc da versao instalada (hibernate-core 7.4.5.Final, ~/.m2/repository/org/hibernate/orm/hibernate-core/7.4.5.Final/) - achado MAJOR do Plan Reviewer, nao assumir de memoria.",
+          "detail": "Absorvida na mesma branch/PR de feat-002.4 (SV-26) - descoberta durante a implementacao, nao no plan_review: o teste de integracao de feat-002.4 nao compila/passa sem o roteamento de schema existir primeiro (gate de cobertura da CI exige teste de verdade em toda PR de subtask, nao so no merge final). Chave de configuracao confirmada via javap contra o jar realmente instalado (hibernate-core-7.4.5.Final.jar, org.hibernate.cfg.MultiTenancySettings): hibernate.multi_tenant_connection_provider / hibernate.tenant_identifier_resolver - nao existe mais hibernate.multiTenancy=SCHEMA (Hibernate 5). CurrentTenantIdentifierResolver<T>/MultiTenantConnectionProvider<T> confirmados genericos via javap - usados com T=String.",
           "checklist": [
-            "CurrentTenantIdentifierResolver (config/): le TenantContextHolder.current() (ja movido em feat-002.1).",
-            "MultiTenantConnectionProvider (config/): SET search_path no checkout da conexao, reset no release.",
-            "HibernatePropertiesCustomizer registrando os dois beans, com a chave de propriedade confirmada contra a doc oficial da versao instalada."
+            "TenantIdentifierResolver (config/): le TenantContextHolder.current(); sem tenant no contexto (ex.: actuator) cai no schema public.",
+            "SchemaMultiTenantConnectionProvider (config/): Connection.setSchema() (driver do Postgres executa SET SEARCH_PATH internamente) no checkout, reset para public no release.",
+            "TenantHibernatePropertiesCustomizer (config/): registra os dois beans via org.hibernate.cfg.MultiTenancySettings.MULTI_TENANT_CONNECTION_PROVIDER/MULTI_TENANT_IDENTIFIER_RESOLVER."
           ],
-          "validation": "Teste de integracao prova que uma query JPA em uma request/contexto do tenant A nao ve dados do tenant B (ver feat-002.6).",
+          "validation": "JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest (feat-002.4) provam save/find roteando pelo schema certo - prova de cross-tenant (dois schemas, mesmo dado) fica para feat-002.6.",
           "owner": "agente"
         },
         {
           "id": "feat-002.6",
-          "name": "Testes de mapeamento e isolamento por tenant",
+          "name": "Testes de isolamento e unicidade por tenant",
           "status": "not-started",
           "jira": "SV-28",
-          "detail": "TenantSchemaIntegrationSupport (feat-001.3) ja provisiona schema chamando o caso de uso de producao - reusado aqui sem modificacao. O teste de isolamento cross-tenant e o mais importante desta feature: prova que o wiring de feat-002.5 funciona de ponta a ponta, nao so que o SQL da migration esta correto.",
+          "detail": "Save/find basico ja provado em feat-002.4/002.5 (JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest). O que falta e especificamente: violacao de constraint sendo rejeitada, e isolamento entre dois schemas de tenant diferentes - os dois exigem cenario multi-schema que os testes basicos nao cobrem.",
           "checklist": [
-            "Integracao: salvar e buscar User dentro de um schema de tenant.",
-            "Integracao: unicidade de email dentro do mesmo schema de tenant (insercao duplicada rejeitada).",
-            "Integracao: mesmo email permitido em dois schemas de tenant diferentes (prova de isolamento via multi-tenancy do Hibernate, nao so SQL cru).",
-            "Integracao: unicidade 1:1 de TelegramAccount.userId.",
-            "Unitario: qualquer invariante de dominio de Role/User/TelegramAccount que exista (se nenhuma, documentar por que nao)."
+            "Integracao: unicidade de email dentro do mesmo schema de tenant (insercao duplicada rejeitada, DataIntegrityViolationException).",
+            "Integracao: mesmo email permitido em dois schemas de tenant diferentes (prova de isolamento via multi-tenancy do Hibernate, nao so SQL cru) - o teste mais importante desta feature.",
+            "Integracao: unicidade 1:1 de TelegramAccount.userId (segundo vinculo para o mesmo userId rejeitado)."
           ],
           "validation": "mvn verify verde, gate de cobertura 80% mantido.",
           "owner": "agente"
