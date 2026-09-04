@@ -39,6 +39,10 @@ spring:
 admin:
   api-key: ${ADMIN_API_KEY}
 
+paseto:
+  local-key: ${PASETO_LOCAL_KEY}
+  access-token-ttl-minutes: 480
+
 ---
 spring:
   config:
@@ -48,6 +52,10 @@ spring:
 
 admin:
   api-key: test-admin-api-key
+
+paseto:
+  local-key: 93f681c1304df4c64f73a0df5c58c7eb097927246ad5b850247a97ef14774bc7
+  access-token-ttl-minutes: 480
 
 ---
 spring:
@@ -61,3 +69,7 @@ spring:
 
 admin:
   api-key: ${ADMIN_API_KEY}
+
+paseto:
+  local-key: ${PASETO_LOCAL_KEY}
+  access-token-ttl-minutes: 480

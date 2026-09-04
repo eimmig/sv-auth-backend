@@ -645,11 +645,121 @@
       "dependencies": [
         "feat-004"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: READY WITH CONCERNS, 2 MINOR corrigidos no plano antes da implementacao. (MINOR) LoginRequest usava campo tenantSlug, inconsistente com CreateTenantRequest (campo slug) - corrigido para slug, mesmo nome nos dois DTOs do servico. (MINOR) PASETO_LOCAL_KEY precisa de nota explicita de que e a MESMA chave que sera configurada em services/api-gateway quando epic-008 existir (nao gerar uma independente la, ou tokens emitidos aqui ficam indecifraveis) - corrigido: comentario em .env.example + nota em docs/OBSERVABILITY-AND-CONFIG.md (raiz). Confirmado sem achado adicional: mitigacao de timing attack (chamar PasswordHasher.hash() no lugar de PasswordHasher.matches() contra um dummy hash fixo) e solida - hash()/matches() do BCryptPasswordEncoder fazem exatamente um round de BCrypt no mesmo fator de custo (10, default), e todo hash gravado no banco (feat-003/004) usa esse mesmo default, entao os 4 caminhos de falha (slug invalido/tenant inexistente/email inexistente/senha errada) e o de sucesso tem custo dominado pelo mesmo unico round; erro unico InvalidCredentialsException (401, mensagem sempre generica, nunca diferencia o motivo) correto e alinhado a pratica padrao de nao dar pista de enumeracao; SecretKey.fromHexString/fromBytes ja valida 32 bytes no construtor compacto (Conditions.verify) - uma PASETO_LOCAL_KEY malformada derruba o bean no boot (fail-fast), nao precisa de smoke-test adicional. Biblioteca externa confirmada nesta sessao via Maven Central API + GitHub releases (nao assumida de memoria, dado o cutoff de conhecimento): io.github.nbaars:paseto4j-version4:2024.3, unica versao publicada (release 2024-09-10), API (Paseto.encrypt/decrypt, SecretKey.fromHexString) lida direto do codigo-fonte do modulo v4 no GitHub. DECISAO DO USUARIO (AskUserQuestion, antes do plan review): mustChangePassword=true (admin criado em feat-003) NAO bloqueia login - sempre autentica se a senha bater, mustChangePassword devolvido no corpo da resposta pro frontend decidir a UX; nao ha endpoint de troca de senha no backlog ainda, bloquear travaria o admin pra sempre sem via de escape. Residual aceito: resposta de login nao devolve userId/nome/tenantName pra exibicao (token v4.local e opaco, criptografado) - nao pedido pela description desta feature, sinalizado para quando epic-006 (web) comecar. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-44",
+      "subtasks": [
+        {
+          "id": "feat-005.1",
+          "name": "Dependencia PASETO + config da chave simetrica",
+          "status": "done",
+          "jira": "SV-45",
+          "detail": "io.github.nbaars:paseto4j-version4:2024.3 (Maven Central, confirmado nesta sessao) - traz org.bouncycastle:bcprov-jdk18on transitivo, nao precisa declarar. Mesmo molde de admin.api-key (feat-003.1): variavel nova, profile test com valor fixo, .env.example so com o que a feature realmente le.",
+          "checklist": [
+            "pom.xml: dependencia io.github.nbaars:paseto4j-version4:2024.3.",
+            ".env.example ganha PASETO_LOCAL_KEY=CHANGE_ME (comentario: 32 bytes hex de 64 chars, gerar com `openssl rand -hex 32`; MESMA chave que sera configurada em services/api-gateway quando epic-008 existir, nao gerar uma independente).",
+            "application.yml: paseto.local-key: ${PASETO_LOCAL_KEY} (dev/prod), valor hex fixo de 64 chars no profile test; paseto.access-token-ttl-minutes com default 480 (8h, sem endpoint de refresh no backlog atual)."
+          ],
+          "validation": "mvn compile passa; nenhuma outra subtask depende de env var ainda nao existente.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.2",
+          "name": "AccessTokenIssuer (emissao de token PASETO)",
+          "status": "done",
+          "jira": "SV-46",
+          "detail": "Isola o detalhe de biblioteca (paseto4j) no adapter/out/security, mesmo padrao de BCryptPasswordHasher/SecureRandomPasswordGenerator. SecretKey construido uma vez no bean, nao a cada chamada.",
+          "checklist": [
+            "domain/port/out/AccessTokenIssuer.issue(UUID userId, String tenantSlug): String.",
+            "adapter/out/security/PasetoAccessTokenIssuer: record PasetoClaims(userId, tenantId, iat, exp) serializado via ObjectMapper injetado (tools.jackson, ja usado no projeto); Paseto.encrypt(SecretKey, payloadJson, \"\")."
+          ],
+          "validation": "Teste unitario: token emitido comeca com v4.local., e decriptavel (Paseto.decrypt) com a mesma chave, claims userId/tenantId/exp batendo com o esperado.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.3",
+          "name": "PasswordHasher.matches() + InvalidCredentialsException + LoginUseCase/LoginService",
+          "status": "done",
+          "jira": "SV-47",
+          "detail": "Extensao do port existente (mesmo molde de hash()). Erro unico e generico pra qualquer falha de autenticacao - nao diferenciar motivo, evita enumeracao. Timing attack mitigado chamando hash() (nao matches() contra dummy) nos caminhos de tenant/email inexistente - mesmo custo computacional de um round de BCrypt.",
+          "checklist": [
+            "domain/port/out/PasswordHasher ganha matches(String rawPassword, String hashedPassword): boolean; BCryptPasswordHasher.matches() delega pra BCryptPasswordEncoder.matches().",
+            "domain/model/InvalidCredentialsException (LocalizedDomainException, 401, mensagem sempre generica) + chave i18n nos 3 locales.",
+            "domain/port/in/LoginUseCase.login(String slug, String email, String rawPassword): LoginResult (record LoginResult(String token, boolean mustChangePassword)).",
+            "application/LoginService: TenantSchemaName.fromSlug (IllegalArgumentException -> InvalidCredentialsException) -> provisionTenantSchema.exists(slug) (false -> passwordHasher.hash(rawPassword) descartado + InvalidCredentialsException) -> migrateIfPending(slug) -> TenantContextScope aberto, userRepository.findByEmail(email) (ausente -> mesmo truque de hash() + InvalidCredentialsException) -> passwordHasher.matches(rawPassword, user.passwordHash()) (falso -> InvalidCredentialsException) -> sucesso: accessTokenIssuer.issue(user.id(), slug) + LoginResult(token, user.mustChangePassword())."
+          ],
+          "validation": "Teste unitario (fakes/mocks) cobre sucesso, slug invalido, tenant inexistente, email inexistente, senha errada - todos lancando a MESMA excecao.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.4",
+          "name": "AuthController (POST /api/v1/auth/login) + testes de integracao + docs",
+          "status": "done",
+          "jira": "SV-48",
+          "detail": "Campo slug (nao tenantSlug) no request, mesmo nome de CreateTenantRequest - achado do Plan Reviewer.",
+          "checklist": [
+            "adapter/in/web/AuthController: POST /api/v1/auth/login, LoginRequest(String slug, String email, String password) com @NotBlank nos 3, resposta 200 LoginResponse(token, mustChangePassword).",
+            "DomainExceptionHandler ganha InvalidCredentialsException no @ExceptionHandler existente.",
+            "Teste de integracao (Testcontainers, via TenantSchemaIntegrationSupport + fixture de usuario salvo direto): 200 com token valido (decriptavel na mesma chave, claims batendo) e mustChangePassword refletindo o usuario; 401 pros 4 casos de falha (corpo identico, prova de nao-enumeracao); 400 payload invalido; Accept-Language.",
+            "docs/services/auth-service.md (contrato exato, decisao de nao bloquear por mustChangePassword, TTL de 8h sem refresh) e docs/OBSERVABILITY-AND-CONFIG.md (nota da chave compartilhada com api-gateway) atualizados no repositorio raiz, fora deste repositorio."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso); teste i18n confirma title/detail mudando por Accept-Language.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.5",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-49",
+          "detail": "Fecha a feature com o gate real do harness.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-44, story SV-44 com 5 subtasks SV-45..49, 1 PR de subtask (#34, bundlando feat-005.1..4 - descoberto durante a implementacao que config/issuer/service/controller so compilam e testam juntos, mesmo padrao de feat-002.4/002.5) + PR feature->develop, CI verde incluindo o gate completo). Primeira feature de EMISSAO de credencial do servico (PASETO v4.local) e primeiro endpoint publico nao-administrativo (sem X-Admin-Api-Key nem X-User-Id/X-Tenant-Id ja resolvidos - o proprio login resolve o tenant a partir do slug no corpo).",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 119 testes, 0 falhas.",
+              "CI verde na PR de subtask (#34, bundlada) e na PR feature->develop, confirmado com gh pr checks - a ultima passou pelo gate completo (pipeline, SonarCloud Code Analysis, GitGuardian Security Checks).",
+              "./init.sh verde em feature/SV-44 antes do merge."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Biblioteca PASETO: a API do README/main branch do paseto4j estava desatualizada em relacao ao release 2024.3 realmente publicado no Maven Central (SecretKey.fromHexString/fromBytes so existem no main nao-lancado) - descoberto via erro de compilacao, corrigido usando javap contra o jar real instalado, revelando o construtor real (deprecated mas funcional) new SecretKey(byte[], Version). Nao assumido de memoria nem do README - verificado contra o artefato de verdade.",
+              "feat-005.1..4 bundladas numa unica branch/PR (subtask/SV-45) - interdependencia descoberta durante a implementacao (config so testavel junto do issuer que a consome; issuer so testavel junto do service que o usa), mesmo padrao ja usado em feat-002.4/002.5."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): READY WITH CONCERNS, 2 MINOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "Decisao do usuario (AskUserQuestion, antes do plan review): mustChangePassword=true nao bloqueia login - devolvido no corpo da resposta pro frontend decidir a UX; nao ha endpoint de troca de senha no backlog, bloquear travaria o admin de feat-003 pra sempre.",
+              "Achado real durante a implementacao (nao no plan_review): LoginService.burnHashingCost (chamado nos caminhos de tenant/email inexistente para manter timing consistente) usava PasswordHasher.hash(), que tem guarda de 72 bytes (BCryptPasswordHasher) - um rawPassword acima desse limite contra um tenant/email inexistente vazaria IllegalArgumentException crua (500) em vez do 401 generico esperado. Corrigido com try/catch relancando InvalidCredentialsException; teste dedicado (shouldRejectWhenTenantDoesNotExistAndPasswordIsTooLongForBCrypt) adicionado.",
+              "Delivery Reviewer (PASS, sem achado bloqueante) - confirmou a correcao do bug de burnHashingCost completa nos dois pontos de chamada, ausencia de vazamento de senha/token/hash, corpo identico nos 4 casos de falha (teste dedicado), e ausencia de regressao nas rotas de feat-003/004 (PasswordHasher com unico implementador).",
+              "Test Suite Auditor (achado real corrigido): isolamento cross-tenant no LOGIN so estava provado na persistencia (feat-002), nao no endpoint - adicionado shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail, prova explicita de que o mesmo e-mail em dois tenants com senhas diferentes nao permite login cruzado.",
+              "Persistence Auditor (PASS, sem achado) - confirmou no maximo 1 operacao BCrypt por request em qualquer caminho (nao 3 como a hipotese inicial sugeria), ausencia de query redundante com TenantSchemaFilter (login nao envia X-Tenant-Id, filtro e no-op nessa rota), e TenantContextScope usado exatamente onde ja e o padrao validado (so ao redor de findByEmail)."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor (1 teste adicionado) e Persistence Auditor rodados antes de done - achados reais corrigidos no Plan Reviewer (2 MINOR) e Test Suite Auditor (1 gap), demais PASS.",
+              "Pesquisa externa real (nao de memoria): Maven Central API + GitHub releases API confirmaram io.github.nbaars:paseto4j-version4:2024.3 como unica versao publicada; javap contra os jars instalados (paseto4j-commons/version4 2024.3) confirmou a API real quando o README/main branch divergiu do release.",
+              "docs/services/auth-service.md (contrato exato, decisao de nao bloquear por mustChangePassword) e docs/OBSERVABILITY-AND-CONFIG.md (PASETO_LOCAL_KEY compartilhada com api-gateway) atualizados no repositorio raiz, fora deste repositorio."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-006",
