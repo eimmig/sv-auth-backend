@@ -3,8 +3,7 @@
 ## Estado Atual (Current State)
 
 **Última atualização:** 2026-09-04
-**Feature ativa:** nenhuma (`feat-004` `done`, `feat-005`/`feat-007` liberadas — `feat-006`
-depende de `feat-005`)
+**Feature ativa:** nenhuma (`feat-005` `done`, `feat-006`/`feat-007` liberadas)
 
 ## Status
 
@@ -43,6 +42,19 @@ depende de `feat-005`)
       implicitamente — teste explícito adicionado). Convenção nova documentada em
       `docs/API-CONTRACTS.md`: 401 para header de identidade ausente/inválido, 400 para header
       de contexto de negócio ausente. Evidência completa em `feature_list.json`.
+- [x] **`feat-005` (RF02, autenticação com token PASETO) — `done` em 2026-09-04.**
+      `POST /api/v1/auth/login`, primeira feature de emissão de credencial do serviço. Token
+      PASETO v4.local (`io.github.nbaars:paseto4j-version4:2024.3` — biblioteca confirmada via
+      Maven Central/GitHub releases, mas o README/main branch divergia do release realmente
+      publicado, corrigido via `javap` contra o jar instalado). 5 subtasks (SV-45..49, `feat-005.1..4`
+      bundladas numa única branch/PR — interdependência descoberta na implementação, mesmo
+      padrão de `feat-002.4/002.5`). `mustChangePassword=true` não bloqueia login (decisão do
+      usuário — sem endpoint de troca de senha no backlog). Erro único `InvalidCredentialsException`
+      (401 genérico) para as 4 causas de falha, evita enumeração de tenant/usuário. Achado real
+      corrigido: `hash()` de descarte (mitigação de timing attack) vazava `IllegalArgumentException`
+      crua para senha >72 bytes contra tenant/email inexistente — corrigido. Achado do Test Suite
+      Auditor corrigido: isolamento cross-tenant no login só provado na persistência, teste
+      explícito adicionado. Evidência completa em `feature_list.json`.
 
 ### Em andamento
 
@@ -132,18 +144,23 @@ depende de `feat-005`)
 
 ## Evidência de conclusão
 
-- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004` em `feature_list.json` (objeto
-  estruturado com 4 seções: verificação real executada, divergência do plano original, defeitos
-  encontrados antes de causar dano, skills e ferramentas).
+- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004`/`feat-005` em `feature_list.json`
+  (objeto estruturado com 4 seções: verificação real executada, divergência do plano original,
+  defeitos encontrados antes de causar dano, skills e ferramentas).
 
 ## Notas para a próxima sessão
 
-- `feat-005` (RF02, login/PASETO) é a próxima liberada. `feat-004` resolveu a checagem de "quem
-  está autenticado" via `X-User-Id`/`X-Tenant-Id` confiados diretamente (sem `api-gateway`
-  ainda) — `feat-005` precisa decidir se mantém esse modelo até `epic-008` existir ou se
-  antecipa algo. Reaproveita `PasswordHasher`/`UserRepository`/`AttributeConverter` já
-  existentes.
-- `feat-007` (pipeline de CI) também está liberada, independente de `feat-005`.
+- `feat-006` (RF05 suporte, vínculo de conta Telegram) é a próxima liberada — depende de
+  `feat-005` (PASETO), já entregue. `feat-007` (pipeline de CI) também está liberada,
+  independente de `feat-006`.
+- `feat-005` emite o token mas não valida — a validação real (que injeta `X-User-Id`/
+  `X-Tenant-Id` a partir do PASETO) é exclusiva de `services/api-gateway` (`epic-008`, ainda
+  `not-started`). A mesma `PASETO_LOCAL_KEY` gerada aqui precisa ser configurada lá quando esse
+  epic começar — não gerar uma independente (nota em `docs/OBSERVABILITY-AND-CONFIG.md`).
+- Biblioteca `io.github.nbaars:paseto4j-version4:2024.3`: o README/main branch do projeto no
+  GitHub está à frente do último release publicado — API real confirmada via `javap` contra o
+  jar instalado, não confiar em exemplos do README sem checar a versão. Ver `PasetoAccessTokenIssuer`
+  para a API real (`new SecretKey(byte[], Version)`, não `fromHexString`).
 - O padrão de multi-tenancy do Hibernate (resolver + connection provider + `Persistable<UUID>`
   para entidade com id atribuído pelo domínio) já está documentado em `docs/CONVENTIONS.md` —
   `bets-service`/`stats-service` podem reaproveitar diretamente quando chegarem no próprio
