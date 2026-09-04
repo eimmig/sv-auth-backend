@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.stakevault.betting.auth.config.TenantContextScope;
 import com.stakevault.betting.auth.domain.model.Role;
+import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
 import com.stakevault.betting.auth.domain.port.out.UserRepository;
@@ -117,6 +118,30 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 				"X-Tenant-Id", tenantSlug, "X-User-Id", UUID.randomUUID().toString());
 
 		assertThat(response.statusCode()).isEqualTo(403);
+	}
+
+	@Test
+	void shouldReturn403WhenCallerIsAnAdminOfADifferentTenant() throws Exception {
+		String otherSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+		TenantSchemaName otherSchema = TenantSchemaName.fromSlug(otherSlug);
+		provisionTenantSchema.ensureSchemaExists(otherSlug);
+
+		try {
+			User adminOfOtherTenant = new User(UUID.randomUUID(), "Other Admin", "admin@" + otherSlug, "hash",
+					Role.ADMIN, false, Instant.now().truncatedTo(DB_PRECISION));
+			try (var _ = TenantContextScope.open(otherSchema)) {
+				userRepository.save(adminOfOtherTenant);
+			}
+
+			HttpResponse<String> response = post(
+					"{\"name\":\"New Member\",\"email\":\"member@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+					"X-Tenant-Id", tenantSlug, "X-User-Id", adminOfOtherTenant.id().toString());
+
+			assertThat(response.statusCode()).isEqualTo(403);
+			assertThat(response.body()).contains("\"type\":\"https://docs/errors/admin-role-required\"");
+		} finally {
+			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + otherSchema.value() + "\" CASCADE");
+		}
 	}
 
 	@Test
