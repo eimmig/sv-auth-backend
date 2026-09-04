@@ -541,10 +541,66 @@
       "dependencies": [
         "feat-003"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 1 MAJOR corrigido no plano antes da implementacao (nenhum exigia decisao do usuario alem da ja tomada com o usuario sobre o modelo de confianca via X-User-Id/X-Tenant-Id, ver abaixo). (MAJOR) MissingCallerContextException estava planejada como 400, inconsistente com o precedente real do servico: InvalidAdminApiKeyException (X-Admin-Api-Key ausente/invalido) usa 401, e X-User-Id desempenha o mesmo papel de identidade do chamador, nao um campo de payload - corrigido para 401, e passou a cobrir tambem X-User-Id malformado (nao-UUID), que o plano original deixava vazar como IllegalArgumentException crua (500). MissingTenantContextException mantida em 400 (consistente com TenantSchemaFilter, que ja usa 400 para X-Tenant-Id malformado - ausencia total do header e a mesma familia de falha de contrato). Confirmado sem achado adicional: autorizacao com 403 unico para 'caller nao existe' e 'caller nao e admin' (evita enumeracao, mesmo espirito do 401 generico de feat-003 para chave admin incorreta); nenhum acoplamento indevido de camada (X-User-Id lido no controller/adapter, valor puro passado ao use case, mesmo padrao de AdminTenantController/CreateTenantService). DECISAO DO USUARIO (AskUserQuestion, antes do plan review): como feat-005 (login/PASETO) ainda nao existe, este endpoint confia diretamente nos headers X-User-Id/X-Tenant-Id informados pelo chamador - mesmo modelo de confianca que bets-service/stats-service vao usar do api-gateway (docs/API-CONTRACTS.md 'Confianca entre servicos') e mesmo padrao que TenantSchemaFilter ja aplica a X-Tenant-Id desde feat-001.3; api-gateway (epic-008) ainda nao existe, entao por ora quem chama informa os headers diretamente. Risco residual aceito: TOCTOU entre findById(callerId) e save() (dois admins criando o mesmo email concorrentemente) - mesmo residual aceito em feat-003, desproporcional sem evidencia real de concorrencia. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-39",
+      "subtasks": [
+        {
+          "id": "feat-004.1",
+          "name": "Excecoes de dominio, i18n e handler de Bean Validation",
+          "status": "done",
+          "jira": "SV-40",
+          "detail": "Camada de erro completa antes do use case/controller existirem, mesmo molde de TenantAlreadyProvisionedException/InvalidAdminApiKeyException - MissingCallerContextException (401, cobre ausente e malformado), MissingTenantContextException (400), AdminRoleRequiredException (403), EmailAlreadyRegisteredException (409). Primeira vez que o servico usa Bean Validation (@Valid) de verdade - precisa do handler generico de MethodArgumentNotValidException no mesmo commit, senao nenhuma subtask seguinte consegue testar 400 de payload invalido.",
+          "checklist": [
+            "domain/model/{MissingCallerContextException,MissingTenantContextException,AdminRoleRequiredException,EmailAlreadyRegisteredException} implementando LocalizedDomainException.",
+            "4 chaves novas x 3 locales em messages_{pt_BR,en_US,es}.properties (error.missing-caller-context, error.missing-tenant-context, error.admin-role-required, error.email-already-registered) + error.validation-failed (title/detail generico).",
+            "DomainExceptionHandler: as 4 exceptions novas no @ExceptionHandler existente + @ExceptionHandler(MethodArgumentNotValidException.class) novo, 400 RFC7807 localizado agregando nomes de campo invalidos no detail."
+          ],
+          "validation": "mvn verify verde; LocalizedDomainExceptionTest estendido cobre as 4 exceptions novas.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-004.2",
+          "name": "CreateUserUseCase / CreateUserService",
+          "status": "in-progress",
+          "jira": "SV-41",
+          "detail": "Nao abre TenantContextScope (diferente de CreateTenantService) - a rota passa pelo TenantSchemaFilter existente, que ja abre o contexto antes do controller quando X-Tenant-Id esta presente.",
+          "checklist": [
+            "domain/port/in/CreateUserUseCase.createUser(UUID callerId, String name, String email, String rawPassword).",
+            "application/CreateUserService: TenantContextHolder.current()==null -> MissingTenantContextException; userRepository.findById(callerId) ausente OU role!=ADMIN -> AdminRoleRequiredException; hash via PasswordHasher; save(new User(UUID.randomUUID(), name, email, hash, Role.MEMBER, false, Instant.now())); catch DataIntegrityViolationException -> EmailAlreadyRegisteredException."
+          ],
+          "validation": "Teste unitario (fakes de UserRepository/PasswordHasher) cobre sucesso, tenant ausente, caller ausente, caller nao-admin, caller inexistente, email duplicado - mesmo estilo de CreateTenantServiceTest.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-004.3",
+          "name": "UsersController (POST /api/v1/users) + testes de integracao",
+          "status": "not-started",
+          "jira": "SV-42",
+          "detail": "X-User-Id lido no controller (adapter), nao no use case - parse de UUID com catch mapeando pra MissingCallerContextException. Fecha o item pendente de docs (contrato exato) e o gap de docs/API-CONTRACTS.md sobre a convencao de status code pra header de identidade ausente vs contexto de negocio ausente.",
+          "checklist": [
+            "adapter/in/web/{UsersController,CreateUserRequest,CreateUserResponse} - payload {name,email,password} com @NotBlank/@Email; resposta 201 {id,name,email,role,mustChangePassword,createdAt} (nunca passwordHash).",
+            "Teste de integracao (Testcontainers, via TenantSchemaIntegrationSupport): 201 fim-a-fim; 401 sem X-User-Id (e com X-User-Id malformado); 403 caller nao-admin/inexistente; 409 email duplicado; 400 payload invalido; Accept-Language sobre um dos erros novos.",
+            "docs/services/auth-service.md (contrato exato) e docs/API-CONTRACTS.md (convencao 401 identidade ausente / 400 contexto de negocio ausente / 422 regra de dominio) atualizados no mesmo commit."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso); teste i18n confirma title/detail mudando por Accept-Language.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-004.4",
+          "name": "CHANGELOG e verificacao final",
+          "status": "not-started",
+          "jira": "SV-43",
+          "detail": "Fecha a feature com o gate real do harness.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence.",
+          "owner": "agente"
+        }
+      ],
       "evidence": ""
     },
     {
