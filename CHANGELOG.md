@@ -29,3 +29,11 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-28](https://stakevault.atlassian.net/browse/SV-28) - Testes de mapeamento e isolamento por tenant
 - [SV-29](https://stakevault.atlassian.net/browse/SV-29) - CHANGELOG e verificacao final
 - [SV-30](https://stakevault.atlassian.net/browse/SV-30) - Corrigir 27 apontamentos do SonarCloud ignorados no merge e travar o gate
+- [SV-31](https://stakevault.atlassian.net/browse/SV-31) - Provisionamento de tenant (rota admin)
+- [SV-32](https://stakevault.atlassian.net/browse/SV-32) - Config ADMIN_API_KEY
+- [SV-33](https://stakevault.atlassian.net/browse/SV-33) - Exceptions de dominio com chave de mensagem + entradas i18n
+- [SV-34](https://stakevault.atlassian.net/browse/SV-34) - Ports/out + adapters de senha (hash e geracao)
+- [SV-35](https://stakevault.atlassian.net/browse/SV-35) - CreateTenantUseCase / CreateTenantService
+- [SV-36](https://stakevault.atlassian.net/browse/SV-36) - AdminApiKeyFilter
+- [SV-37](https://stakevault.atlassian.net/browse/SV-37) - RestControllerAdvice + endpoint POST /api/v1/admin/tenants
+- [SV-38](https://stakevault.atlassian.net/browse/SV-38) - Teste i18n (Accept-Language) + CHANGELOG + verificacao final
