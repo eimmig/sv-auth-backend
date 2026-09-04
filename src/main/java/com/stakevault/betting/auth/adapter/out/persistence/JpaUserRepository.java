@@ -3,12 +3,12 @@ package com.stakevault.betting.auth.adapter.out.persistence;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.out.UserRepository;
 
-@Component
+@Repository
 public class JpaUserRepository implements UserRepository {
 
 	private final UserJpaRepository jpaRepository;

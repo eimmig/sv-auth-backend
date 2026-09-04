@@ -60,7 +60,7 @@ public class TenantSchemaFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			chain.doFilter(request, response);
 		} finally {
 			MDC.remove(TENANT_MDC_KEY);

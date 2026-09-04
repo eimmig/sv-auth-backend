@@ -13,6 +13,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Escopo compartilhado pelos passos de story->develop/main (changelog, SonarCloud) - ver docs/CI-CD.md
+      - name: Calcular escopo de story->develop/main
+        id: story-gate
+        run: |
+          if [ "${{ github.event_name != 'pull_request' || github.base_ref == 'develop' || github.base_ref == 'main' }}" = "true" ]; then
+            echo "applies=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applies=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # 1. Changelog - so no PR pra develop/main, ver docs/CI-CD.md
       - name: Validar atualizacao do CHANGELOG.md
         if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
@@ -50,7 +60,7 @@ jobs:
 
       # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md
       - name: SonarCloud
-        if: hashFiles('pom.xml') != '' && (github.event_name != 'pull_request' || github.base_ref == 'develop' || github.base_ref == 'main')
+        if: hashFiles('pom.xml') != '' && steps.story-gate.outputs.applies == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -59,3 +69,14 @@ jobs:
           -Dsonar.projectKey=eimmig_sv-auth-backend
           -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
           -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.qualitygate.wait=true
+
+      # 6. Gate de issue/hotspot do SonarCloud - pulado em push p/ develop (API bloqueia branch != main)
+      - name: Validar zero issues no SonarCloud
+        if: hashFiles('pom.xml') != '' && steps.story-gate.outputs.applies == 'true' && !(github.event_name == 'push' && github.ref_name == 'develop')
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          python3 .github/scripts/validate-sonar-issues.py
+          --project-key eimmig_sv-auth-backend
+          ${{ github.event_name == 'pull_request' && format('--pull-request {0}', github.event.pull_request.number) || format('--branch {0}', github.ref_name) }}
