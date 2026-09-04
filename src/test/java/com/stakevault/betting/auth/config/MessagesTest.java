@@ -14,6 +14,7 @@ class MessagesTest {
 	MessagesTest() {
 		messageSource.setBasename("messages");
 		messageSource.setFallbackToSystemLocale(false);
+		messageSource.setDefaultEncoding("UTF-8");
 	}
 
 	@Test

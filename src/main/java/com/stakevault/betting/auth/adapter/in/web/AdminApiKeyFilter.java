@@ -1,0 +1,83 @@
+package com.stakevault.betting.auth.adapter.in.web;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.util.UriUtils;
+
+import tools.jackson.databind.ObjectMapper;
+import com.stakevault.betting.auth.domain.model.InvalidAdminApiKeyException;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class AdminApiKeyFilter extends OncePerRequestFilter {
+
+	public static final String ADMIN_API_KEY_HEADER = "X-Admin-Api-Key";
+	private static final String ADMIN_PATH_PREFIX = "/api/v1/admin/";
+
+	private final String configuredApiKey;
+	private final MessageSource messageSource;
+	private final LocaleResolver localeResolver;
+	private final ObjectMapper objectMapper;
+
+	public AdminApiKeyFilter(@Value("${admin.api-key}") String configuredApiKey, MessageSource messageSource,
+			LocaleResolver localeResolver, ObjectMapper objectMapper) {
+		this.configuredApiKey = configuredApiKey;
+		this.messageSource = messageSource;
+		this.localeResolver = localeResolver;
+		this.objectMapper = objectMapper;
+	}
+
+	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) {
+		String decodedPath = UriUtils.decode(request.getRequestURI(), StandardCharsets.UTF_8);
+		return !decodedPath.startsWith(ADMIN_PATH_PREFIX);
+	}
+
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+			throws ServletException, IOException {
+		String providedKey = request.getHeader(ADMIN_API_KEY_HEADER);
+		if (providedKey == null || !constantTimeEquals(providedKey, configuredApiKey)) {
+			writeUnauthorized(request, response);
+			return;
+		}
+		chain.doFilter(request, response);
+	}
+
+	private boolean constantTimeEquals(String provided, String configured) {
+		return MessageDigest.isEqual(
+				provided.getBytes(StandardCharsets.UTF_8), configured.getBytes(StandardCharsets.UTF_8));
+	}
+
+	private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		InvalidAdminApiKeyException exception = new InvalidAdminApiKeyException();
+		Locale locale = localeResolver.resolveLocale(request);
+		String title = messageSource.getMessage(exception.messageKey() + ".title", null, locale);
+		String detail = messageSource.getMessage(exception.messageKey() + ".detail", null, locale);
+
+		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+		var body = new LinkedHashMap<String, Object>();
+		body.put("type", "https://docs/errors/invalid-admin-api-key");
+		body.put("title", title);
+		body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+		body.put("detail", detail);
+		body.put("instance", request.getRequestURI());
+		objectMapper.writeValue(response.getOutputStream(), body);
+	}
+}
