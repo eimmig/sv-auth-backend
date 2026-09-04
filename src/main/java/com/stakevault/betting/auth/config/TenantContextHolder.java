@@ -1,8 +1,7 @@
-package com.stakevault.betting.auth.adapter.in.web;
+package com.stakevault.betting.auth.config;
 
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 
-/** Schema do tenant resolvido para a requisicao atual. Preenchido por TenantSchemaFilter. */
 public final class TenantContextHolder {
 
 	private static final ThreadLocal<TenantSchemaName> CURRENT = new ThreadLocal<>();

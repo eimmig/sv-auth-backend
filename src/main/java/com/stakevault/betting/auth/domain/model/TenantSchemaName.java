@@ -2,7 +2,6 @@ package com.stakevault.betting.auth.domain.model;
 
 import java.util.regex.Pattern;
 
-/** Nome do schema Postgres de um tenant ({@code tenant_<slug>}). */
 public record TenantSchemaName(String value) {
 
 	private static final Pattern SLUG = Pattern.compile("^[a-z][a-z0-9-]{1,55}$");

@@ -8,47 +8,47 @@ import org.junit.jupiter.api.Test;
 class TenantSchemaNameTest {
 
 	@Test
-	void fromSlug_derivaPrefixoTenant() {
+	void shouldDeriveTenantPrefixFromSlug() {
 		assertThat(TenantSchemaName.fromSlug("acme").value()).isEqualTo("tenant_acme");
 	}
 
 	@Test
-	void fromSlug_aceitaHifenNoMeio() {
+	void shouldAcceptHyphenInTheMiddle() {
 		assertThat(TenantSchemaName.fromSlug("acme-corp").value()).isEqualTo("tenant_acme-corp");
 	}
 
 	@Test
-	void fromSlug_rejeitaComecarComDigito() {
+	void shouldRejectSlugStartingWithDigit() {
 		assertThatThrownBy(() -> TenantSchemaName.fromSlug("1acme")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void fromSlug_rejeitaMaiuscula() {
+	void shouldRejectUppercaseSlug() {
 		assertThatThrownBy(() -> TenantSchemaName.fromSlug("ACME")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void fromSlug_rejeitaCaractereInvalido() {
+	void shouldRejectInvalidCharacter() {
 		assertThatThrownBy(() -> TenantSchemaName.fromSlug("acme!")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void fromSlug_rejeitaSlugDeUmCaractereSo() {
+	void shouldRejectSingleCharacterSlug() {
 		assertThatThrownBy(() -> TenantSchemaName.fromSlug("a")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void fromSlug_rejeitaNulo() {
+	void shouldRejectNullSlug() {
 		assertThatThrownBy(() -> TenantSchemaName.fromSlug(null)).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void construtor_rejeitaValorSemPrefixoTenant() {
+	void shouldRejectValueWithoutTenantPrefix() {
 		assertThatThrownBy(() -> new TenantSchemaName("acme")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void construtor_rejeitaValorNulo() {
+	void shouldRejectNullValue() {
 		assertThatThrownBy(() -> new TenantSchemaName(null)).isInstanceOf(IllegalArgumentException.class);
 	}
 }

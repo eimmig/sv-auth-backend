@@ -14,6 +14,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import tools.jackson.databind.ObjectMapper;
+import com.stakevault.betting.auth.config.TenantContextHolder;
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.TenantSchemaNotFoundException;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
@@ -24,7 +25,7 @@ class TenantSchemaFilterTest {
 	private final TenantSchemaFilter filter = new TenantSchemaFilter(provisionTenantSchema, new ObjectMapper());
 
 	@Test
-	void semHeader_passaDiretoSemTocarNoCasoDeUso() throws Exception {
+	void shouldPassThroughWithoutTouchingUseCaseWhenHeaderMissing() throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		MockHttpServletResponse response = new MockHttpServletResponse();
 		MockFilterChain chain = new MockFilterChain();
@@ -36,7 +37,7 @@ class TenantSchemaFilterTest {
 	}
 
 	@Test
-	void tenantSlugInvalido_retorna400SemChamarCasoDeUso() throws Exception {
+	void shouldReturn400ForInvalidTenantSlugWithoutCallingUseCase() throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader(TenantSchemaFilter.TENANT_HEADER, "ACME!!!");
 		MockHttpServletResponse response = new MockHttpServletResponse();
@@ -51,10 +52,8 @@ class TenantSchemaFilterTest {
 	}
 
 	@Test
-	void tenantNaoProvisionado_retorna404EMdcJaTemTenantIdNoMomentoDoErro() throws Exception {
+	void shouldExposeTenantIdInMdcBeforeReturning404ForUnprovisionedTenant() throws Exception {
 		doAnswer(invocation -> {
-			// MDC precisa estar visivel AQUI, nao so depois do catch - e o log da
-			// tentativa rejeitada, o mais util dos dois casos de erro.
 			assertThat(MDC.get("tenantId")).isEqualTo("tenant_acme");
 			throw new TenantSchemaNotFoundException(new TenantSchemaName("tenant_acme"));
 		}).when(provisionTenantSchema).migrateIfPending("acme");
@@ -72,7 +71,7 @@ class TenantSchemaFilterTest {
 	}
 
 	@Test
-	void tenantValido_resolveContextoDuranteAChamadaELimpaDepois() throws Exception {
+	void shouldResolveContextDuringCallAndClearAfterwards() throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader(TenantSchemaFilter.TENANT_HEADER, "acme");
 		MockHttpServletResponse response = new MockHttpServletResponse();

@@ -15,7 +15,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.stakevault.betting.auth.TestcontainersConfiguration;
 
-/** liveness e readiness (com checagem de Postgres) respondem. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
@@ -32,7 +31,7 @@ class HealthChecksTest {
 	}
 
 	@Test
-	void liveness_respondeUp() throws Exception {
+	void shouldRespondUpForLiveness() throws Exception {
 		HttpResponse<String> response = get("/actuator/health");
 
 		assertThat(response.statusCode()).isEqualTo(200);
@@ -40,7 +39,7 @@ class HealthChecksTest {
 	}
 
 	@Test
-	void readiness_respondeUpEIncluiChecagemDoPostgres() throws Exception {
+	void shouldRespondUpAndIncludePostgresCheckForReadiness() throws Exception {
 		HttpResponse<String> response = get("/actuator/health/readiness");
 
 		assertThat(response.statusCode()).isEqualTo(200);

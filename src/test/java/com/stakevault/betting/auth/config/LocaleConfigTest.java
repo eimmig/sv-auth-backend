@@ -13,14 +13,14 @@ class LocaleConfigTest {
 	private final LocaleResolver resolver = new LocaleConfig().localeResolver();
 
 	@Test
-	void semAcceptLanguage_resolvePtBR() {
+	void shouldResolvePtBrWithoutAcceptLanguage() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 
 		assertThat(resolver.resolveLocale(request)).isEqualTo(Locale.forLanguageTag("pt-BR"));
 	}
 
 	@Test
-	void acceptLanguageSuportado_resolveOMesmoLocale() {
+	void shouldResolveSameLocaleWhenSupported() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Accept-Language", "en-US");
 
@@ -28,7 +28,7 @@ class LocaleConfigTest {
 	}
 
 	@Test
-	void acceptLanguageNaoSuportado_caiNoDefaultPtBR() {
+	void shouldFallBackToPtBrWhenUnsupported() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Accept-Language", "fr-FR");
 
