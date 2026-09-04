@@ -1,5 +1,6 @@
 package com.stakevault.betting.auth.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -27,6 +28,13 @@ class ProvisionTenantSchemaServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new ProvisionTenantSchemaService(gateway);
+	}
+
+	@Test
+	void shouldDelegateExistenceCheckToGateway() {
+		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true);
+
+		assertThat(service.exists("acme")).isTrue();
 	}
 
 	@Test

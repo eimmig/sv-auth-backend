@@ -433,7 +433,7 @@
         {
           "id": "feat-003.4",
           "name": "CreateTenantUseCase / CreateTenantService",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-35",
           "detail": "Ordem obrigatoria corrigida pelo Plan Reviewer (2 achados BLOCKER): checar existencia antes de escrever, e abrir TenantContextScope explicitamente antes de UserRepository.save().",
           "checklist": [
