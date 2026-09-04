@@ -22,14 +22,18 @@ class PendingTelegramLinkTest {
 
 	@Test
 	void shouldRejectBlankCode() {
-		assertThatThrownBy(
-				() -> new PendingTelegramLink(" ", "acme", UUID.randomUUID(), Instant.now().plusSeconds(60)))
+		UUID userId = UUID.randomUUID();
+		Instant expiresAt = Instant.now().plusSeconds(60);
+
+		assertThatThrownBy(() -> new PendingTelegramLink(" ", "acme", userId, expiresAt))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void shouldRejectNullExpiresAt() {
-		assertThatThrownBy(() -> new PendingTelegramLink("ABC12345", "acme", UUID.randomUUID(), null))
+		UUID userId = UUID.randomUUID();
+
+		assertThatThrownBy(() -> new PendingTelegramLink("ABC12345", "acme", userId, null))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 

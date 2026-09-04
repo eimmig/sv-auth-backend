@@ -56,8 +56,9 @@ class TelegramLinkConfirmationTransactionTest {
 	void shouldRejectWhenUserAlreadyHasATelegramAccount() {
 		when(telegramAccountRepository.findByUserId(USER_ID)).thenReturn(Optional.of(
 				new TelegramAccount(UUID.randomUUID(), USER_ID, "999", Instant.now())));
+		PendingTelegramLink pending = pending();
 
-		assertThatThrownBy(() -> transaction.execute(pending(), "111"))
+		assertThatThrownBy(() -> transaction.execute(pending, "111"))
 				.isInstanceOf(TelegramAccountAlreadyLinkedException.class);
 
 		verify(telegramAccountRepository, never()).save(any());
@@ -70,8 +71,9 @@ class TelegramLinkConfirmationTransactionTest {
 		when(telegramAccountRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 		when(telegramAccountRepository.findByTelegramUserId("111")).thenReturn(Optional.of(
 				new TelegramAccount(UUID.randomUUID(), UUID.randomUUID(), "111", Instant.now())));
+		PendingTelegramLink pending = pending();
 
-		assertThatThrownBy(() -> transaction.execute(pending(), "111"))
+		assertThatThrownBy(() -> transaction.execute(pending, "111"))
 				.isInstanceOf(TelegramAccountAlreadyLinkedException.class);
 
 		verify(telegramAccountRepository, never()).save(any());

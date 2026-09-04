@@ -3,7 +3,6 @@ package com.stakevault.betting.auth.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -58,7 +57,7 @@ class ConfirmTelegramLinkServiceTest {
 		doAnswer(invocation -> {
 			assertThat(TenantContextHolder.current().value()).isEqualTo("tenant_acme");
 			return null;
-		}).when(confirmationTransaction).execute(eq(pending), eq("111"));
+		}).when(confirmationTransaction).execute(pending, "111");
 
 		service.confirm("111", "ABC12345");
 

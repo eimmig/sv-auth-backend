@@ -19,13 +19,17 @@ class TelegramLinkTest {
 
 	@Test
 	void shouldRejectBlankTelegramUserId() {
-		assertThatThrownBy(() -> new TelegramLink(" ", "acme", UUID.randomUUID()))
+		UUID userId = UUID.randomUUID();
+
+		assertThatThrownBy(() -> new TelegramLink(" ", "acme", userId))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void shouldRejectBlankTenantSlug() {
-		assertThatThrownBy(() -> new TelegramLink("123456", " ", UUID.randomUUID()))
+		UUID userId = UUID.randomUUID();
+
+		assertThatThrownBy(() -> new TelegramLink("123456", " ", userId))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
