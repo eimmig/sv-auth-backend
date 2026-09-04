@@ -3,7 +3,8 @@
 ## Estado Atual (Current State)
 
 **Última atualização:** 2026-09-04
-**Feature ativa:** nenhuma (`feat-002` `done`, `feat-003` liberada)
+**Feature ativa:** nenhuma (`feat-003` `done`, `feat-004`/`feat-007` liberadas — `feat-005`
+depende de `feat-004`, `feat-006` depende de `feat-005`)
 
 ## Status
 
@@ -24,6 +25,14 @@
       8 subtasks (SV-23..SV-30 — a última, reabertura pós-merge para corrigir 27 apontamentos
       reais do SonarCloud ignorados na PR original e travar o gate de verdade, ver "Bloqueios /
       Riscos"). Evidência completa em `feature_list.json`.
+- [x] **`feat-003` (Provisionamento de tenant — rota admin) — `done` em 2026-09-04.** Primeiro
+      endpoint HTTP real do serviço (`POST /api/v1/admin/tenants`), primeira implementação de
+      verdade do padrão `@RestControllerAdvice`/`ProblemDetail` documentado desde `feat-001` mas
+      nunca exercitado. 7 subtasks (SV-32..SV-38). Achado crítico de infraestrutura corrigido:
+      `MessageSourceAutoConfiguration` do Spring Boot nunca ativava sem `messages.properties`
+      base (sem sufixo de locale) — todo `getMessage()` real da aplicação lançava
+      `NoSuchMessageException` silenciosamente desde `feat-001.5`. Evidência completa em
+      `feature_list.json`.
 
 ### Em andamento
 
@@ -31,10 +40,9 @@
 
 ### Próximos passos (Next Steps)
 
-1. `feat-003` — rota administrativa de provisionamento de tenant (`X-Admin-Api-Key`, cria o
-   primeiro `admin` com `mustChangePassword = true`). Primeira feature a expor endpoint HTTP
-   real e a primeira que vai precisar decidir hashing de senha (BCrypt ou similar, ainda não
-   escolhido em nenhuma convenção).
+1. `feat-004` (RF01, criação de usuário dentro do tenant) e `feat-007` (pipeline de CI) estão
+   liberadas — `feat-005` (login/PASETO) depende de `feat-004`, `feat-006` (vínculo Telegram)
+   depende de `feat-005`.
 
 ## Bloqueios / Riscos
 
@@ -62,6 +70,23 @@
   (nota nova) para o fluxo correto (não commitar a saída do `jira_story.py` em `develop` antes
   de criar a branch) e o procedimento de correção se acontecer de novo (`git merge develop`
   dentro da branch da feature + reconferir se o arquivo precisa ser reescrito depois do merge).
+- **Achado crítico, corrigido em `feat-003.6`**: `MessageSourceAutoConfiguration` do Spring Boot
+  nunca ativava neste serviço (exige `src/main/resources/messages.properties` **sem** sufixo de
+  locale, confirmado via `javap` contra o jar real — só existiam `messages_pt_BR/en_US/es
+  .properties`). Sem a autoconfiguração, `MessageSource` nunca virava bean real e todo
+  `getMessage()` da aplicação lançava `NoSuchMessageException` via `DelegatingMessageSource`,
+  silenciosamente, desde `feat-001.5` — nenhum teste pegou porque todos construíam
+  `ResourceBundleMessageSource` manualmente em vez de usar o bean injetado. Corrigido criando o
+  arquivo base. Ver `docs/CONVENTIONS.md` seção i18n — `bets-service`/`stats-service`/
+  `api-gateway` precisam criar esse arquivo **junto** com seus próprios `messages_*.properties`,
+  não depois de descobrir o bug de novo.
+- **Risco residual aceito em `feat-003`**: corrida (TOCTOU) entre `gateway.exists(slug)` e
+  `ensureSchemaExists(slug)` em `CreateTenantService` — dois `POST /api/v1/admin/tenants`
+  concorrentes para o mesmo slug novo podem ambos passar no `exists()` antes de qualquer um
+  provisionar; só a inserção do admin (não a criação do schema) tem fallback para
+  `TenantAlreadyProvisionedException`. Aceito como desproporcional para uma rota admin de uso
+  raro/manual (um operador só) — não implementar lock/compensação sem evidência real de
+  concorrência.
 
 ## Decisões tomadas
 
@@ -86,17 +111,29 @@
 - `feat-002`: migration, `domain/model/{Role,User,TelegramAccount}`, `domain/port/out/*`,
   `adapter/out/persistence/*` (novo), `config/*` (novo — multi-tenancy), toda a suíte de testes
   reescrita — ver commits em `feature/SV-22` (mergeada em `develop`, `a847e48`).
+- `feat-003`: `adapter/in/web/{AdminApiKeyFilter,AdminTenantController,CreateTenantRequest,
+  CreateTenantResponse,DomainExceptionHandler,ProblemDetailMessages}` (novos),
+  `adapter/out/security/{BCryptPasswordHasher,SecureRandomPasswordGenerator}` (novos),
+  `application/CreateTenantService` (novo), `domain/model/{LocalizedDomainException,
+  SlugRelatedDomainException,TenantAlreadyProvisionedException,InvalidTenantSlugException,
+  InvalidAdminApiKeyException,CreatedTenantAdmin}` (novos), `domain/port/{in/CreateTenantUseCase,
+  out/PasswordHasher,out/TemporaryPasswordGenerator}` (novos), `messages.properties` (novo, base
+  sem locale), `pom.xml` (`spring-security-crypto`, `sourceEncoding`) — ver commits em
+  `feature/SV-31` (mergeada em `develop`, `441355a`).
 
 ## Evidência de conclusão
 
-- Ver campo `evidence` de `feat-002` em `feature_list.json` (objeto estruturado com 4 seções:
-  verificação real executada, divergência do plano original, defeitos encontrados antes de
-  causar dano, skills e ferramentas).
+- Ver campo `evidence` de `feat-002`/`feat-003` em `feature_list.json` (objeto estruturado com 4
+  seções: verificação real executada, divergência do plano original, defeitos encontrados antes
+  de causar dano, skills e ferramentas).
 
 ## Notas para a próxima sessão
 
-- `feat-003` é a primeira feature deste serviço com endpoint HTTP real — vai precisar decidir
-  biblioteca de hashing de senha (não escolhida em nenhuma convenção ainda).
+- `feat-004` (RF01, criação de usuário dentro do tenant, checagem de autorização por role
+  `admin`) é a próxima liberada. Reaproveita `PasswordHasher`/`UserRepository` já existentes;
+  ainda não há PASETO/login (`feat-005`), então a checagem de "quem está autenticado" nesta
+  feature provavelmente precisa de alguma forma de contexto de requisição a definir.
+- `feat-007` (pipeline de CI) também está liberada, independente de `feat-004`.
 - O padrão de multi-tenancy do Hibernate (resolver + connection provider + `Persistable<UUID>`
   para entidade com id atribuído pelo domínio) já está documentado em `docs/CONVENTIONS.md` —
   `bets-service`/`stats-service` podem reaproveitar diretamente quando chegarem no próprio
