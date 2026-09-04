@@ -775,7 +775,7 @@
         {
           "id": "feat-006.1",
           "name": "Migration eager do schema public + runner no boot",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-51",
           "detail": "Primeiro caminho de migration nao-lazy do servico - schema public sempre existe e pertence ao proprio servico, sem a ambiguidade de \"quem provisiona\" que motivou a lazy migration por tenant (feat-001.3).",
           "checklist": [
@@ -789,7 +789,7 @@
         {
           "id": "feat-006.2",
           "name": "Dominio: TelegramLink, PendingTelegramLink, excecoes, TenantSchemaName.slug(), gerador de codigo",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-52",
           "detail": "Gerador de codigo dedicado (nao reaproveita TemporaryPasswordGenerator - alfabeto/tamanho/proposito diferentes).",
           "checklist": [
@@ -805,7 +805,7 @@
         {
           "id": "feat-006.3",
           "name": "Persistencia JPA das tabelas public (TelegramLink, PendingTelegramLink)",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-53",
           "detail": "Entidades JPA normais com @Table(schema = \"public\") explicito - achado do Plan Reviewer, substitui o adapter JDBC cru do plano original. Upsert real (busca antes de salvar), nao Persistable.isNew=true sempre.",
           "checklist": [
@@ -819,7 +819,7 @@
         {
           "id": "feat-006.4",
           "name": "Application services: gerar codigo, confirmar vinculo, lookup",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-54",
           "detail": "ConfirmTelegramLinkService e o primeiro @Transactional do servico - cobre tenant schema + public na mesma transacao real. Reconfirmacao sobrescreve vinculo antigo (decisao do usuario).",
           "checklist": [
@@ -834,7 +834,7 @@
         {
           "id": "feat-006.5",
           "name": "Web adapter: 3 endpoints + DTOs + i18n",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-55",
           "detail": "Sem verbo na URL (POST cria o recurso = confirma o vinculo) - mesma convencao de docs/API-CONTRACTS.md.",
           "checklist": [
