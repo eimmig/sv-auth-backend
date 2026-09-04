@@ -3,7 +3,7 @@
 ## Estado Atual (Current State)
 
 **Última atualização:** 2026-09-04
-**Feature ativa:** nenhuma (`feat-005` `done`, `feat-006`/`feat-007` liberadas)
+**Feature ativa:** nenhuma (`feat-006` `done`, `feat-007` liberada)
 
 ## Status
 
@@ -55,6 +55,21 @@
       crua para senha >72 bytes contra tenant/email inexistente — corrigido. Achado do Test Suite
       Auditor corrigido: isolamento cross-tenant no login só provado na persistência, teste
       explícito adicionado. Evidência completa em `feature_list.json`.
+- [x] **`feat-006` (RF05 suporte, vínculo de conta Telegram) — `done` em 2026-09-04.**
+      `POST /api/v1/telegram-links`, `POST /api/v1/telegram-accounts`, `GET
+      /api/v1/telegram-accounts/{telegramUserId}`. Primeira feature com dado fora do
+      schema-per-tenant (diretório global `TELEGRAM_LINK`/`PENDING_TELEGRAM_LINK`, schema
+      `public`, migration eager) e primeiro `@Transactional` real do serviço, cruzando o schema
+      do tenant e o `public` na mesma transação (`TelegramLinkConfirmationTransaction`). 6
+      subtasks (SV-51..56, `feat-006.1..5` bundladas numa única branch/PR — interdependência
+      descoberta na implementação, mesmo padrão de `feat-002.4/5`/`feat-005.1..4`).
+      Reconfirmação de `telegramUserId` já vinculado a outro tenant sobrescreve o vínculo antigo
+      (decisão do usuário). Achado do Persistence Auditor corrigido: a migration do schema
+      `public` rodava via `ApplicationRunner`, que o Spring Boot só chama **depois** do servidor
+      embutido já aceitar conexões — corrigido para `InitializingBean` (mesmo mecanismo do
+      `FlywayMigrationInitializer` oficial). Achado do Test Suite Auditor corrigido: caminho 409
+      só provado por mock, teste HTTP ponta a ponta adicionado. Evidência completa em
+      `feature_list.json`.
 
 ### Em andamento
 
@@ -62,8 +77,8 @@
 
 ### Próximos passos (Next Steps)
 
-1. `feat-005` (RF02, login/PASETO) e `feat-007` (pipeline de CI) estão liberadas — `feat-006`
-   (vínculo Telegram) depende de `feat-005`.
+1. `feat-007` (pipeline de CI) é a única feature liberada restante neste serviço — todo o resto
+   do backlog atual (`feat-001..006`) está `done`.
 
 ## Bloqueios / Riscos
 
@@ -108,6 +123,23 @@
   `TenantAlreadyProvisionedException`. Aceito como desproporcional para uma rota admin de uso
   raro/manual (um operador só) — não implementar lock/compensação sem evidência real de
   concorrência.
+- **Achado crítico, corrigido em `feat-006` (Persistence Auditor)**: `ApplicationRunner`/
+  `CommandLineRunner` **não é seguro** para trabalho que precisa terminar antes do servidor
+  aceitar tráfego — `SpringApplication.run()` já inicia o servidor embutido (`SmartLifecycle`,
+  dentro de `refreshContext()`) **antes** de chamar os runners (`callRunners()`, depois do
+  `refreshContext()` retornar). `PublicSchemaMigrationRunner` usava `ApplicationRunner` para
+  migrar o schema `public` no boot — corrigido para `InitializingBean.afterPropertiesSet()`
+  (roda durante `finishBeanFactoryInitialization()`, garantidamente antes do servidor subir,
+  mesmo mecanismo do `FlywayMigrationInitializer` oficial do Spring Boot). Ver
+  `docs/CONVENTIONS.md` seção "Migrations" — `bets-service`/`stats-service`/`api-gateway`
+  reaproveitam o padrão se precisarem de algo equivalente a "rodar antes de servir tráfego".
+- **Risco residual aceito em `feat-006`**: `JpaTelegramLinkRepository.upsert()` e o pré-check de
+  `TelegramLinkConfirmationTransaction` são *find-then-save*, não atômicos — duas confirmações
+  concorrentes para o mesmo `telegramUserId` podem gerar um `500` bruto em vez de um `409` limpo
+  no perdedor da corrida (a transação inteira ainda reverte de forma consistente, sem corrupção
+  de dado). Aceito como desproporcional para um endpoint interno de baixo volume, antes de
+  `api-gateway` existir — mesma categoria do TOCTOU já aceito em `feat-003`. Sem job de limpeza
+  para `PENDING_TELEGRAM_LINK` expirado e nunca confirmado — aceito, volume esperado é pequeno.
 
 ## Decisões tomadas
 
@@ -141,18 +173,34 @@
   out/PasswordHasher,out/TemporaryPasswordGenerator}` (novos), `messages.properties` (novo, base
   sem locale), `pom.xml` (`spring-security-crypto`, `sourceEncoding`) — ver commits em
   `feature/SV-31` (mergeada em `develop`, `441355a`).
+- `feat-006`: `domain/model/{TelegramLink,PendingTelegramLink,GeneratedTelegramLinkCode,
+  CallerNotFoundException,TelegramLinkCodeNotFoundException,TelegramLinkCodeExpiredException,
+  TelegramAccountAlreadyLinkedException,TelegramAccountNotFoundException}` (novos),
+  `domain/port/{in/*TelegramLink*UseCase,in/LookupTelegramAccountUseCase,
+  out/TelegramLinkRepository,out/PendingTelegramLinkRepository,out/TelegramLinkCodeGenerator}`
+  (novos), `adapter/out/persistence/{TelegramLinkJpaEntity,PendingTelegramLinkJpaEntity,
+  Jpa*Repository}` (novos, `@Table(schema = "public")`), `adapter/out/security/
+  SecureRandomTelegramLinkCodeGenerator` (novo), `application/{GenerateTelegramLinkCodeService,
+  ConfirmTelegramLinkService,TelegramLinkConfirmationTransaction,LookupTelegramAccountService}`
+  (novos), `adapter/in/web/{TelegramLinksController,TelegramAccountsController,*Request,
+  *Response}` (novos), `config/PublicSchemaMigrationRunner` (novo), `db/migration-public/`
+  (novo) — ver commits em `feature/SV-50` (mergeada em `develop`, `a6f92fd`).
 
 ## Evidência de conclusão
 
-- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004`/`feat-005` em `feature_list.json`
-  (objeto estruturado com 4 seções: verificação real executada, divergência do plano original,
-  defeitos encontrados antes de causar dano, skills e ferramentas).
+- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004`/`feat-005`/`feat-006` em
+  `feature_list.json` (objeto estruturado com 4 seções: verificação real executada, divergência
+  do plano original, defeitos encontrados antes de causar dano, skills e ferramentas).
 
 ## Notas para a próxima sessão
 
-- `feat-006` (RF05 suporte, vínculo de conta Telegram) é a próxima liberada — depende de
-  `feat-005` (PASETO), já entregue. `feat-007` (pipeline de CI) também está liberada,
-  independente de `feat-006`.
+- `feat-007` (pipeline de CI) é a única feature liberada restante deste serviço.
+- Padrão novo de `feat-006`, reaproveitável por `bets-service`/`stats-service` se algum dia
+  precisarem de uma tabela global fora do schema-per-tenant: entidade JPA com `@Table(schema =
+  "public")` explícito (convive com a multi-tenancy do Hibernate sem precisar de um segundo
+  mecanismo de acesso a dados) + migration eager separada via `InitializingBean` (nunca
+  `ApplicationRunner`/`CommandLineRunner` — rodam depois do servidor já aceitar tráfego). Ver
+  `docs/CONVENTIONS.md` seção "Migrations".
 - `feat-005` emite o token mas não valida — a validação real (que injeta `X-User-Id`/
   `X-Tenant-Id` a partir do PASETO) é exclusiva de `services/api-gateway` (`epic-008`, ainda
   `not-started`). A mesma `PASETO_LOCAL_KEY` gerada aqui precisa ser configurada lá quando esse
