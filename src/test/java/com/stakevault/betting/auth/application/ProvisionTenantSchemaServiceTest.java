@@ -30,14 +30,14 @@ class ProvisionTenantSchemaServiceTest {
 	}
 
 	@Test
-	void ensureSchemaExists_delegaCriacaoEMigracaoAoGateway() {
+	void shouldDelegateCreationAndMigrationToGateway() {
 		service.ensureSchemaExists("acme");
 
 		verify(gateway).createAndMigrate(new TenantSchemaName("tenant_acme"));
 	}
 
 	@Test
-	void migrateIfPending_migraQuandoSchemaExiste() {
+	void shouldMigrateWhenSchemaExists() {
 		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true);
 
 		service.migrateIfPending("acme");
@@ -46,7 +46,7 @@ class ProvisionTenantSchemaServiceTest {
 	}
 
 	@Test
-	void migrateIfPending_lancaExceptionSemMigrarQuandoSchemaNaoExiste() {
+	void shouldThrowWithoutMigratingWhenSchemaDoesNotExist() {
 		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(false);
 
 		assertThatThrownBy(() -> service.migrateIfPending("acme"))
@@ -56,7 +56,7 @@ class ProvisionTenantSchemaServiceTest {
 	}
 
 	@Test
-	void migrateIfPending_confereExistenciaEmTodaChamadaMesmoRepetida() {
+	void shouldCheckExistenceOnEveryCallEvenWhenRepeated() {
 		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true, false);
 		service.migrateIfPending("acme");
 
