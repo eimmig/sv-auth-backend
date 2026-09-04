@@ -58,18 +58,23 @@ jobs:
         if: hashFiles('pom.xml') != ''
         run: mvn -B verify
 
-      # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md
+      # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md. qualitygate.wait pulado em
+      # push p/ develop (API recusa computar gate pra branch != main, mesma causa raiz do passo 6)
       - name: SonarCloud
         if: hashFiles('pom.xml') != '' && steps.story-gate.outputs.applies == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
-          -Dsonar.projectKey=eimmig_sv-auth-backend
-          -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-          -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.qualitygate.wait=true
+        run: |
+          WAIT_FLAG="-Dsonar.qualitygate.wait=true"
+          if [ "${{ github.event_name == 'push' && github.ref_name == 'develop' }}" = "true" ]; then
+            WAIT_FLAG=""
+          fi
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
+            -Dsonar.projectKey=eimmig_sv-auth-backend \
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} \
+            -Dsonar.host.url=https://sonarcloud.io \
+            $WAIT_FLAG
 
       # 6. Gate de issue/hotspot do SonarCloud - pulado em push p/ develop (API bloqueia branch != main)
       - name: Validar zero issues no SonarCloud
