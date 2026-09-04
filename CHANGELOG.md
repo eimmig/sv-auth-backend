@@ -48,3 +48,10 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-47](https://stakevault.atlassian.net/browse/SV-47) - PasswordHasher.matches() + InvalidCredentialsException + LoginUseCase/LoginService
 - [SV-48](https://stakevault.atlassian.net/browse/SV-48) - AuthController (POST /api/v1/auth/login) + testes de integracao + docs
 - [SV-49](https://stakevault.atlassian.net/browse/SV-49) - CHANGELOG e verificacao final
+- [SV-50](https://stakevault.atlassian.net/browse/SV-50) - RF05 (suporte) - Vinculo de conta Telegram
+- [SV-51](https://stakevault.atlassian.net/browse/SV-51) - Migration eager do schema public + runner no boot
+- [SV-52](https://stakevault.atlassian.net/browse/SV-52) - Dominio: TelegramLink, PendingTelegramLink, excecoes, TenantSchemaName.slug(), gerador de codigo
+- [SV-53](https://stakevault.atlassian.net/browse/SV-53) - Persistencia JPA das tabelas public (TelegramLink, PendingTelegramLink)
+- [SV-54](https://stakevault.atlassian.net/browse/SV-54) - Application services: gerar codigo, confirmar vinculo, lookup
+- [SV-55](https://stakevault.atlassian.net/browse/SV-55) - Web adapter: 3 endpoints + DTOs + i18n
+- [SV-56](https://stakevault.atlassian.net/browse/SV-56) - CHANGELOG e verificacao final
