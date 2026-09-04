@@ -14,6 +14,16 @@ public class InvalidTenantSlugException extends RuntimeException implements Loca
 		return "error.invalid-tenant-slug";
 	}
 
+	@Override
+	public int httpStatusCode() {
+		return 422;
+	}
+
+	@Override
+	public Object[] messageArgs() {
+		return new Object[] { slug == null ? "" : slug };
+	}
+
 	public String slug() {
 		return slug;
 	}

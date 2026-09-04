@@ -10,4 +10,12 @@ class InvalidAdminApiKeyExceptionTest {
 	void shouldExposeMessageKey() {
 		assertThat(new InvalidAdminApiKeyException().messageKey()).isEqualTo("error.invalid-admin-api-key");
 	}
+
+	@Test
+	void shouldMapToUnauthorizedStatusWithNoMessageArgs() {
+		var exception = new InvalidAdminApiKeyException();
+
+		assertThat(exception.httpStatusCode()).isEqualTo(401);
+		assertThat(exception.messageArgs()).isEmpty();
+	}
 }

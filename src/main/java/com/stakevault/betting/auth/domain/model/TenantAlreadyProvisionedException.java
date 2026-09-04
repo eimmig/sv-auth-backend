@@ -14,6 +14,16 @@ public class TenantAlreadyProvisionedException extends RuntimeException implemen
 		return "error.tenant-already-provisioned";
 	}
 
+	@Override
+	public int httpStatusCode() {
+		return 409;
+	}
+
+	@Override
+	public Object[] messageArgs() {
+		return new Object[] { slug };
+	}
+
 	public String slug() {
 		return slug;
 	}
