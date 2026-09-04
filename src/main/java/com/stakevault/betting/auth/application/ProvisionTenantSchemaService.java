@@ -17,6 +17,11 @@ public class ProvisionTenantSchemaService implements ProvisionTenantSchemaUseCas
 	}
 
 	@Override
+	public boolean exists(String tenantSlug) {
+		return gateway.exists(TenantSchemaName.fromSlug(tenantSlug));
+	}
+
+	@Override
 	public void ensureSchemaExists(String tenantSlug) {
 		gateway.createAndMigrate(TenantSchemaName.fromSlug(tenantSlug));
 	}
