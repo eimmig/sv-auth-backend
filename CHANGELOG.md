@@ -42,3 +42,9 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-41](https://stakevault.atlassian.net/browse/SV-41) - CreateUserUseCase / CreateUserService
 - [SV-42](https://stakevault.atlassian.net/browse/SV-42) - UsersController (POST /api/v1/users) + testes de integracao
 - [SV-43](https://stakevault.atlassian.net/browse/SV-43) - CHANGELOG e verificacao final
+- [SV-44](https://stakevault.atlassian.net/browse/SV-44) - RF02 - Autenticacao com token PASETO
+- [SV-45](https://stakevault.atlassian.net/browse/SV-45) - Dependencia PASETO + config da chave simetrica
+- [SV-46](https://stakevault.atlassian.net/browse/SV-46) - AccessTokenIssuer (emissao de token PASETO)
+- [SV-47](https://stakevault.atlassian.net/browse/SV-47) - PasswordHasher.matches() + InvalidCredentialsException + LoginUseCase/LoginService
+- [SV-48](https://stakevault.atlassian.net/browse/SV-48) - AuthController (POST /api/v1/auth/login) + testes de integracao + docs
+- [SV-49](https://stakevault.atlassian.net/browse/SV-49) - CHANGELOG e verificacao final
