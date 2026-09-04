@@ -71,14 +71,25 @@
       só provado por mock, teste HTTP ponta a ponta adicionado. Evidência completa em
       `feature_list.json`.
 
+- [x] **`feat-007` (Pipeline de CI - GitHub Actions + SonarCloud) — `done` em 2026-09-04.**
+      Feature de fechamento formal, sem código/workflow novo: o pipeline já existia e já rodava
+      de verdade em produção desde `epic-009` (setup) e `feat-001..006` (endurecimento
+      incremental — guardas por marcador, `sonar.qualitygate.wait`, gate de zero issue/hotspot,
+      branch protection). Único achado real: a `description` da própria feature ainda dizia "5
+      passos" e citava o atalho `mvn sonar:sonar` — desatualizada desde que `feat-002.8`/SV-30
+      adicionou o 6º passo (gate de zero issue). Corrigida para bater com `ci.yml` real. 2
+      subtasks (SV-58/59). **Última feature do backlog atual de `auth-service` — fecha
+      `epic-002` na raiz.** Evidência completa em `feature_list.json`.
+
 ### Em andamento
 
 - Nenhuma feature iniciada.
 
 ### Próximos passos (Next Steps)
 
-1. `feat-007` (pipeline de CI) é a única feature liberada restante neste serviço — todo o resto
-   do backlog atual (`feat-001..006`) está `done`.
+1. Backlog atual (`feat-001..007`) 100% `done`. Nenhuma feature liberada neste serviço até que a
+   raiz abra um novo epic para `auth-service` (não há previsão no `feature_list.json` da raiz
+   hoje — os epics restantes são de outros serviços).
 
 ## Bloqueios / Riscos
 
