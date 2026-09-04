@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stakevault.betting.auth.domain.model.AdminRoleRequiredException;
 import com.stakevault.betting.auth.domain.model.EmailAlreadyRegisteredException;
+import com.stakevault.betting.auth.domain.model.InvalidCredentialsException;
 import com.stakevault.betting.auth.domain.model.InvalidTenantSlugException;
 import com.stakevault.betting.auth.domain.model.LocalizedDomainException;
 import com.stakevault.betting.auth.domain.model.MissingCallerContextException;
@@ -34,7 +35,8 @@ public class DomainExceptionHandler {
 	// InvalidAdminApiKeyException fires from AdminApiKeyFilter, before DispatcherServlet - not listed here on purpose.
 	@ExceptionHandler({ TenantAlreadyProvisionedException.class, InvalidTenantSlugException.class,
 			MissingCallerContextException.class, MissingTenantContextException.class,
-			AdminRoleRequiredException.class, EmailAlreadyRegisteredException.class })
+			AdminRoleRequiredException.class, EmailAlreadyRegisteredException.class,
+			InvalidCredentialsException.class })
 	public ProblemDetail handle(LocalizedDomainException exception, Locale locale, HttpServletRequest request) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
 				HttpStatus.valueOf(exception.httpStatusCode()),
