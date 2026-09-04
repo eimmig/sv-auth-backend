@@ -903,7 +903,7 @@
     {
       "id": "feat-007",
       "name": "Pipeline de CI (GitHub Actions + SonarCloud)",
-      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 6 passos (corrigido de '5' nesta feature - passo 6 adicionado em feat-002.8/SV-30, description desatualizada ate aqui): validacao de CHANGELOG.md atualizado (so PR story->develop/main), validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn -DskipTests package), testes unitarios + cobertura (mvn verify), qualidade/cobertura no SonarCloud (mvn sonar:sonar, projectKey eimmig_sv-auth-backend, sonar.qualitygate.wait=true condicional - pulado em push direto p/ develop), gate de zero issue/hotspot do SonarCloud (validate-sonar-issues.py). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. Setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) e branch protection real feitos em epic-009/feat-002.8 - ver docs/CI-CD.md secao 'Setup pendente'.",
+      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 6 passos (corrigido de '5' nesta feature - passo 6 adicionado em feat-002.8/SV-30, description desatualizada ate aqui): validacao de CHANGELOG.md atualizado (so PR story->develop/main), validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn -DskipTests package), testes unitarios + cobertura (mvn verify), qualidade/cobertura no SonarCloud (mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar - coordenadas completas, nao o atalho mvn sonar:sonar que nunca resolve sem pluginGroups/pom, ver docs/CI-CD.md 'Terceira armadilha' -, projectKey eimmig_sv-auth-backend, sonar.qualitygate.wait=true condicional - pulado em push direto p/ develop), gate de zero issue/hotspot do SonarCloud (validate-sonar-issues.py). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. Setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) e branch protection real feitos em epic-009/feat-002.8 - ver docs/CI-CD.md secao 'Setup pendente'.",
       "dependencies": [
         "feat-001"
       ],
@@ -928,7 +928,7 @@
         {
           "id": "feat-007.2",
           "name": "CHANGELOG e verificacao final",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-59",
           "detail": "Fecha a feature e o epic-002 da raiz (ultima feature liberada deste servico) - sem codigo/teste/persistencia tocados, so Delivery Reviewer sobre o diff (feature_list.json/CHANGELOG.md).",
           "checklist": [
@@ -941,7 +941,38 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-57, story SV-57 com 2 subtasks SV-58/SV-59, PR de subtask #39 mergeado). Feature de fechamento formal, sem codigo/workflow novo - o pipeline de CI (GitHub Actions + SonarCloud) deste servico ja existia e ja rodava de verdade em producao desde epic-009 (setup) e feat-001..006 (endurecimento incremental: guardas por arquivo-marcador, sonar.qualitygate.wait, gate de zero issue/hotspot, branch protection real). Ultima feature liberada do backlog de auth-service - fecha epic-002 na raiz.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "./init.sh (mvn verify) verde com Docker ativo - 162 testes, 0 falhas (nenhum teste novo, feature nao toca codigo de aplicacao).",
+              "CI verde na PR de subtask (#39, subtask/SV-58 -> feature/SV-57), confirmado com gh pr checks."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Nenhuma - o Plan Reviewer ja constatou que nao havia mais nenhuma peca de CI faltando (setup do GitHub/SonarCloud/branch protection provados em producao pelas 6 features anteriores); o unico trabalho real era corrigir a description desatualizada da propria feature."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes de qualquer mudanca): REVISE, 1 MAJOR corrigido no plano - description desta feature dizia '5 passos' de CI, ci.yml/docs/CI-CD.md real ja tem 6 desde feat-002.8/SV-30 (gate de zero issue/hotspot). Detalhe completo no campo plan_review.",
+              "Delivery Reviewer (feat-007.2): achado real na propria correcao de feat-007.1 - a description reescrita ainda citava o atalho 'mvn sonar:sonar', exatamente o formato que docs/CI-CD.md documenta como armadilha corrigida ('No plugin found for prefix sonar' - so resolve com coordenadas completas do plugin). Corrigido para as coordenadas completas (org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar), batendo com o ci.yml real deste repositorio."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer (1 MAJOR corrigido) e Delivery Reviewer (1 achado real corrigido, diff puramente documental) rodados antes de done - Test Suite Auditor e Persistence Auditor nao se aplicam (zero codigo/teste/persistencia tocado nesta feature), documentado no plan_review em vez de rodados sem proposito.",
+              "tools/jira_story.py usado normalmente (criacao da story + 2 subtasks, --sync-status a cada transicao real)."
+            ]
+          }
+        ]
+      }
     }
   ]
 }
