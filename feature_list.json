@@ -223,7 +223,7 @@
         {
           "id": "feat-002.1",
           "name": "Lombok e reorganizacao de TenantContextHolder",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-23",
           "detail": "Preparacao antes do restante da feature: Lombok so e permitido em adapter/out/persistence/ (docs/CONVENTIONS.md), e o Plan Reviewer apontou que TenantContextHolder precisa sair de adapter/in/web/ antes do wiring de multi-tenancy (feat-002.5) para nao criar acoplamento adapter-a-adapter de tras para frente.",
           "checklist": [
@@ -236,7 +236,7 @@
         {
           "id": "feat-002.2",
           "name": "Migration Flyway: tabelas users e telegram_accounts",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-24",
           "detail": "Primeira migration real do servico (db/migration estava vazio desde feat-001). Nomes fisicos users/telegram_accounts (nao user/telegram_account - USER e palavra reservada no Postgres), divergencia do nome logico do ERD documentada no mesmo commit por pedido do Plan Reviewer.",
           "checklist": [
@@ -250,7 +250,7 @@
         {
           "id": "feat-002.3",
           "name": "Modelo de dominio e ports/out",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-25",
           "detail": "domain/ puro (sem import de framework) - Role, User, TelegramAccount como record (imutaveis, ver docs/CONVENTIONS.md). Ports/out sao o contrato de persistencia que a propria suite de testes desta feature consome (nao ha caso de uso/endpoint ainda - reservado para feat-003/004).",
           "checklist": [
