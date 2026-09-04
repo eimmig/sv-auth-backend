@@ -21,7 +21,9 @@
       migration real (`users`/`telegram_accounts`), primeiro mapeamento JPA do serviço, e
       multi-tenancy do Hibernate por schema (`CurrentTenantIdentifierResolver` +
       `MultiTenantConnectionProvider`, chaves confirmadas via `javap` contra o jar instalado).
-      7 subtasks (SV-23..SV-29). Evidência completa em `feature_list.json`.
+      8 subtasks (SV-23..SV-30 — a última, reabertura pós-merge para corrigir 27 apontamentos
+      reais do SonarCloud ignorados na PR original e travar o gate de verdade, ver "Bloqueios /
+      Riscos"). Evidência completa em `feature_list.json`.
 
 ### Em andamento
 
@@ -37,6 +39,16 @@
 ## Bloqueios / Riscos
 
 - Nenhum bloqueio real.
+- **Achado real, corrigido em `feat-002.8`/SV-30**: a PR `feature/SV-22` → `develop` mergeou com
+  27 issues do SonarCloud abertas (1 CRITICAL, 8 MAJOR, 18 MINOR) nunca revisadas — o gate padrão
+  do SonarCloud (plano gratuito, sem gate customizável) só mede rating/cobertura/duplicação, não
+  quantidade de issue nova, e o goal Maven não tinha `-Dsonar.qualitygate.wait=true` (o passo do
+  CI "passava" sem nem esperar o resultado do gate). Corrigido: os 27 apontamentos reais + script
+  novo (`validate-sonar-issues.py`, consulta `/issues/search` e `/hotspots/search` direto,
+  paginado) + branch protection real no GitHub (`required_status_checks`, sem isso nenhum check
+  do `ci.yml` bloqueava o botão de merge). Ver `docs/CI-CD.md` seção "SonarCloud: o Quality Gate
+  padrão não bloqueia por issue nova" — `bets-service`/`stats-service` (mesma stack Java) só
+  precisam replicar os arquivos, não redescobrir o problema.
 - `UserRepository.save()`/`TelegramAccountRepository.save()` são **só de criação** (padrão
   `Persistable<UUID>`) — nenhuma feature do backlog atual precisa atualizar uma linha já
   existente, mas se isso mudar (ex.: zerar `mustChangePassword` após troca de senha), o
