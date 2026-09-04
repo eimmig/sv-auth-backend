@@ -491,7 +491,48 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-31, story SV-31 com 7 subtasks SV-32..SV-38, 7 PRs mergeados um por subtask, todos com CI verde). Primeira feature do servico a expor um endpoint HTTP real de negocio e a primeira a exercitar de verdade o mecanismo de i18n (@RestControllerAdvice + MessageSource) documentado desde feat-001 mas nunca implementado.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 87 testes, 0 falhas.",
+              "CI verde em todos os 7 PRs de subtask (subtask/SV-32..SV-38 -> feature/SV-31), confirmado com gh pr checks a cada push.",
+              "./init.sh verde ao final da feature.",
+              "Delivery Reviewer (PASS), Test Suite Auditor (PASS) e Persistence Auditor (PASS) rodados contra a entrega completa antes de done - nenhum achado bloqueante remanescente, so riscos residuais aceitos e documentados (ver abaixo)."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "TenantAlreadySlugException (nome do plan_review) implementada como TenantAlreadyProvisionedException - nome mais claro, mesmo papel.",
+              "InvalidAdminApiKeyException criada como classe LocalizedDomainException completa (nao so uma chave solta) para manter o mesmo padrao das outras duas exceptions, mesmo rodando fora do @RestControllerAdvice (AdminApiKeyFilter roda antes do DispatcherServlet).",
+              "LocalizedDomainException ganhou httpStatusCode() e messageArgs() (nao previsto no plan_review original) - permite um unico @ExceptionHandler generico em vez de um handler por excecao, e elimina duplicacao de resolucao de mensagem entre o filtro e o advice (extraido para ProblemDetailMessages, achado do /code-review).",
+              "InvalidTenantSlugException reclassificada de 400 para 422 a meio da implementacao - achado do /code-review contra docs/API-CONTRACTS.md ('violacoes de regra de negocio de dominio usam status 422', e TenantSchemaName.fromSlug e validacao de dominio, nao Bean Validation)."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 2 BLOCKER + 2 MAJOR + 3 MINOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "/code-review (antes de cada uma das 7 PRs de subtask, 5+ rodadas com multiplos agentes paralelos na subtask final feat-003.6): achados reais corrigidos incluem (a) BCryptPasswordHasher sem guarda de 72 bytes (limite hard do BCrypt, gerava IllegalArgumentException cru); (b) alfabeto do gerador de senha ainda deixava 'o' minusculo confundivel com '0'; (c) AdminApiKeyFilter.shouldNotFilter comparava contra request.getRequestURI() cru (nao decodificado) - bypass real de seguranca via path percent-encoded (/api/v1/adm%69n/tenants) que o Spring MVC decodificava e roteava mas o filtro nao reconhecia, corrigido com UriUtils.decode(); (d) TOCTOU entre exists() e o insert do admin mitigado com catch de DataIntegrityViolationException -> TenantAlreadyProvisionedException; (e) DomainExceptionHandler nunca chamava setInstance() no ProblemDetail, inconsistente com o corpo manual do filtro; (f) slug ausente do payload vazava o literal 'null' na mensagem de erro (MessageFormat renderizando null); (g) AdminApiKeyFilter duplicava (e chegou a divergir de) a resolucao de type/status que o advice ja fazia - unificado via ProblemDetailMessages compartilhado, filtro passou a usar exception.httpStatusCode()/typeSlug() em vez de literais.",
+              "Achado critico de infraestrutura, nao coberto por nenhuma skill de revisao (descoberto rodando o primeiro teste de integracao real do endpoint): MessageSourceAutoConfiguration do Spring Boot nunca ativava neste servico - a condicao de ativacao (confirmada via javap contra spring-boot-autoconfigure-4.1.1 real) exige um src/main/resources/messages.properties SEM sufixo de locale (classpath*:messages.properties), que nunca existiu (so messages_pt_BR/en_US/es.properties). Sem a autoconfiguracao, MessageSource nunca virava bean real - todo getMessage() da aplicacao recebia o DelegatingMessageSource interno do Spring e lancava NoSuchMessageException, silenciosamente, desde feat-001.5. Ficou sem deteccao ate agora porque MessagesTest (feat-001.5) e AdminApiKeyFilterTest (feat-003.5) sempre construiam seu proprio ResourceBundleMessageSource manualmente em vez de injetar o bean real - so o primeiro teste de integracao ponta a ponta de verdade (@SpringBootTest + RANDOM_PORT chamando o endpoint) expos o problema. Corrigido criando o arquivo base; documentado em docs/CONVENTIONS.md para os outros 3 servicos Java.",
+              "Segundo bug de encoding, relacionado mas distinto: MockHttpServletResponse (e HttpServletResponse real) assume ISO-8859-1 sem charset explicito no content-type, corrompendo texto UTF-8 com acento escrito pelo ObjectMapper - so apareceu ao testar a primeira mensagem de erro acentuada (es/pt-BR) de verdade. Corrigido com response.setCharacterEncoding('UTF-8') explicito no filtro.",
+              "Terceiro bug de encoding, so reproduzido no CI (Linux), nao localmente (Windows): ResourceBundleMessageSource construido manualmente em teste usa o cache estatico por JVM do ResourceBundle.getBundle(...), que nao leva o Control/encoding em conta na chave - se uma classe SEM setDefaultEncoding('UTF-8') roda primeiro na mesma JVM (Surefire reusa uma fork para todas as classes por padrao), ela popula o cache com a versao mal-decodificada e a classe seguinte (mesmo com o ajuste correto) reaproveita o cache errado. A ordem de execucao de classes difere entre Windows e Linux - passou local, falhou no CI. Corrigido aplicando setDefaultEncoding('UTF-8') em toda instancia manual do padrao (inclusive retroativamente em MessagesTest, feat-001.5) - confirmado order-independent forcando -Dsurefire.runOrder=alphabetical e reversealphabetical localmente."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer (REVISE, 2 BLOCKER + 2 MAJOR + 3 MINOR corrigidos antes do codigo), Delivery Reviewer (PASS), Test Suite Auditor (PASS, 1 achado P2 nao-bloqueante sobre ausencia de teste de concorrencia - risco residual aceito) e Persistence Auditor (PASS, confirmou que a ausencia de @Transactional no CreateTenantService e correta, nao uma lacuna) rodados.",
+              "/code-review rodado antes de cada uma das 7 PRs de subtask - achados reais corrigidos em quase todas as rodadas, a ultima (feat-003.6) com multiplos agentes paralelos (reuso/simplificacao, seguranca/conformidade com CLAUDE.md, rastreamento cross-file, diff linha-a-linha, auditoria de comportamento removido, eficiencia/altitude) dado o tamanho da subtask.",
+              "javap usado diretamente contra o jar real spring-boot-autoconfigure-4.1.1 para confirmar a condicao exata de ativacao do MessageSourceAutoConfiguration, em vez de assumir de memoria - mesma disciplina ja estabelecida em feat-002 para a API de multi-tenancy do Hibernate.",
+              "Jira sincronizado a cada transicao real de status (in-progress/done por subtask, com o disparo de fechamento da feature em edicao separada da ultima subtask, seguindo a correcao de processo registrada em CLAUDE.md apos o erro de feat-002)."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-004",
