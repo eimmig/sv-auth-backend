@@ -34,10 +34,11 @@ class PasetoAccessTokenIssuerTest {
 		SecretKey key = new SecretKey(HexFormat.of().parseHex(KEY_HEX), Version.V4);
 		String claimsJson = Paseto.decrypt(key, token, "");
 
-		assertThat(claimsJson).contains("\"userId\":\"" + userId + "\"");
-		assertThat(claimsJson).contains("\"tenantId\":\"acme\"");
-		assertThat(claimsJson).contains("\"iat\":");
-		assertThat(claimsJson).contains("\"exp\":");
+		assertThat(claimsJson)
+				.contains("\"userId\":\"" + userId + "\"")
+				.contains("\"tenantId\":\"acme\"")
+				.contains("\"iat\":")
+				.contains("\"exp\":");
 	}
 
 	@Test

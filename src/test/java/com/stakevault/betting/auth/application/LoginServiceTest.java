@@ -76,8 +76,9 @@ class LoginServiceTest {
 	void shouldRejectWhenTenantDoesNotExistAndPasswordIsTooLongForBCrypt() {
 		when(provisionTenantSchema.exists("acme")).thenReturn(false);
 		when(passwordHasher.hash(any())).thenThrow(new IllegalArgumentException("password exceeds 72 bytes"));
+		String tooLongPassword = "a".repeat(100);
 
-		assertThatThrownBy(() -> service.login("acme", "ana@acme", "a".repeat(100)))
+		assertThatThrownBy(() -> service.login("acme", "ana@acme", tooLongPassword))
 				.isInstanceOf(InvalidCredentialsException.class);
 	}
 
