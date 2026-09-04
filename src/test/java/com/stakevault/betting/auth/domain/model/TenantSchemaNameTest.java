@@ -51,4 +51,9 @@ class TenantSchemaNameTest {
 	void shouldRejectNullValue() {
 		assertThatThrownBy(() -> new TenantSchemaName(null)).isInstanceOf(IllegalArgumentException.class);
 	}
+
+	@Test
+	void shouldDeriveSlugBackFromSchemaName() {
+		assertThat(TenantSchemaName.fromSlug("acme-corp").slug()).isEqualTo("acme-corp");
+	}
 }

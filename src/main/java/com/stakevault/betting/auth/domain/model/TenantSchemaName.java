@@ -18,4 +18,8 @@ public record TenantSchemaName(String value) {
 		}
 		return new TenantSchemaName("tenant_" + slug);
 	}
+
+	public String slug() {
+		return value.substring("tenant_".length());
+	}
 }
