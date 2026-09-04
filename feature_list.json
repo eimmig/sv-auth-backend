@@ -575,7 +575,7 @@
         {
           "id": "feat-004.3",
           "name": "UsersController (POST /api/v1/users) + testes de integracao",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-42",
           "detail": "X-User-Id lido no controller (adapter), nao no use case - parse de UUID com catch mapeando pra MissingCallerContextException. Fecha o item pendente de docs (contrato exato) e o gap de docs/API-CONTRACTS.md sobre a convencao de status code pra header de identidade ausente vs contexto de negocio ausente.",
           "checklist": [
@@ -589,7 +589,7 @@
         {
           "id": "feat-004.4",
           "name": "CHANGELOG e verificacao final",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-43",
           "detail": "Fecha a feature com o gate real do harness.",
           "checklist": [
