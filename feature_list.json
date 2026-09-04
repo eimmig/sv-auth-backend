@@ -381,15 +381,158 @@
     {
       "id": "feat-003",
       "name": "Provisionamento de tenant (rota admin)",
-      "description": "Rota administrativa que cria um tenant novo: schema tenant_<slug> neste servico, roda as migrations nele, cria o primeiro usuario admin@<slug> (role=admin) com senha aleatoria e mustChangePassword=true. Restrita ao operador da plataforma via header X-Admin-Api-Key (segredo estatico, ver docs/API-CONTRACTS.md) - NAO e autocadastro publico. Orquestracao: 3 chamadas manuais separadas do operador (auth-service primeiro, depois bets-service, depois stats-service, mesma X-Admin-Api-Key) - este servico NAO chama os outros dois em codigo (decisao de 2026-08-02, ver docs/DECISIONS-LOG.md item 3). USER ganha coluna mustChangePassword (boolean) - backend bloqueia qualquer acao do admin recem-criado ate a senha ser trocada.",
+      "description": "Rota administrativa POST /api/v1/admin/tenants (payload {slug, tenantName?}, resposta 201 {userId, email, temporaryPassword}) que cria um tenant novo: schema tenant_<slug> neste servico, roda as migrations nele, cria o primeiro usuario admin@<slug> (role=admin) com senha aleatoria e mustChangePassword=true. Restrita ao operador da plataforma via header X-Admin-Api-Key (segredo estatico, ver docs/API-CONTRACTS.md) - NAO e autocadastro publico. Orquestracao: 3 chamadas manuais separadas do operador (auth-service primeiro, depois bets-service, depois stats-service, mesma X-Admin-Api-Key) - este servico NAO chama os outros dois em codigo (decisao de 2026-08-02, ver docs/DECISIONS-LOG.md item 3). USER ganha coluna mustChangePassword (boolean) - enforcement do bloqueio fica para feat-005 (nao ha consumidor/login ainda nesta feature).",
       "dependencies": [
         "feat-002"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 achados BLOCKER + 2 MAJOR + 3 MINOR, todos corrigidos no plano antes da implementacao (nenhum exigia decisao do usuario). (BLOCKER) plano original nao checava gateway.exists(schema) antes de ensureSchemaExists - createAndMigrate e idempotente (CREATE SCHEMA IF NOT EXISTS), entao slug duplicado reprovisionaria em silencio e a segunda insercao de admin@<slug> estouraria DataIntegrityViolationException crua (500) em vez do 409 que o proprio plano prometia testar; corrigido exigindo gateway.exists(schema) como primeiro passo do use case, TenantAlreadySlugException (409) antes de qualquer escrita. (BLOCKER) rota admin usa X-Admin-Api-Key, nao X-Tenant-Id - nenhum filtro existente abre TenantContextScope para essa requisicao (so TenantSchemaFilter abre, disparado por X-Tenant-Id), entao UserRepository.save() cairia no schema public em vez de tenant_<slug>; corrigido exigindo TenantContextScope.open(schema) explicito dentro do proprio use case, nao dependente do filtro HTTP existente. (MAJOR) plano ignorava o mecanismo de i18n ja documentado em docs/CONVENTIONS.md (exception carrega chave de mensagem, @RestControllerAdvice resolve via MessageSource) e nunca implementado de verdade (TenantSchemaFilter escreve texto pt-BR hardcoded, TenantSchemaNotFoundException carrega mensagem literal nao chave) - item pendente de docs/TESTING.md (pelo menos um teste de integracao do servico provando title/detail mudando por Accept-Language) continuava em aberto desde feat-001.5; corrigido exigindo @RestControllerAdvice real, exceptions novas com chave de mensagem, novas entradas nos 3 messages_*.properties, e pelo menos um teste trocando Accept-Language nos 3 locales sobre um erro real do endpoint novo. (MAJOR) mapear IllegalArgumentException genericamente no advice seria amplo demais (TenantSchemaName.fromSlug usa essa exception generica, capturaria bugs nao relacionados como 400 enganoso) - corrigido: CreateTenantService traduz para InvalidTenantSlugException dedicada antes de propagar, advice nunca mapeia IllegalArgumentException cru. (MINOR) contrato HTTP (rota/payload/resposta) nao estava fixado em nenhum documento do vault - aceito o proposto (POST /api/v1/admin/tenants, ver description desta feature) como decisao desta feature, exigindo documentacao em docs/services/auth-service.md e docs/API-CONTRACTS.md no mesmo commit da implementacao. (MINOR) camada de gerador/hash de senha deixada ambigua no plano original (application/ ou adapter/out) - corrigido para seguir o padrao ja estabelecido do servico (port/out + adapter/out, mesmo molde de TenantSchemaGateway): PasswordHasher/BCryptPasswordHasher, TemporaryPasswordGenerator/SecureRandomPasswordGenerator. (MINOR) versao do spring-security-crypto confirmada via BOM local (spring-boot-dependencies-4.1.1.pom gerencia spring-security.version=7.1.1, jar ja presente no .m2) - dependencia isolada sem starter completo, sem conflito com AdminApiKeyFilter dedicado. Residual aceito: AdminApiKeyFilter roda fora do DispatcherServlet (nao passa pelo @RestControllerAdvice), resolve locale diretamente via MessageSource/LocaleResolver injetados - mesma limitacao estrutural que TenantSchemaFilter ja tem, nao corrigida aqui (fora de escopo, nao e regressao introduzida por este plano). Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-31",
+      "subtasks": [
+        {
+          "id": "feat-003.1",
+          "name": "Config ADMIN_API_KEY",
+          "status": "done",
+          "jira": "SV-32",
+          "detail": "Variavel nova consumida pelo AdminApiKeyFilter (feat-003.5) - precisa existir antes do filtro para nao deixar o profile test sem valor fixo.",
+          "checklist": [
+            ".env.example (profile dev) ganha ADMIN_API_KEY=CHANGE_ME.",
+            "application.yml profile test ganha valor fixo consumido pelo Testcontainers/MockMvc.",
+            "docs/OBSERVABILITY-AND-CONFIG.md confirmado/atualizado com o nome exato da env var."
+          ],
+          "validation": "mvn compile passa; nenhuma outra subtask depende de env var ainda nao existente.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.2",
+          "name": "Exceptions de dominio com chave de mensagem + entradas i18n",
+          "status": "done",
+          "jira": "SV-33",
+          "detail": "Primeira implementacao real do padrao ja documentado em docs/CONVENTIONS.md (exception carrega chave, nao texto) - TenantSchemaNotFoundException (feat-001.3) nunca seguiu esse padrao, nao e reaberta aqui (fora de escopo).",
+          "checklist": [
+            "domain/model/TenantAlreadySlugException, InvalidTenantSlugException, InvalidAdminApiKeyException - cada uma com getMessageKey(), sem texto final embutido.",
+            "Novas chaves nos 3 messages_{pt_BR,en_US,es}.properties (validado por .github/scripts/validate-i18n-keys.py)."
+          ],
+          "validation": "mvn compile passa; validate-i18n-keys.py (rodado localmente) confirma as 3 chaves presentes nos 3 arquivos.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.3",
+          "name": "Ports/out + adapters de senha (hash e geracao)",
+          "status": "done",
+          "jira": "SV-34",
+          "detail": "Mesmo padrao ja estabelecido do servico (port/out + adapter/out, molde de TenantSchemaGateway) - achado do Plan Reviewer contra a ambiguidade do plano original.",
+          "checklist": [
+            "Dependencia spring-security-crypto no pom.xml (sem versao explicita - herdada do BOM spring-boot-dependencies, ja confirmado 7.1.1).",
+            "domain/port/out/PasswordHasher (hash(raw): String) e TemporaryPasswordGenerator (generate(): String).",
+            "adapter/out/security/BCryptPasswordHasher e SecureRandomPasswordGenerator (SecureRandom, alfabeto seguro)."
+          ],
+          "validation": "mvn verify verde com testes unitarios dos dois adapters.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.4",
+          "name": "CreateTenantUseCase / CreateTenantService",
+          "status": "done",
+          "jira": "SV-35",
+          "detail": "Ordem obrigatoria corrigida pelo Plan Reviewer (2 achados BLOCKER): checar existencia antes de escrever, e abrir TenantContextScope explicitamente antes de UserRepository.save().",
+          "checklist": [
+            "TenantSchemaName.fromSlug(slug) - IllegalArgumentException relancada como InvalidTenantSlugException.",
+            "gateway.exists(schema) - true lanca TenantAlreadySlugException ANTES de qualquer escrita.",
+            "ensureSchemaExists(slug) (reaproveita feat-001.3/002).",
+            "Gerar senha (TemporaryPasswordGenerator) + hash (PasswordHasher).",
+            "try (var _ = TenantContextScope.open(schema)) ao redor de UserRepository.save(new User(..., role=ADMIN, mustChangePassword=true)) - abertura explicita, nao depende do TenantSchemaFilter.",
+            "Retorna userId/email/senha em texto plano - nunca persistida nem logada em texto plano."
+          ],
+          "validation": "Teste unitario com fakes de PasswordHasher/TemporaryPasswordGenerator/UserRepository/TenantSchemaGateway cobre os 4 caminhos (sucesso, slug invalido, slug duplicado, e confirma TenantContextScope aberto durante o save).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.5",
+          "name": "AdminApiKeyFilter",
+          "status": "done",
+          "jira": "SV-36",
+          "detail": "Filtro de servlet (nao passa pelo @RestControllerAdvice de feat-003.6) - resolve locale diretamente, mesma limitacao estrutural que TenantSchemaFilter ja tem (nao corrigida aqui, fora de escopo).",
+          "checklist": [
+            "OncePerRequestFilter escopado a /api/v1/admin/**.",
+            "Le X-Admin-Api-Key, compara contra ADMIN_API_KEY via MessageDigest.isEqual (constant-time).",
+            "401 RFC7807 se ausente/incorreto, corpo localizado via MessageSource+LocaleResolver injetados (Accept-Language)."
+          ],
+          "validation": "Teste de integracao: sem header ou header errado -> 401, RFC7807, nenhuma escrita no banco (schema nao criado).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.6",
+          "name": "RestControllerAdvice + endpoint POST /api/v1/admin/tenants",
+          "status": "done",
+          "jira": "SV-37",
+          "detail": "Primeiro @RestControllerAdvice real do servico - mapeia so as exceptions de dominio nomeadas (nunca IllegalArgumentException cru, achado MAJOR do Plan Reviewer). Contrato HTTP documentado no mesmo commit (achado MINOR).",
+          "checklist": [
+            "adapter/in/web/AdminExceptionHandler (@RestControllerAdvice): TenantAlreadySlugException->409, InvalidTenantSlugException->400, ambos com title/detail via MessageSource.",
+            "POST /api/v1/admin/tenants: DTO entrada (slug @NotBlank, tenantName opcional), DTO saida (userId, email, temporaryPassword), 201.",
+            "docs/services/auth-service.md e docs/API-CONTRACTS.md ganham o contrato exato (rota, payload, resposta, status codes)."
+          ],
+          "validation": "Teste de integracao (Testcontainers): 201 fim-a-fim (schema criado, usuario criado no schema certo); slug duplicado 409; slug invalido 400.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.7",
+          "name": "Teste i18n (Accept-Language) + CHANGELOG + verificacao final",
+          "status": "done",
+          "jira": "SV-38",
+          "detail": "Fecha o item pendente de docs/TESTING.md desde feat-001.5 (pelo menos um teste de integracao do servico provando title/detail mudando por Accept-Language) - achado MAJOR do Plan Reviewer.",
+          "checklist": [
+            "Teste de integracao troca Accept-Language entre pt-BR/en-US/es sobre um erro real do endpoint (ex.: slug duplicado, 409) e confirma title/detail diferentes.",
+            "Entrada em CHANGELOG.md.",
+            "./init.sh (mvn verify) verde com Docker ativo.",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico e raiz, se fechar epic-002... nao fecha, feat-004..007 restam) atualizado com evidence.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-31, story SV-31 com 7 subtasks SV-32..SV-38, 7 PRs mergeados um por subtask, todos com CI verde). Primeira feature do servico a expor um endpoint HTTP real de negocio e a primeira a exercitar de verdade o mecanismo de i18n (@RestControllerAdvice + MessageSource) documentado desde feat-001 mas nunca implementado.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 87 testes, 0 falhas.",
+              "CI verde em todos os 7 PRs de subtask (subtask/SV-32..SV-38 -> feature/SV-31), confirmado com gh pr checks a cada push.",
+              "./init.sh verde ao final da feature.",
+              "Delivery Reviewer (PASS), Test Suite Auditor (PASS) e Persistence Auditor (PASS) rodados contra a entrega completa antes de done - nenhum achado bloqueante remanescente, so riscos residuais aceitos e documentados (ver abaixo)."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "TenantAlreadySlugException (nome do plan_review) implementada como TenantAlreadyProvisionedException - nome mais claro, mesmo papel.",
+              "InvalidAdminApiKeyException criada como classe LocalizedDomainException completa (nao so uma chave solta) para manter o mesmo padrao das outras duas exceptions, mesmo rodando fora do @RestControllerAdvice (AdminApiKeyFilter roda antes do DispatcherServlet).",
+              "LocalizedDomainException ganhou httpStatusCode() e messageArgs() (nao previsto no plan_review original) - permite um unico @ExceptionHandler generico em vez de um handler por excecao, e elimina duplicacao de resolucao de mensagem entre o filtro e o advice (extraido para ProblemDetailMessages, achado do /code-review).",
+              "InvalidTenantSlugException reclassificada de 400 para 422 a meio da implementacao - achado do /code-review contra docs/API-CONTRACTS.md ('violacoes de regra de negocio de dominio usam status 422', e TenantSchemaName.fromSlug e validacao de dominio, nao Bean Validation)."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 2 BLOCKER + 2 MAJOR + 3 MINOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "/code-review (antes de cada uma das 7 PRs de subtask, 5+ rodadas com multiplos agentes paralelos na subtask final feat-003.6): achados reais corrigidos incluem (a) BCryptPasswordHasher sem guarda de 72 bytes (limite hard do BCrypt, gerava IllegalArgumentException cru); (b) alfabeto do gerador de senha ainda deixava 'o' minusculo confundivel com '0'; (c) AdminApiKeyFilter.shouldNotFilter comparava contra request.getRequestURI() cru (nao decodificado) - bypass real de seguranca via path percent-encoded (/api/v1/adm%69n/tenants) que o Spring MVC decodificava e roteava mas o filtro nao reconhecia, corrigido com UriUtils.decode(); (d) TOCTOU entre exists() e o insert do admin mitigado com catch de DataIntegrityViolationException -> TenantAlreadyProvisionedException; (e) DomainExceptionHandler nunca chamava setInstance() no ProblemDetail, inconsistente com o corpo manual do filtro; (f) slug ausente do payload vazava o literal 'null' na mensagem de erro (MessageFormat renderizando null); (g) AdminApiKeyFilter duplicava (e chegou a divergir de) a resolucao de type/status que o advice ja fazia - unificado via ProblemDetailMessages compartilhado, filtro passou a usar exception.httpStatusCode()/typeSlug() em vez de literais.",
+              "Achado critico de infraestrutura, nao coberto por nenhuma skill de revisao (descoberto rodando o primeiro teste de integracao real do endpoint): MessageSourceAutoConfiguration do Spring Boot nunca ativava neste servico - a condicao de ativacao (confirmada via javap contra spring-boot-autoconfigure-4.1.1 real) exige um src/main/resources/messages.properties SEM sufixo de locale (classpath*:messages.properties), que nunca existiu (so messages_pt_BR/en_US/es.properties). Sem a autoconfiguracao, MessageSource nunca virava bean real - todo getMessage() da aplicacao recebia o DelegatingMessageSource interno do Spring e lancava NoSuchMessageException, silenciosamente, desde feat-001.5. Ficou sem deteccao ate agora porque MessagesTest (feat-001.5) e AdminApiKeyFilterTest (feat-003.5) sempre construiam seu proprio ResourceBundleMessageSource manualmente em vez de injetar o bean real - so o primeiro teste de integracao ponta a ponta de verdade (@SpringBootTest + RANDOM_PORT chamando o endpoint) expos o problema. Corrigido criando o arquivo base; documentado em docs/CONVENTIONS.md para os outros 3 servicos Java.",
+              "Segundo bug de encoding, relacionado mas distinto: MockHttpServletResponse (e HttpServletResponse real) assume ISO-8859-1 sem charset explicito no content-type, corrompendo texto UTF-8 com acento escrito pelo ObjectMapper - so apareceu ao testar a primeira mensagem de erro acentuada (es/pt-BR) de verdade. Corrigido com response.setCharacterEncoding('UTF-8') explicito no filtro.",
+              "Terceiro bug de encoding, so reproduzido no CI (Linux), nao localmente (Windows): ResourceBundleMessageSource construido manualmente em teste usa o cache estatico por JVM do ResourceBundle.getBundle(...), que nao leva o Control/encoding em conta na chave - se uma classe SEM setDefaultEncoding('UTF-8') roda primeiro na mesma JVM (Surefire reusa uma fork para todas as classes por padrao), ela popula o cache com a versao mal-decodificada e a classe seguinte (mesmo com o ajuste correto) reaproveita o cache errado. A ordem de execucao de classes difere entre Windows e Linux - passou local, falhou no CI. Corrigido aplicando setDefaultEncoding('UTF-8') em toda instancia manual do padrao (inclusive retroativamente em MessagesTest, feat-001.5) - confirmado order-independent forcando -Dsurefire.runOrder=alphabetical e reversealphabetical localmente."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer (REVISE, 2 BLOCKER + 2 MAJOR + 3 MINOR corrigidos antes do codigo), Delivery Reviewer (PASS), Test Suite Auditor (PASS, 1 achado P2 nao-bloqueante sobre ausencia de teste de concorrencia - risco residual aceito) e Persistence Auditor (PASS, confirmou que a ausencia de @Transactional no CreateTenantService e correta, nao uma lacuna) rodados.",
+              "/code-review rodado antes de cada uma das 7 PRs de subtask - achados reais corrigidos em quase todas as rodadas, a ultima (feat-003.6) com multiplos agentes paralelos (reuso/simplificacao, seguranca/conformidade com CLAUDE.md, rastreamento cross-file, diff linha-a-linha, auditoria de comportamento removido, eficiencia/altitude) dado o tamanho da subtask.",
+              "javap usado diretamente contra o jar real spring-boot-autoconfigure-4.1.1 para confirmar a condicao exata de ativacao do MessageSourceAutoConfiguration, em vez de assumir de memoria - mesma disciplina ja estabelecida em feat-002 para a API de multi-tenancy do Hibernate.",
+              "Jira sincronizado a cada transicao real de status (in-progress/done por subtask, com o disparo de fechamento da feature em edicao separada da ultima subtask, seguindo a correcao de processo registrada em CLAUDE.md apos o erro de feat-002)."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-004",
