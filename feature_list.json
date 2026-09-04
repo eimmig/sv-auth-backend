@@ -419,7 +419,7 @@
         {
           "id": "feat-003.3",
           "name": "Ports/out + adapters de senha (hash e geracao)",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-34",
           "detail": "Mesmo padrao ja estabelecido do servico (port/out + adapter/out, molde de TenantSchemaGateway) - achado do Plan Reviewer contra a ambiguidade do plano original.",
           "checklist": [
