@@ -60,7 +60,7 @@ public class CreateTenantService implements CreateTenantUseCase {
 		try (var _ = TenantContextScope.open(schema)) {
 			admin = userRepository.save(
 					new User(UUID.randomUUID(), adminName, email, passwordHash, Role.ADMIN, true, Instant.now()));
-		} catch (DataIntegrityViolationException concurrentProvisioning) {
+		} catch (DataIntegrityViolationException _) {
 			throw new TenantAlreadyProvisionedException(slug);
 		}
 

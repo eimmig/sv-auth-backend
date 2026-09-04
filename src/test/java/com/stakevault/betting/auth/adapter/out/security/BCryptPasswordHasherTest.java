@@ -14,8 +14,7 @@ class BCryptPasswordHasherTest {
 	void shouldHashToDifferentValueThanRawPassword() {
 		String hash = hasher.hash("correct-horse-battery-staple");
 
-		assertThat(hash).isNotEqualTo("correct-horse-battery-staple");
-		assertThat(hash).startsWith("$2");
+		assertThat(hash).isNotEqualTo("correct-horse-battery-staple").startsWith("$2");
 	}
 
 	@Test

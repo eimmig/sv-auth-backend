@@ -22,7 +22,7 @@ class AdminApiKeyFilterTest {
 	private final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
 	private final LocaleResolver localeResolver = mock(LocaleResolver.class);
 	private final AdminApiKeyFilter filter = new AdminApiKeyFilter(
-			"correct-key", messageSource, localeResolver, new ObjectMapper());
+			"correct-key", "/api/v1/admin/", messageSource, localeResolver, new ObjectMapper());
 
 	AdminApiKeyFilterTest() {
 		messageSource.setBasename("messages");

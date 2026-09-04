@@ -26,16 +26,18 @@ import jakarta.servlet.http.HttpServletResponse;
 public class AdminApiKeyFilter extends OncePerRequestFilter {
 
 	public static final String ADMIN_API_KEY_HEADER = "X-Admin-Api-Key";
-	private static final String ADMIN_PATH_PREFIX = "/api/v1/admin/";
 
 	private final String configuredApiKey;
+	private final String adminPathPrefix;
 	private final MessageSource messageSource;
 	private final LocaleResolver localeResolver;
 	private final ObjectMapper objectMapper;
 
-	public AdminApiKeyFilter(@Value("${admin.api-key}") String configuredApiKey, MessageSource messageSource,
+	public AdminApiKeyFilter(@Value("${admin.api-key}") String configuredApiKey,
+			@Value("${admin.path-prefix:/api/v1/admin/}") String adminPathPrefix, MessageSource messageSource,
 			LocaleResolver localeResolver, ObjectMapper objectMapper) {
 		this.configuredApiKey = configuredApiKey;
+		this.adminPathPrefix = adminPathPrefix;
 		this.messageSource = messageSource;
 		this.localeResolver = localeResolver;
 		this.objectMapper = objectMapper;
@@ -44,7 +46,7 @@ public class AdminApiKeyFilter extends OncePerRequestFilter {
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
 		String decodedPath = UriUtils.decode(request.getRequestURI(), StandardCharsets.UTF_8);
-		return !decodedPath.startsWith(ADMIN_PATH_PREFIX);
+		return !decodedPath.startsWith(adminPathPrefix);
 	}
 
 	@Override
