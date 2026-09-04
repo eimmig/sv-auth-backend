@@ -155,6 +155,22 @@ class TelegramLinkFlowIntegrationTest extends TenantSchemaIntegrationSupport {
 	}
 
 	@Test
+	void shouldReturn409WhenCallerAlreadyHasALinkedTelegramAccount() throws Exception {
+		User caller = seedUser(tenantSlug);
+		String firstCode = extractCode(generateCode(tenantSlug, caller.id().toString()).body());
+		String firstTelegramUserId = "tg-first-" + UUID.randomUUID();
+		assertThat(confirmLink(firstTelegramUserId, firstCode).statusCode()).isEqualTo(201);
+
+		String secondCode = extractCode(generateCode(tenantSlug, caller.id().toString()).body());
+		String secondTelegramUserId = "tg-second-" + UUID.randomUUID();
+		HttpResponse<String> response = confirmLink(secondTelegramUserId, secondCode);
+
+		assertThat(response.statusCode()).isEqualTo(409);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/telegram-account-already-linked\"");
+		assertThat(lookup(secondTelegramUserId).statusCode()).isEqualTo(404);
+	}
+
+	@Test
 	void shouldLocalizeExpiredCodeErrorPerAcceptLanguage() throws Exception {
 		User caller = seedUser(tenantSlug);
 		pendingTelegramLinkRepository.save(new PendingTelegramLink("EXPIRED2", tenantSlug, caller.id(),
