@@ -450,7 +450,7 @@
         {
           "id": "feat-003.5",
           "name": "AdminApiKeyFilter",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-36",
           "detail": "Filtro de servlet (nao passa pelo @RestControllerAdvice de feat-003.6) - resolve locale diretamente, mesma limitacao estrutural que TenantSchemaFilter ja tem (nao corrigida aqui, fora de escopo).",
           "checklist": [
