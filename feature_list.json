@@ -903,14 +903,44 @@
     {
       "id": "feat-007",
       "name": "Pipeline de CI (GitHub Actions + SonarCloud)",
-      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 5 passos: validacao de CHANGELOG.md atualizado, validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn package), testes unitarios + cobertura (mvn test jacoco:report), qualidade/cobertura no SonarCloud (mvn sonar:sonar, projectKey sv-auth-backend). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. So funciona de fato apos este repositorio existir no GitHub e o setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) estar feito - ver docs/CI-CD.md secao 'Setup pendente'.",
+      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 6 passos (corrigido de '5' nesta feature - passo 6 adicionado em feat-002.8/SV-30, description desatualizada ate aqui): validacao de CHANGELOG.md atualizado (so PR story->develop/main), validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn -DskipTests package), testes unitarios + cobertura (mvn verify), qualidade/cobertura no SonarCloud (mvn sonar:sonar, projectKey eimmig_sv-auth-backend, sonar.qualitygate.wait=true condicional - pulado em push direto p/ develop), gate de zero issue/hotspot do SonarCloud (validate-sonar-issues.py). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. Setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) e branch protection real feitos em epic-009/feat-002.8 - ver docs/CI-CD.md secao 'Setup pendente'.",
       "dependencies": [
         "feat-001"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer mudanca. Veredito: REVISE, 1 achado MAJOR corrigido no plano (nenhum exigia decisao do usuario). (MAJOR) description original desta feature dizia '5 passos' (changelog/i18n/build/testes/sonar) e citava mvn sonar:sonar sem o goal totalmente qualificado - mas o ci.yml real deste repositorio e docs/CI-CD.md ja tem 6 passos desde a reabertura de feat-002.8/SV-30 (passo 6 = gate de zero issue/hotspot via validate-sonar-issues.py, mais o fix de sonar.qualitygate.wait condicional documentado em CI-CD.md 'Terceira armadilha') - a description desta feature nunca foi atualizada quando isso foi corrigido incrementalmente dentro de feat-002, ficando desalinhada do proprio pipeline que descreve. Corrigido: description reescrita para 6 passos, coordenadas/flags exatas do ci.yml atual. Auditoria completa (ci.yml, .github/scripts/*, docs/CI-CD.md, historico das evidence de feat-001..006) nao encontrou nenhum outro gap real: repositorio GitHub/SonarCloud/branch protection/GitGuardian ja provados em producao nas 6 features anteriores (CI verde em toda PR, gh pr checks confirmado a cada uma). Escopo desta feature, portanto, e so formalizar o fechamento (sem codigo/workflow novo) - trabalho de CI em si ja foi inteiramente absorvido incrementalmente por feat-001..006. Delivery Reviewer roda sobre o diff desta feature (so feature_list.json/CHANGELOG.md); Test Suite Auditor e Persistence Auditor nao se aplicam (zero codigo/teste/persistencia tocado) - residual aceito, documentado aqui em vez de rodados sem proposito. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-57",
+      "subtasks": [
+        {
+          "id": "feat-007.1",
+          "name": "Auditoria do pipeline real vs description da feature",
+          "status": "done",
+          "jira": "SV-58",
+          "detail": "Achado do Plan Reviewer: description desta feature dizia '5 passos', ci.yml/docs/CI-CD.md real ja tem 6 desde feat-002.8 (SV-30) - corrigido para nao deixar o backlog contradizendo o proprio pipeline que documenta.",
+          "checklist": [
+            "Comparar ci.yml, .github/scripts/{validate-changelog.sh,validate-i18n-keys.py,validate-sonar-issues.py} deste repositorio contra docs/CI-CD.md 'Os 6 passos' - confirmado sem divergencia.",
+            "Corrigir description desta feature (feature_list.json) de 5 para 6 passos, com as flags/coordenadas exatas do ci.yml atual.",
+            "Confirmar (via historico de evidence de feat-001..006, sem repetir chamada de API) que repositorio GitHub, SonarCloud, branch protection e GitGuardian ja estao funcionando de fato - nenhum novo setup necessario."
+          ],
+          "validation": "Nenhuma divergencia restante entre ci.yml/scripts/docs/CI-CD.md e a description desta feature.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-007.2",
+          "name": "CHANGELOG e verificacao final",
+          "status": "in-progress",
+          "jira": "SV-59",
+          "detail": "Fecha a feature e o epic-002 da raiz (ultima feature liberada deste servico) - sem codigo/teste/persistencia tocados, so Delivery Reviewer sobre o diff (feature_list.json/CHANGELOG.md).",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo.",
+            "Delivery Reviewer rodado sobre o diff desta feature (Test Suite Auditor/Persistence Auditor nao se aplicam - zero codigo/teste/persistencia tocado, ver plan_review).",
+            "Vault (docs/) revisado: alguma descoberta desta feature sem nota correspondente? (nenhuma alem da correcao de description ja feita em feat-007.1)."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) e ../../feature_list.json (raiz, epic-002) atualizados com evidence.",
+          "owner": "agente"
+        }
+      ],
       "evidence": ""
     }
   ]
