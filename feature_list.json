@@ -768,11 +768,137 @@
       "dependencies": [
         "feat-005"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 MAJOR + 3 MINOR corrigidos no plano antes da implementacao. (MAJOR) plano original criava um segundo mecanismo de persistencia (JdbcTemplate cru) so para TELEGRAM_LINK/PENDING_TELEGRAM_LINK (schema public), dependendo de o JdbcTemplate compartilhar por acidente a mesma conexao/transacao do EntityManager (nao garantido pelo autoconfigure) - corrigido para mapear as duas como entidades JPA normais com @Table(schema = \"public\") explicito (Hibernate sempre qualifica totalmente essas tabelas, independente do schema corrente setado pelo SchemaMultiTenantConnectionProvider para a sessao), reaproveitando o EntityManagerFactory/JpaTransactionManager ja configurado - ConfirmTelegramLinkService ganha @Transactional (primeiro uso no servico) cobrindo tenant schema (TELEGRAM_ACCOUNT) + public (TELEGRAM_LINK/delete do pending) na mesma transacao real. (MAJOR) padrao Persistable.isNew=true sempre (usado em USER/TELEGRAM_ACCOUNT desde feat-002) nao suporta o \"upsert\" de TELEGRAM_LINK descrito no plano original (reconfirmacao com telegramUserId ja vinculado a outro tenant colidiria na PK em vez de atualizar) - corrigido: ConfirmTelegramLinkService busca a linha existente antes de salvar (mesmo mecanismo de @PostLoad -> isNew=false ja usado), TELEGRAM_ACCOUNT do tenant antigo fica orfao mas nao bloqueia a nova confirmacao. (MINOR) migration eager separada (classpath:db/migration-public, runner proprio no boot) confirmada como necessaria - nao existe hoje nenhum caminho de migration para o schema public (spring.flyway.enabled=false, unico gateway existente e lazy por tenant) - documentar o mecanismo novo em docs/CONVENTIONS.md secao Migrations no mesmo commit. (MINOR) endpoints internos (confirmar vinculo + lookup) sem header de autenticacao de servico ate epic-008 existir - confirmado como o MESMO risco residual ja aceito hoje para bets-service/stats-service e para o proprio GET .../{telegramUserId} ja documentado neste CLAUDE.md, nao uma regressao nova - mantido sem correcao, documentado como risco aceito. (MINOR) docs/services/auth-service.md linha ~145 (\"PENDING_TELEGRAM_LINK... alem de no schema do tenant\") contradiz o ERD de docs/DATA-MODEL.md (tabela so existe em public) - confirmado como erro de prosa, corrigido no mesmo commit desta feature. DECISAO DO USUARIO (AskUserQuestion, apos o plan review): quando telegramUserId ja vinculado a outro tenant/usuario recebe nova confirmacao valida, sobrescreve o vinculo antigo (TELEGRAM_LINK.telegramUserId e PK unica, so um vinculo ativo por vez) - TELEGRAM_ACCOUNT do tenant anterior fica orfao, sem endpoint de desvinculo nesta feature. Residual aceito: @Table(schema=public) convivendo com CurrentTenantIdentifierResolver e padrao documentado do Hibernate mas nunca usado neste codigo-base - subtask feat-006.4 inclui teste de integracao provando rollback cross-schema (falha forcada no upsert de TelegramLink reverte tambem a escrita em TELEGRAM_ACCOUNT) antes de fechar. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-50",
+      "subtasks": [
+        {
+          "id": "feat-006.1",
+          "name": "Migration eager do schema public + runner no boot",
+          "status": "done",
+          "jira": "SV-51",
+          "detail": "Primeiro caminho de migration nao-lazy do servico - schema public sempre existe e pertence ao proprio servico, sem a ambiguidade de \"quem provisiona\" que motivou a lazy migration por tenant (feat-001.3).",
+          "checklist": [
+            "src/main/resources/db/migration-public/V<timestamp>__create_telegram_link_tables.sql: TELEGRAM_LINK (telegram_user_id PK varchar, tenant_id varchar, user_id uuid) e PENDING_TELEGRAM_LINK (code PK varchar, tenant_id varchar, user_id uuid, expires_at timestamptz).",
+            "Novo @Component (ApplicationRunner) que roda Flyway.configure().schemas(\"public\").createSchemas(false).locations(\"classpath:db/migration-public\").load().migrate() uma vez no boot - nao mexe em spring.flyway.enabled (continua false).",
+            "docs/CONVENTIONS.md secao Migrations ganha um paragrafo descrevendo esse mecanismo novo (eager, so para public, separado da lazy por tenant) - no repositorio raiz."
+          ],
+          "validation": "Aplicacao sobe local (docker compose) e as duas tabelas existem no schema public; teste de integracao minimo confirma a migration rodando contra Postgres efemero (Testcontainers).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.2",
+          "name": "Dominio: TelegramLink, PendingTelegramLink, excecoes, TenantSchemaName.slug(), gerador de codigo",
+          "status": "done",
+          "jira": "SV-52",
+          "detail": "Gerador de codigo dedicado (nao reaproveita TemporaryPasswordGenerator - alfabeto/tamanho/proposito diferentes).",
+          "checklist": [
+            "domain/model/TelegramLink (telegramUserId, tenantSlug, userId) e domain/model/PendingTelegramLink (code, tenantSlug, userId, expiresAt) - records com validacao no construtor compacto, mesmo molde de TelegramAccount.",
+            "domain/model/CallerNotFoundException, TelegramLinkCodeNotFoundException, TelegramLinkCodeExpiredException (LocalizedDomainException) + chaves em messages_pt_BR/en_US/es.properties.",
+            "TenantSchemaName ganha slug() (remove prefixo tenant_) - evita expor TenantContextHolder fora de config/.",
+            "domain/port/out/TelegramLinkCodeGenerator + adapter/out/security/SecureRandomTelegramLinkCodeGenerator (SecureRandom, alfabeto sem ambiguos, 8 chars).",
+            "application.yml: telegram.link-code-ttl-minutes: 15 (mesmo padrao de paseto.access-token-ttl-minutes)."
+          ],
+          "validation": "mvn compile passa; teste unitario do gerador (tamanho, alfabeto, unicidade estatistica basica).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.3",
+          "name": "Persistencia JPA das tabelas public (TelegramLink, PendingTelegramLink)",
+          "status": "done",
+          "jira": "SV-53",
+          "detail": "Entidades JPA normais com @Table(schema = \"public\") explicito - achado do Plan Reviewer, substitui o adapter JDBC cru do plano original. Upsert real (busca antes de salvar), nao Persistable.isNew=true sempre.",
+          "checklist": [
+            "adapter/out/persistence/TelegramLinkJpaEntity (@Table(name=\"telegram_link\", schema=\"public\"), PK telegramUserId, Persistable<String> com isNew via @PostLoad, mesmo molde de TelegramAccountJpaEntity) + TelegramLinkJpaRepository (Spring Data).",
+            "adapter/out/persistence/PendingTelegramLinkJpaEntity (@Table(name=\"pending_telegram_link\", schema=\"public\"), PK code) + PendingTelegramLinkJpaRepository.",
+            "domain/port/out/TelegramLinkRepository (upsert, findByTelegramUserId) e domain/port/out/PendingTelegramLinkRepository (save, findByCode, deleteByCode) + adapters implementando-os sobre os repositories acima."
+          ],
+          "validation": "Teste de integracao (Testcontainers): salvar TelegramLink/PendingTelegramLink persiste de fato no schema public (nao no schema do tenant corrente, mesmo com TenantContextScope aberto durante o teste).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.4",
+          "name": "Application services: gerar codigo, confirmar vinculo, lookup",
+          "status": "done",
+          "jira": "SV-54",
+          "detail": "ConfirmTelegramLinkService e o primeiro @Transactional do servico - cobre tenant schema + public na mesma transacao real. Reconfirmacao sobrescreve vinculo antigo (decisao do usuario).",
+          "checklist": [
+            "domain/port/in/GenerateTelegramLinkCodeUseCase + application/GenerateTelegramLinkCodeService: valida caller (UserRepository.findById, ausente -> CallerNotFoundException, 401), gera codigo, grava PendingTelegramLink com tenantSlug corrente (TenantContextHolder + slug()) e expiresAt = now + TTL.",
+            "domain/port/in/ConfirmTelegramLinkUseCase + application/ConfirmTelegramLinkService (@Transactional): busca PendingTelegramLink por code (ausente -> TelegramLinkCodeNotFoundException, 404; expirado -> consome o codigo + TelegramLinkCodeExpiredException, 422); abre TenantContextScope para o tenantSlug resolvido; upsert de TelegramAccount (schema do tenant, via TelegramAccountRepository existente) e upsert de TelegramLink (schema public, sobrescreve vinculo anterior se telegramUserId ja apontava para outro tenant/usuario); deleta o PendingTelegramLink consumido.",
+            "domain/port/in/LookupTelegramAccountUseCase + application/LookupTelegramAccountService: TelegramLinkRepository.findByTelegramUserId (ausente -> 404).",
+            "Teste de integracao provando rollback cross-schema: falha forcada no upsert de TelegramLink dentro de ConfirmTelegramLinkService reverte tambem a escrita em TELEGRAM_ACCOUNT feita na mesma chamada (prova que @Transactional cobre as duas escritas de verdade, nao so por coincidencia de configuracao)."
+          ],
+          "validation": "Teste unitario dos 3 services (mocks dos ports) cobrindo sucesso e cada excecao; teste de integracao do rollback cross-schema passa.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.5",
+          "name": "Web adapter: 3 endpoints + DTOs + i18n",
+          "status": "done",
+          "jira": "SV-55",
+          "detail": "Sem verbo na URL (POST cria o recurso = confirma o vinculo) - mesma convencao de docs/API-CONTRACTS.md.",
+          "checklist": [
+            "adapter/in/web/TelegramLinksController: POST /api/v1/telegram-links (header X-User-Id obrigatorio, MissingCallerContextException se ausente/malformado, mesmo padrao de UsersController) -> 201 GenerateTelegramLinkResponse(code, expiresAt).",
+            "adapter/in/web/TelegramAccountsController: POST /api/v1/telegram-accounts (body ConfirmTelegramLinkRequest(telegramUserId, code)) -> 201; GET /api/v1/telegram-accounts/{telegramUserId} -> 200 TelegramAccountLookupResponse(userId, tenantId) ou 404.",
+            "DomainExceptionHandler ganha CallerNotFoundException (401), TelegramLinkCodeNotFoundException (404 - excecao propria, nao reusa o @ExceptionHandler de LocalizedDomainException se o status nao bater com o padrao atual), TelegramLinkCodeExpiredException (422).",
+            "Teste de integracao HTTP ponta a ponta dos 3 endpoints: gerar codigo -> confirmar -> lookup; isolamento cross-tenant (dois tenants, codigos nao colidem); codigo expirado; reconfirmacao trocando o tenant vinculado a um telegramUserId; i18n (title/detail mudando por Accept-Language em pelo menos 1 caso, ex.: codigo expirado)."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.6",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-56",
+          "detail": "Fecha a feature com o gate real do harness.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "Corrigir docs/services/auth-service.md linha ~145 (remover mencao a copia de PENDING_TELEGRAM_LINK no schema do tenant) - repositorio raiz.",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done.",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto no mesmo commit (mecanismo de migration eager para schema public e @Table(schema=) convivendo com multi-tenancy sao candidatos fortes para docs/CONVENTIONS.md)."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) atualizado se este foi o marco que fecha epic-002 (nao e - feat-007 ainda fica).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-50, story SV-50 com 6 subtasks SV-51..56, PR de subtask #36 bundlando feat-006.1..5 - descoberto durante a implementacao que migration/dominio/persistencia/services/web sao interdependentes, mesmo padrao de feat-002.4/5 e feat-005.1..4 -, CI verde incluindo o gate completo). Primeira feature do servico a introduzir dado fora do schema-per-tenant (schema public, diretorio global TELEGRAM_LINK/PENDING_TELEGRAM_LINK) e a primeira transacao real (@Transactional) do servico, cruzando schema do tenant e schema public na mesma transacao.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 162 testes, 0 falhas.",
+              "CI verde na PR de subtask (#36, bundlada) - gh pr checks confirmou pipeline pass antes do merge.",
+              "./init.sh verde em feature/SV-50 apos o merge do subtask."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 2 MAJOR corrigidos no plano - persistencia via entidades JPA com @Table(schema = \"public\") em vez de um adapter JDBC cru separado, e upsert real (busca antes de salvar) em vez do padrao Persistable.isNew=true sempre usado em USER/TELEGRAM_ACCOUNT - detalhe completo no campo plan_review.",
+              "Achado real durante a implementacao (nao previsto no plan_review): ler PENDING_TELEGRAM_LINK (schema public) e depois escrever em TELEGRAM_ACCOUNT (schema do tenant) DENTRO da mesma sessao Hibernate ja aberta e inseguro - a sessao resolve o schema da conexao uma unica vez, na primeira aquisicao, nao a cada query. Corrigido isolando a escrita cruzada num componente separado (TelegramLinkConfirmationTransaction, @Transactional) chamado APOS o TenantContextScope do tenant ja estar aberto (nao durante) - ConfirmTelegramLinkService faz a leitura do schema public primeiro (sem contexto de tenant, sessao propria) e so entao abre o escopo e delega. Prova empirica em TelegramLinkConfirmationTransactionRollbackIntegrationTest.",
+              "DECISAO DO USUARIO (AskUserQuestion, apos o plan review): quando telegramUserId ja vinculado a outro tenant/usuario recebe nova confirmacao valida, sobrescreve o vinculo antigo - TELEGRAM_ACCOUNT do tenant anterior fica orfao, sem endpoint de desvinculo nesta feature."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Persistence Auditor (CONCERNS, 2 achados corrigiveis + 1 residual aceito): (1) CONFIRMADO E CORRIGIDO - PublicSchemaMigrationRunner usava ApplicationRunner, que roda DEPOIS do servidor embutido ja aceitar conexoes (SpringApplication.run() inicia o SmartLifecycle do servidor dentro de refreshContext(), antes de callRunners()) - uma requisicao logo apos o boot podia cair no schema public antes da migration rodar. Corrigido trocando para InitializingBean.afterPropertiesSet() (mesmo mecanismo do FlywayMigrationInitializer oficial do Spring Boot), que roda garantidamente antes do servidor subir. (2) CONFIRMADO, aceito como risco residual (mesma categoria do TOCTOU ja aceito em feat-003) - upsert()/pre-check de TelegramLinkConfirmationTransaction sao find-then-save, nao atomicos; duas confirmacoes concorrentes pro mesmo telegramUserId podem gerar um 500 bruto em vez de 409 limpo no perdedor da corrida, mas a transacao inteira ainda reverte de forma consistente (sem corrupcao de dado) - desproporcional de corrigir para um endpoint interno de baixo volume antes do api-gateway existir. (3) sem job de limpeza de PENDING_TELEGRAM_LINK expirado - aceito, volume esperado e pequeno.",
+              "Test Suite Auditor (achado real corrigido): o caminho 409 (TelegramAccountAlreadyLinkedException) so estava provado no nivel de mock (TelegramLinkConfirmationTransactionTest), sem prova de que o controller + DomainExceptionHandler real retornam 409 de fato - adicionado shouldReturn409WhenCallerAlreadyHasALinkedTelegramAccount em TelegramLinkFlowIntegrationTest (10 casos HTTP ponta a ponta no total).",
+              "Delivery Reviewer (PASS, sem achado bloqueante) - diff conferido contra develop: mudancas nos 2 arquivos existentes tocados (DomainExceptionHandler, TenantSchemaName) sao puramente aditivas, sem regressao nas rotas existentes (login, admin/tenants, users); nenhum dado sensivel vazado nas respostas; convencoes de rota (sem verbo, RFC 7807, X-User-Id/X-Tenant-Id) respeitadas."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done - achados reais corrigidos no Plan Reviewer (2 MAJOR), Persistence Auditor (1 corrigido, 2 residuais aceitos) e Test Suite Auditor (1 gap de cobertura HTTP), Delivery Reviewer sem achado.",
+              "docs/CONVENTIONS.md (mecanismo novo de migration eager para schema public + InitializingBean vs ApplicationRunner) e docs/services/auth-service.md (contrato exato dos 3 endpoints, correcao da discrepancia sobre PENDING_TELEGRAM_LINK nao existir tambem no schema do tenant) atualizados no repositorio raiz, fora deste repositorio."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-007",
