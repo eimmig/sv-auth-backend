@@ -562,7 +562,7 @@
         {
           "id": "feat-004.2",
           "name": "CreateUserUseCase / CreateUserService",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-41",
           "detail": "Nao abre TenantContextScope (diferente de CreateTenantService) - a rota passa pelo TenantSchemaFilter existente, que ja abre o contexto antes do controller quando X-Tenant-Id esta presente.",
           "checklist": [
@@ -575,7 +575,7 @@
         {
           "id": "feat-004.3",
           "name": "UsersController (POST /api/v1/users) + testes de integracao",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-42",
           "detail": "X-User-Id lido no controller (adapter), nao no use case - parse de UUID com catch mapeando pra MissingCallerContextException. Fecha o item pendente de docs (contrato exato) e o gap de docs/API-CONTRACTS.md sobre a convencao de status code pra header de identidade ausente vs contexto de negocio ausente.",
           "checklist": [
