@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -61,6 +62,11 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 		}
 
 		assertThat(found).contains(user);
+	}
+
+	@Test
+	void shouldFailWhenNoTenantContextIsOpen() {
+		assertThatThrownBy(() -> userRepository.findByEmail("ana@acme.com")).isInstanceOf(DataAccessException.class);
 	}
 
 	@Test

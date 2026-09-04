@@ -18,10 +18,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/**
- * Resolve X-Tenant-Id, garante o schema em dia e expoe via TenantContextHolder/MDC.
- * Requisicao sem async: TenantContextHolder/MDC nao sao seguros sob dispatch assincrono.
- */
 @Component
 public class TenantSchemaFilter extends OncePerRequestFilter {
 
