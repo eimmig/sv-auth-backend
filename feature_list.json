@@ -652,7 +652,7 @@
         {
           "id": "feat-005.1",
           "name": "Dependencia PASETO + config da chave simetrica",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-45",
           "detail": "io.github.nbaars:paseto4j-version4:2024.3 (Maven Central, confirmado nesta sessao) - traz org.bouncycastle:bcprov-jdk18on transitivo, nao precisa declarar. Mesmo molde de admin.api-key (feat-003.1): variavel nova, profile test com valor fixo, .env.example so com o que a feature realmente le.",
           "checklist": [
@@ -666,7 +666,7 @@
         {
           "id": "feat-005.2",
           "name": "AccessTokenIssuer (emissao de token PASETO)",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-46",
           "detail": "Isola o detalhe de biblioteca (paseto4j) no adapter/out/security, mesmo padrao de BCryptPasswordHasher/SecureRandomPasswordGenerator. SecretKey construido uma vez no bean, nao a cada chamada.",
           "checklist": [
@@ -679,7 +679,7 @@
         {
           "id": "feat-005.3",
           "name": "PasswordHasher.matches() + InvalidCredentialsException + LoginUseCase/LoginService",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-47",
           "detail": "Extensao do port existente (mesmo molde de hash()). Erro unico e generico pra qualquer falha de autenticacao - nao diferenciar motivo, evita enumeracao. Timing attack mitigado chamando hash() (nao matches() contra dummy) nos caminhos de tenant/email inexistente - mesmo custo computacional de um round de BCrypt.",
           "checklist": [
@@ -694,7 +694,7 @@
         {
           "id": "feat-005.4",
           "name": "AuthController (POST /api/v1/auth/login) + testes de integracao + docs",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-48",
           "detail": "Campo slug (nao tenantSlug) no request, mesmo nome de CreateTenantRequest - achado do Plan Reviewer.",
           "checklist": [
@@ -709,7 +709,7 @@
         {
           "id": "feat-005.5",
           "name": "CHANGELOG e verificacao final",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-49",
           "detail": "Fecha a feature com o gate real do harness.",
           "checklist": [
