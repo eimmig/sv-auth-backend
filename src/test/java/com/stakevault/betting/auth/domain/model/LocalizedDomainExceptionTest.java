@@ -15,7 +15,8 @@ class LocalizedDomainExceptionTest {
 				new MissingCallerContextException(),
 				new MissingTenantContextException(),
 				new AdminRoleRequiredException(),
-				new EmailAlreadyRegisteredException("member@acme")
+				new EmailAlreadyRegisteredException("member@acme"),
+				new InvalidCredentialsException()
 		};
 
 		for (RuntimeException exception : exceptions) {
