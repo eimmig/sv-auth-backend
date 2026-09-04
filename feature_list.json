@@ -216,7 +216,7 @@
       "dependencies": [
         "feat-001"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 achados MAJOR + 2 MINOR, todos corrigidos no plano antes da implementacao (nenhum exigia decisao do usuario). (MAJOR) TenantContextHolder vivia em adapter/in/web/, mas o novo CurrentTenantIdentifierResolver (persistencia) precisa le-lo - acoplamento adapter-a-adapter de tras para frente; corrigido movendo TenantContextHolder para config/ antes de qualquer wiring de multi-tenancy, TenantSchemaFilter passa a importar de la. (MAJOR) chave de configuracao exata do Hibernate para habilitar multi-tenancy por schema nao estava confirmada contra doc oficial da versao instalada (hibernate-core 7.4.5.Final, resolvida via Spring Boot 4.1.1 - confirmado no .m2 local) - doc oficial (hibernate-orm/documentation, branch main) so confirma a abordagem (MultiTenantConnectionProvider + CurrentTenantIdentifierResolver), nao a chave exata para 7.4.x; corrigido exigindo verificacao contra a doc/javadoc da propria versao instalada como parte da subtask de wiring, nao assumida de memoria. (MINOR) nomes fisicos de tabela (users/telegram_accounts, nao user/telegram_account - USER e palavra reservada no Postgres) divergem do nome logico do ERD (docs/DATA-MODEL.md) sem nota cruzada - corrigido, nota adicionada no mesmo commit da migration. (MINOR) ON DELETE CASCADE em telegram_accounts.user_id antecipa uma operacao (exclusao de usuario) que nenhuma feature do backlog cobre ainda - mantido como postura padrao de integridade referencial de relacao 1:1, nunca exercitado ate existir a operacao, registrado aqui para nao parecer implementacao antecipada sem explicacao. Escopo confirmado sem invasao de feat-003 (rota de provisionamento)/feat-004 (autorizacao)/feat-005 (hash de senha, PASETO) - feat-002 nao expoe endpoint HTTP. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
       "jira": "SV-22",
       "subtasks": [
@@ -339,7 +339,7 @@
         }
       ],
       "evidence": {
-        "resumo": "Entregue em 2026-09-04 (branch feature/SV-22, story SV-22 com 7 subtasks SV-23..SV-29, 5 PRs mergeados - feat-002.4/002.5 e feat-002.1..002.3 cada um seu proprio PR, feat-002.6 e feat-002.7 idem).",
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-22, story SV-22 com 7 subtasks SV-23..SV-29, 5 PRs mergeados - feat-002.4/002.5 e feat-002.1..002.3 cada um seu proprio PR, feat-002.6 e feat-002.7 idem). Reaberta no mesmo dia (feat-002.8/SV-30, branch bugfix/SV-30-sonar-issues, PR #21): usuario apontou que o merge da PR #20 (feature/SV-22 -> develop) ignorou 27 apontamentos reais do SonarCloud, nunca revisados - gate padrao do plano gratuito nao bloqueia por issue nova. Corrigidos todos os 27 + travado o gate de verdade (script novo consultando a API do SonarCloud direto + branch protection no GitHub) - ver evidencia completa no campo detail de feat-002.8.",
         "secoes": [
           {
             "titulo": "Verificacao real executada",
