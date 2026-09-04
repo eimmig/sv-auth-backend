@@ -3,8 +3,8 @@
 ## Estado Atual (Current State)
 
 **Última atualização:** 2026-09-04
-**Feature ativa:** nenhuma (`feat-003` `done`, `feat-004`/`feat-007` liberadas — `feat-005`
-depende de `feat-004`, `feat-006` depende de `feat-005`)
+**Feature ativa:** nenhuma (`feat-004` `done`, `feat-005`/`feat-007` liberadas — `feat-006`
+depende de `feat-005`)
 
 ## Status
 
@@ -34,15 +34,24 @@ depende de `feat-004`, `feat-006` depende de `feat-005`)
       `NoSuchMessageException` silenciosamente desde `feat-001.5`. Evidência completa em
       `feature_list.json`.
 
+- [x] **`feat-004` (RF01, criação de usuário dentro do tenant) — `done` em 2026-09-04.**
+      `POST /api/v1/users`, primeira rota de negócio real fora da rota admin de `feat-003`.
+      Confia diretamente em `X-User-Id`/`X-Tenant-Id` (decisão tomada com o usuário — sem
+      PASETO/`api-gateway` ainda, mesmo modelo de confiança que `bets-service`/`stats-service`
+      vão usar). 4 subtasks (SV-40..43). Primeiro uso real de Bean Validation (`@Valid`) no
+      serviço. Achado do Test Suite Auditor corrigido (isolamento cross-tenant só provado
+      implicitamente — teste explícito adicionado). Convenção nova documentada em
+      `docs/API-CONTRACTS.md`: 401 para header de identidade ausente/inválido, 400 para header
+      de contexto de negócio ausente. Evidência completa em `feature_list.json`.
+
 ### Em andamento
 
 - Nenhuma feature iniciada.
 
 ### Próximos passos (Next Steps)
 
-1. `feat-004` (RF01, criação de usuário dentro do tenant) e `feat-007` (pipeline de CI) estão
-   liberadas — `feat-005` (login/PASETO) depende de `feat-004`, `feat-006` (vínculo Telegram)
-   depende de `feat-005`.
+1. `feat-005` (RF02, login/PASETO) e `feat-007` (pipeline de CI) estão liberadas — `feat-006`
+   (vínculo Telegram) depende de `feat-005`.
 
 ## Bloqueios / Riscos
 
@@ -123,17 +132,18 @@ depende de `feat-004`, `feat-006` depende de `feat-005`)
 
 ## Evidência de conclusão
 
-- Ver campo `evidence` de `feat-002`/`feat-003` em `feature_list.json` (objeto estruturado com 4
-  seções: verificação real executada, divergência do plano original, defeitos encontrados antes
-  de causar dano, skills e ferramentas).
+- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004` em `feature_list.json` (objeto
+  estruturado com 4 seções: verificação real executada, divergência do plano original, defeitos
+  encontrados antes de causar dano, skills e ferramentas).
 
 ## Notas para a próxima sessão
 
-- `feat-004` (RF01, criação de usuário dentro do tenant, checagem de autorização por role
-  `admin`) é a próxima liberada. Reaproveita `PasswordHasher`/`UserRepository` já existentes;
-  ainda não há PASETO/login (`feat-005`), então a checagem de "quem está autenticado" nesta
-  feature provavelmente precisa de alguma forma de contexto de requisição a definir.
-- `feat-007` (pipeline de CI) também está liberada, independente de `feat-004`.
+- `feat-005` (RF02, login/PASETO) é a próxima liberada. `feat-004` resolveu a checagem de "quem
+  está autenticado" via `X-User-Id`/`X-Tenant-Id` confiados diretamente (sem `api-gateway`
+  ainda) — `feat-005` precisa decidir se mantém esse modelo até `epic-008` existir ou se
+  antecipa algo. Reaproveita `PasswordHasher`/`UserRepository`/`AttributeConverter` já
+  existentes.
+- `feat-007` (pipeline de CI) também está liberada, independente de `feat-005`.
 - O padrão de multi-tenancy do Hibernate (resolver + connection provider + `Persistable<UUID>`
   para entidade com id atribuído pelo domínio) já está documentado em `docs/CONVENTIONS.md` —
   `bets-service`/`stats-service` podem reaproveitar diretamente quando chegarem no próprio
