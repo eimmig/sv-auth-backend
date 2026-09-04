@@ -37,3 +37,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-36](https://stakevault.atlassian.net/browse/SV-36) - AdminApiKeyFilter
 - [SV-37](https://stakevault.atlassian.net/browse/SV-37) - RestControllerAdvice + endpoint POST /api/v1/admin/tenants
 - [SV-38](https://stakevault.atlassian.net/browse/SV-38) - Teste i18n (Accept-Language) + CHANGELOG + verificacao final
+- [SV-39](https://stakevault.atlassian.net/browse/SV-39) - RF01 - Criacao de usuario dentro do tenant
+- [SV-40](https://stakevault.atlassian.net/browse/SV-40) - Excecoes de dominio, i18n e handler de Bean Validation
+- [SV-41](https://stakevault.atlassian.net/browse/SV-41) - CreateUserUseCase / CreateUserService
+- [SV-42](https://stakevault.atlassian.net/browse/SV-42) - UsersController (POST /api/v1/users) + testes de integracao
+- [SV-43](https://stakevault.atlassian.net/browse/SV-43) - CHANGELOG e verificacao final
