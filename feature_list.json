@@ -541,7 +541,7 @@
       "dependencies": [
         "feat-003"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 1 MAJOR corrigido no plano antes da implementacao (nenhum exigia decisao do usuario alem da ja tomada com o usuario sobre o modelo de confianca via X-User-Id/X-Tenant-Id, ver abaixo). (MAJOR) MissingCallerContextException estava planejada como 400, inconsistente com o precedente real do servico: InvalidAdminApiKeyException (X-Admin-Api-Key ausente/invalido) usa 401, e X-User-Id desempenha o mesmo papel de identidade do chamador, nao um campo de payload - corrigido para 401, e passou a cobrir tambem X-User-Id malformado (nao-UUID), que o plano original deixava vazar como IllegalArgumentException crua (500). MissingTenantContextException mantida em 400 (consistente com TenantSchemaFilter, que ja usa 400 para X-Tenant-Id malformado - ausencia total do header e a mesma familia de falha de contrato). Confirmado sem achado adicional: autorizacao com 403 unico para 'caller nao existe' e 'caller nao e admin' (evita enumeracao, mesmo espirito do 401 generico de feat-003 para chave admin incorreta); nenhum acoplamento indevido de camada (X-User-Id lido no controller/adapter, valor puro passado ao use case, mesmo padrao de AdminTenantController/CreateTenantService). DECISAO DO USUARIO (AskUserQuestion, antes do plan review): como feat-005 (login/PASETO) ainda nao existe, este endpoint confia diretamente nos headers X-User-Id/X-Tenant-Id informados pelo chamador - mesmo modelo de confianca que bets-service/stats-service vao usar do api-gateway (docs/API-CONTRACTS.md 'Confianca entre servicos') e mesmo padrao que TenantSchemaFilter ja aplica a X-Tenant-Id desde feat-001.3; api-gateway (epic-008) ainda nao existe, entao por ora quem chama informa os headers diretamente. Risco residual aceito: TOCTOU entre findById(callerId) e save() (dois admins criando o mesmo email concorrentemente) - mesmo residual aceito em feat-003, desproporcional sem evidencia real de concorrencia. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
       "jira": "SV-39",
       "subtasks": [
@@ -601,7 +601,42 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-39, story SV-39 com 4 subtasks SV-40..43, 4 PRs mergeados - 3 de subtask + 1 de feature->develop, todos com CI verde incluindo o gate completo de SonarCloud/GitGuardian na PR final). Primeiro endpoint HTTP de negocio do servico fora da rota admin de feat-003, e primeiro uso real de Bean Validation (@Valid) no servico.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 102 testes, 0 falhas.",
+              "CI verde em todas as 4 PRs (subtask/SV-40..42 -> feature/SV-39, feature/SV-39 -> develop), confirmado com gh pr checks a cada push - a ultima PR passou pelo gate completo (pipeline, SonarCloud Code Analysis, GitGuardian Security Checks).",
+              "./init.sh verde em develop apos o merge."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Nenhuma divergencia de escopo - unica correcao foi a do Plan Reviewer (MissingCallerContextException de 400 para 401), aplicada antes de qualquer codigo."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 1 MAJOR corrigido no plano - detalhe completo no campo plan_review desta feature.",
+              "Decisao do usuario (AskUserQuestion, antes do plan review): sem PASETO/login (feat-005) ainda, o endpoint confia diretamente nos headers X-User-Id/X-Tenant-Id informados pelo chamador - mesmo modelo que bets-service/stats-service vao usar do api-gateway.",
+              "Delivery Reviewer (PASS, sem achado bloqueante) - confirmou ausencia de vazamento de senha/hash na resposta, nenhuma colisao de rota com AdminApiKeyFilter (/api/v1/admin/ vs /api/v1/users), e 1 nota P3 nao-bloqueante sobre prioridade 401 vs 400 quando os dois headers faltam ao mesmo tempo (comportamento correto, so nao documentado).",
+              "Test Suite Auditor (achado real corrigido): isolamento cross-tenant so estava provado implicitamente (dependia da chance de colisao de UUID nunca ter sido exercitada) - adicionado shouldReturn403WhenCallerIsAnAdminOfADifferentTenant, prova explicita de que um admin de um tenant nao consegue agir como admin de outro.",
+              "Persistence Auditor (PASS, sem achado) - confirmou multi-tenancy do Hibernate sem vazamento entre schemas, ausencia de @Transactional continua correta (mesmo raciocinio ja validado em feat-003), e o catch de DataIntegrityViolationException cobre exatamente uk_users_email."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor (1 teste adicionado) e Persistence Auditor rodados antes de done - achado real corrigido no Test Suite Auditor, demais PASS.",
+              "docs/services/auth-service.md (contrato exato de POST /api/v1/users) e docs/API-CONTRACTS.md (convencao nova: 401 para header de identidade ausente/invalido, 400 para header de contexto de negocio ausente, reaproveitavel por bets-service/stats-service) atualizados no repositorio raiz (sv-harness), fora deste repositorio."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-005",
