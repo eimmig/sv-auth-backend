@@ -3,7 +3,6 @@ package com.stakevault.betting.auth.domain.model;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Usuario dentro do schema de um tenant - sem tenantId, o schema ja e o tenant. */
 public record User(
 		UUID id,
 		String name,

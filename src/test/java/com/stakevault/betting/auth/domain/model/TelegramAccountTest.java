@@ -11,20 +11,20 @@ import org.junit.jupiter.api.Test;
 class TelegramAccountTest {
 
 	@Test
-	void construtorAceitaDadosValidos() {
+	void shouldAcceptValidData() {
 		TelegramAccount account = new TelegramAccount(UUID.randomUUID(), UUID.randomUUID(), "123456", Instant.now());
 
 		assertThat(account.telegramUserId()).isEqualTo("123456");
 	}
 
 	@Test
-	void rejeitaUserIdNulo() {
+	void shouldRejectNullUserId() {
 		assertThatThrownBy(() -> new TelegramAccount(UUID.randomUUID(), null, "123456", Instant.now()))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void rejeitaTelegramUserIdEmBranco() {
+	void shouldRejectBlankTelegramUserId() {
 		assertThatThrownBy(() -> new TelegramAccount(UUID.randomUUID(), UUID.randomUUID(), " ", Instant.now()))
 				.isInstanceOf(IllegalArgumentException.class);
 	}

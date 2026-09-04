@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class UserTest {
 
 	@Test
-	void construtorAceitaDadosValidos() {
+	void shouldAcceptValidData() {
 		User user = new User(UUID.randomUUID(), "Ana", "ana@acme.com", "hash", Role.ADMIN, true, Instant.now());
 
 		assertThat(user.name()).isEqualTo("Ana");
@@ -19,25 +19,25 @@ class UserTest {
 	}
 
 	@Test
-	void rejeitaIdNulo() {
+	void shouldRejectNullId() {
 		assertThatThrownBy(() -> new User(null, "Ana", "ana@acme.com", "hash", Role.ADMIN, false, Instant.now()))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void rejeitaEmailEmBranco() {
+	void shouldRejectBlankEmail() {
 		assertThatThrownBy(() -> new User(UUID.randomUUID(), "Ana", " ", "hash", Role.ADMIN, false, Instant.now()))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void rejeitaRoleNula() {
+	void shouldRejectNullRole() {
 		assertThatThrownBy(() -> new User(UUID.randomUUID(), "Ana", "ana@acme.com", "hash", null, false, Instant.now()))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void rejeitaPasswordHashEmBranco() {
+	void shouldRejectBlankPasswordHash() {
 		assertThatThrownBy(() -> new User(UUID.randomUUID(), "Ana", "ana@acme.com", "", Role.MEMBER, false, Instant.now()))
 				.isInstanceOf(IllegalArgumentException.class);
 	}

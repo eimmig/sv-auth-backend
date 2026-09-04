@@ -8,7 +8,6 @@ import javax.sql.DataSource;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.springframework.stereotype.Component;
 
-/** Connection.setSchema() usa SET SEARCH_PATH internamente no driver do Postgres. */
 @Component
 public class SchemaMultiTenantConnectionProvider implements MultiTenantConnectionProvider<String> {
 
@@ -31,14 +30,22 @@ public class SchemaMultiTenantConnectionProvider implements MultiTenantConnectio
 	@Override
 	public Connection getConnection(String tenantIdentifier) throws SQLException {
 		Connection connection = getAnyConnection();
-		connection.setSchema(tenantIdentifier);
-		return connection;
+		try {
+			connection.setSchema(tenantIdentifier);
+			return connection;
+		} catch (SQLException e) {
+			releaseAnyConnection(connection);
+			throw e;
+		}
 	}
 
 	@Override
 	public void releaseConnection(String tenantIdentifier, Connection connection) throws SQLException {
-		connection.setSchema("public");
-		releaseAnyConnection(connection);
+		try {
+			connection.setSchema("public");
+		} finally {
+			releaseAnyConnection(connection);
+		}
 	}
 
 	@Override
