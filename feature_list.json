@@ -464,7 +464,7 @@
         {
           "id": "feat-003.6",
           "name": "RestControllerAdvice + endpoint POST /api/v1/admin/tenants",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-37",
           "detail": "Primeiro @RestControllerAdvice real do servico - mapeia so as exceptions de dominio nomeadas (nunca IllegalArgumentException cru, achado MAJOR do Plan Reviewer). Contrato HTTP documentado no mesmo commit (achado MINOR).",
           "checklist": [

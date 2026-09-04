@@ -13,4 +13,12 @@ class TenantAlreadyProvisionedExceptionTest {
 		assertThat(exception.messageKey()).isEqualTo("error.tenant-already-provisioned");
 		assertThat(exception.slug()).isEqualTo("acme");
 	}
+
+	@Test
+	void shouldMapToConflictStatusWithSlugAsMessageArg() {
+		var exception = new TenantAlreadyProvisionedException("acme");
+
+		assertThat(exception.httpStatusCode()).isEqualTo(409);
+		assertThat(exception.messageArgs()).containsExactly("acme");
+	}
 }

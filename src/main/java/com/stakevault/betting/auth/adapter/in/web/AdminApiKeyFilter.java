@@ -66,16 +66,17 @@ public class AdminApiKeyFilter extends OncePerRequestFilter {
 	private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		InvalidAdminApiKeyException exception = new InvalidAdminApiKeyException();
 		Locale locale = localeResolver.resolveLocale(request);
-		String title = messageSource.getMessage(exception.messageKey() + ".title", null, locale);
-		String detail = messageSource.getMessage(exception.messageKey() + ".detail", null, locale);
+		String title = ProblemDetailMessages.title(exception, locale, messageSource);
+		String detail = ProblemDetailMessages.detail(exception, locale, messageSource);
+		int status = exception.httpStatusCode();
 
-		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		response.setStatus(status);
 		response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
 		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 		var body = new LinkedHashMap<String, Object>();
-		body.put("type", "https://docs/errors/invalid-admin-api-key");
+		body.put("type", "https://docs/errors/" + ProblemDetailMessages.typeSlug(exception));
 		body.put("title", title);
-		body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+		body.put("status", status);
 		body.put("detail", detail);
 		body.put("instance", request.getRequestURI());
 		objectMapper.writeValue(response.getOutputStream(), body);

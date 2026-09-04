@@ -10,4 +10,9 @@ public class InvalidAdminApiKeyException extends RuntimeException implements Loc
 	public String messageKey() {
 		return "error.invalid-admin-api-key";
 	}
+
+	@Override
+	public int httpStatusCode() {
+		return 401;
+	}
 }
