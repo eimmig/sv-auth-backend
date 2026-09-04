@@ -5,7 +5,6 @@ import com.stakevault.betting.auth.domain.model.Role;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-/** Role.ADMIN/MEMBER (Java) <-> 'admin'/'member' (coluna, CHECK da migration exige minusculo). */
 @Converter(autoApply = true)
 public class RoleAttributeConverter implements AttributeConverter<Role, String> {
 

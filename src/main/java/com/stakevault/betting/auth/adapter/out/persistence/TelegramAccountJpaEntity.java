@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Id ja vem preenchido do dominio - Persistable.isNew() evita que save() vire merge()+SELECT para toda insercao. */
 @Entity
 @Table(name = "telegram_accounts")
 @Getter

@@ -3,7 +3,6 @@ package com.stakevault.betting.auth.domain.model;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Vinculo 1:1 entre um USER e uma conta do Telegram, dentro do schema do tenant. */
 public record TelegramAccount(
 		UUID id,
 		UUID userId,

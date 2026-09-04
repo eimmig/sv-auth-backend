@@ -296,9 +296,9 @@
         {
           "id": "feat-002.6",
           "name": "Testes de isolamento e unicidade por tenant",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-28",
-          "detail": "Save/find basico ja provado em feat-002.4/002.5 (JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest). O que falta e especificamente: violacao de constraint sendo rejeitada, e isolamento entre dois schemas de tenant diferentes - os dois exigem cenario multi-schema que os testes basicos nao cobrem.",
+          "detail": "Save/find basico ja provado em feat-002.4/002.5 (JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest). O que faltava e especificamente: violacao de constraint sendo rejeitada, e isolamento entre dois schemas de tenant diferentes - os dois exigem cenario multi-schema que os testes basicos nao cobriam. Pedido do usuario nesta subtask: nomes de teste em ingles, padrao should... (nao mais portugues, ver docs/TESTING.md nova secao); zero comentario de racional/documentacao em codigo, mesmo de uma linha (endurece a regra anterior, ver docs/CONVENTIONS.md) - conteudo movido para docs/CONVENTIONS.md (padroes Persistable/multi-tenancy/converter/Lombok, reaproveitaveis por bets-service/stats-service) e docs/services/auth-service.md.",
           "checklist": [
             "Integracao: unicidade de email dentro do mesmo schema de tenant (insercao duplicada rejeitada, DataIntegrityViolationException).",
             "Integracao: mesmo email permitido em dois schemas de tenant diferentes (prova de isolamento via multi-tenancy do Hibernate, nao so SQL cru) - o teste mais importante desta feature.",

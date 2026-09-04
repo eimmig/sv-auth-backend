@@ -11,19 +11,19 @@ class RoleAttributeConverterTest {
 	private final RoleAttributeConverter converter = new RoleAttributeConverter();
 
 	@Test
-	void convertToDatabaseColumn_gravaMinusculo() {
+	void shouldWriteLowercaseToDatabaseColumn() {
 		assertThat(converter.convertToDatabaseColumn(Role.ADMIN)).isEqualTo("admin");
 		assertThat(converter.convertToDatabaseColumn(Role.MEMBER)).isEqualTo("member");
 	}
 
 	@Test
-	void convertToEntityAttribute_leMinusculo() {
+	void shouldReadLowercaseFromDatabaseColumn() {
 		assertThat(converter.convertToEntityAttribute("admin")).isEqualTo(Role.ADMIN);
 		assertThat(converter.convertToEntityAttribute("member")).isEqualTo(Role.MEMBER);
 	}
 
 	@Test
-	void nuloEmAmbasDirecoes() {
+	void shouldReturnNullForNullInputInBothDirections() {
 		assertThat(converter.convertToDatabaseColumn(null)).isNull();
 		assertThat(converter.convertToEntityAttribute(null)).isNull();
 	}

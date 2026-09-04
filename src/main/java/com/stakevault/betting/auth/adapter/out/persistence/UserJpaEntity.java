@@ -8,7 +8,6 @@ import com.stakevault.betting.auth.domain.model.Role;
 import org.springframework.data.domain.Persistable;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PostLoad;
@@ -18,7 +17,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Id ja vem preenchido do dominio - Persistable.isNew() evita que save() vire merge()+SELECT para toda insercao. */
 @Entity
 @Table(name = "users")
 @Getter
@@ -36,7 +34,6 @@ public class UserJpaEntity implements Persistable<UUID> {
 	@Column(name = "password_hash")
 	private String passwordHash;
 
-	@Convert(converter = RoleAttributeConverter.class)
 	private Role role;
 
 	@Column(name = "must_change_password")
