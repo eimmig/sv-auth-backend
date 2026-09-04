@@ -28,3 +28,4 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-27](https://stakevault.atlassian.net/browse/SV-27) - Multi-tenancy do Hibernate por schema
 - [SV-28](https://stakevault.atlassian.net/browse/SV-28) - Testes de mapeamento e isolamento por tenant
 - [SV-29](https://stakevault.atlassian.net/browse/SV-29) - CHANGELOG e verificacao final
+- [SV-30](https://stakevault.atlassian.net/browse/SV-30) - Corrigir 27 apontamentos do SonarCloud ignorados no merge e travar o gate

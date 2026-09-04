@@ -35,7 +35,7 @@ class JpaTelegramAccountRepositoryIntegrationTest extends TenantSchemaIntegratio
 	private UUID persistUser() {
 		User user = new User(UUID.randomUUID(), "Ana", "ana-" + UUID.randomUUID() + "@acme.com", "hash", Role.MEMBER,
 				false, Instant.now().truncatedTo(DB_PRECISION));
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			userRepository.save(user);
 		}
 		return user.id();
@@ -47,12 +47,12 @@ class JpaTelegramAccountRepositoryIntegrationTest extends TenantSchemaIntegratio
 		TelegramAccount account = new TelegramAccount(UUID.randomUUID(), userId, "123456",
 				Instant.now().truncatedTo(DB_PRECISION));
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			telegramAccountRepository.save(account);
 		}
 
 		Optional<TelegramAccount> found;
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			found = telegramAccountRepository.findByUserId(account.userId());
 		}
 
@@ -65,12 +65,12 @@ class JpaTelegramAccountRepositoryIntegrationTest extends TenantSchemaIntegratio
 		TelegramAccount account = new TelegramAccount(UUID.randomUUID(), userId, "654321",
 				Instant.now().truncatedTo(DB_PRECISION));
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			telegramAccountRepository.save(account);
 		}
 
 		Optional<TelegramAccount> found;
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			found = telegramAccountRepository.findByTelegramUserId("654321");
 		}
 
@@ -80,7 +80,7 @@ class JpaTelegramAccountRepositoryIntegrationTest extends TenantSchemaIntegratio
 	@Test
 	void shouldReturnEmptyWhenUserIdNotFound() {
 		Optional<TelegramAccount> found;
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			found = telegramAccountRepository.findByUserId(UUID.randomUUID());
 		}
 
@@ -95,7 +95,7 @@ class JpaTelegramAccountRepositoryIntegrationTest extends TenantSchemaIntegratio
 		TelegramAccount second = new TelegramAccount(UUID.randomUUID(), userId, "222222",
 				Instant.now().truncatedTo(DB_PRECISION));
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			telegramAccountRepository.save(first);
 			assertThatThrownBy(() -> telegramAccountRepository.save(second))
 					.isInstanceOf(DataIntegrityViolationException.class);

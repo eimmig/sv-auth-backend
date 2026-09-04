@@ -28,5 +28,9 @@ target/
 Thumbs.db
 .DS_Store
 
+# Python (.github/scripts/*.py)
+__pycache__/
+*.pyc
+
 # Boilerplate do Spring Initializr, nao mantido
 HELP.md

@@ -20,25 +20,39 @@ class UserTest {
 
 	@Test
 	void shouldRejectNullId() {
-		assertThatThrownBy(() -> new User(null, "Ana", "ana@acme.com", "hash", Role.ADMIN, false, Instant.now()))
+		String email = "ana@acme.com";
+		Instant now = Instant.now();
+
+		assertThatThrownBy(() -> new User(null, "Ana", email, "hash", Role.ADMIN, false, now))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void shouldRejectBlankEmail() {
-		assertThatThrownBy(() -> new User(UUID.randomUUID(), "Ana", " ", "hash", Role.ADMIN, false, Instant.now()))
+		UUID id = UUID.randomUUID();
+		Instant now = Instant.now();
+
+		assertThatThrownBy(() -> new User(id, "Ana", " ", "hash", Role.ADMIN, false, now))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void shouldRejectNullRole() {
-		assertThatThrownBy(() -> new User(UUID.randomUUID(), "Ana", "ana@acme.com", "hash", null, false, Instant.now()))
+		UUID id = UUID.randomUUID();
+		String email = "ana@acme.com";
+		Instant now = Instant.now();
+
+		assertThatThrownBy(() -> new User(id, "Ana", email, "hash", null, false, now))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void shouldRejectBlankPasswordHash() {
-		assertThatThrownBy(() -> new User(UUID.randomUUID(), "Ana", "ana@acme.com", "", Role.MEMBER, false, Instant.now()))
+		UUID id = UUID.randomUUID();
+		String email = "ana@acme.com";
+		Instant now = Instant.now();
+
+		assertThatThrownBy(() -> new User(id, "Ana", email, "", Role.MEMBER, false, now))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 }

@@ -19,13 +19,20 @@ class TelegramAccountTest {
 
 	@Test
 	void shouldRejectNullUserId() {
-		assertThatThrownBy(() -> new TelegramAccount(UUID.randomUUID(), null, "123456", Instant.now()))
+		UUID id = UUID.randomUUID();
+		Instant now = Instant.now();
+
+		assertThatThrownBy(() -> new TelegramAccount(id, null, "123456", now))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void shouldRejectBlankTelegramUserId() {
-		assertThatThrownBy(() -> new TelegramAccount(UUID.randomUUID(), UUID.randomUUID(), " ", Instant.now()))
+		UUID id = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		Instant now = Instant.now();
+
+		assertThatThrownBy(() -> new TelegramAccount(id, userId, " ", now))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 }

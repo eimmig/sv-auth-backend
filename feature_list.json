@@ -216,7 +216,7 @@
       "dependencies": [
         "feat-001"
       ],
-      "status": "done",
+      "status": "in-progress",
       "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 achados MAJOR + 2 MINOR, todos corrigidos no plano antes da implementacao (nenhum exigia decisao do usuario). (MAJOR) TenantContextHolder vivia em adapter/in/web/, mas o novo CurrentTenantIdentifierResolver (persistencia) precisa le-lo - acoplamento adapter-a-adapter de tras para frente; corrigido movendo TenantContextHolder para config/ antes de qualquer wiring de multi-tenancy, TenantSchemaFilter passa a importar de la. (MAJOR) chave de configuracao exata do Hibernate para habilitar multi-tenancy por schema nao estava confirmada contra doc oficial da versao instalada (hibernate-core 7.4.5.Final, resolvida via Spring Boot 4.1.1 - confirmado no .m2 local) - doc oficial (hibernate-orm/documentation, branch main) so confirma a abordagem (MultiTenantConnectionProvider + CurrentTenantIdentifierResolver), nao a chave exata para 7.4.x; corrigido exigindo verificacao contra a doc/javadoc da propria versao instalada como parte da subtask de wiring, nao assumida de memoria. (MINOR) nomes fisicos de tabela (users/telegram_accounts, nao user/telegram_account - USER e palavra reservada no Postgres) divergem do nome logico do ERD (docs/DATA-MODEL.md) sem nota cruzada - corrigido, nota adicionada no mesmo commit da migration. (MINOR) ON DELETE CASCADE em telegram_accounts.user_id antecipa uma operacao (exclusao de usuario) que nenhuma feature do backlog cobre ainda - mantido como postura padrao de integridade referencial de relacao 1:1, nunca exercitado ate existir a operacao, registrado aqui para nao parecer implementacao antecipada sem explicacao. Escopo confirmado sem invasao de feat-003 (rota de provisionamento)/feat-004 (autorizacao)/feat-005 (hash de senha, PASETO) - feat-002 nao expoe endpoint HTTP. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
       "jira": "SV-22",
       "subtasks": [
@@ -319,6 +319,22 @@
             "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
           ],
           "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.8",
+          "name": "Corrigir 27 apontamentos do SonarCloud ignorados no merge e travar o gate",
+          "status": "done",
+          "jira": "SV-30",
+          "detail": "Descoberta pos-merge (usuario revisou a PR #20 feature/SV-22 -> develop): o Quality Gate padrao do SonarCloud (plano gratuito, sem gate customizavel - API recusa associar gate customizado a projeto: 'Organization is not allowed to modify Quality gates') so mede rating/cobertura/duplicacao, nao quantidade de issue nova, entao a PR passou com 27 issues abertas (1 CRITICAL, 8 MAJOR, 18 MINOR) nunca revisadas. mvn sonar:sonar tambem nao tinha -Dsonar.qualitygate.wait=true, entao o passo do CI nem esperava/falhava pelo resultado do gate. /code-review achou mais 4 problemas reais durante a correcao: hotspot do SonarCloud fica numa API separada (/hotspots/search), nao coberta pelo script original; docstring do script novo violava a regra de zero-comentario (racional movido pra docs/CI-CD.md); paginacao ausente (so ps=100, sem loop); __pycache__ do novo script sem entrada no .gitignore.",
+          "checklist": [
+            "Corrigir os 27 apontamentos reais (nao suprimir): S1481 (variavel 'scope' de try-with-resources nao lida - unnamed variable Java 21+, try (var _ = ...)), S5673 (@Component -> @Repository em JpaUserRepository/JpaTelegramAccountRepository), S1948 (dataSource nao-transient em classe que implementa Service extends Serializable), S5778 (assertThatThrownBy com mais de uma invocacao que pode lancar - UUID/Instant pre-computados fora da lambda).",
+            "-Dsonar.qualitygate.wait=true no goal do sonar-maven-plugin em ci.yml.",
+            ".github/scripts/validate-sonar-issues.py (novo): falha o build se /issues/search ou /hotspots/search (pullRequest ou branch=main - outras branches retornam 403 no plano gratuito) retornar qualquer item aberto, com paginacao real (nao so a primeira pagina).",
+            "Branch protection em develop e main do repositorio real (GitHub API): required_status_checks com o check 'pipeline', strict=true - sem isso nenhum check do ci.yml bloqueava o botao de merge de fato, mesmo falhando.",
+            "docs/CI-CD.md atualizado (6 passos, nao mais 5) com o achado completo para os outros 5 repositorios Java/frontend nao caírem na mesma armadilha."
+          ],
+          "validation": "mvn verify local verde (Docker precisou ser reiniciado a meio da sessao - nao regressao do fix); script testado manualmente contra a API real do SonarCloud (branch main = OK, PR 20 ainda mostra os 27 antigos ate o scanner rodar de novo nesta branch); branch protection confirmada via API do GitHub.",
           "owner": "agente"
         }
       ],

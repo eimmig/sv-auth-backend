@@ -3,12 +3,12 @@ package com.stakevault.betting.auth.adapter.out.persistence;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import com.stakevault.betting.auth.domain.model.TelegramAccount;
 import com.stakevault.betting.auth.domain.port.out.TelegramAccountRepository;
 
-@Component
+@Repository
 public class JpaTelegramAccountRepository implements TelegramAccountRepository {
 
 	private final TelegramAccountJpaRepository jpaRepository;

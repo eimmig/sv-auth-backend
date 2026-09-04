@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SchemaMultiTenantConnectionProvider implements MultiTenantConnectionProvider<String> {
 
-	private final DataSource dataSource;
+	private final transient DataSource dataSource;
 
 	public SchemaMultiTenantConnectionProvider(DataSource dataSource) {
 		this.dataSource = dataSource;

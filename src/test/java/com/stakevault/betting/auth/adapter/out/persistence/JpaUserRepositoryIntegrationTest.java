@@ -35,12 +35,12 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 		User user = new User(UUID.randomUUID(), "Ana", "ana@acme.com", "hash", Role.ADMIN, false,
 				Instant.now().truncatedTo(DB_PRECISION));
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			userRepository.save(user);
 		}
 
 		Optional<User> found;
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			found = userRepository.findById(user.id());
 		}
 
@@ -52,12 +52,12 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 		User user = new User(UUID.randomUUID(), "Bruno", "bruno@acme.com", "hash", Role.MEMBER, true,
 				Instant.now().truncatedTo(DB_PRECISION));
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			userRepository.save(user);
 		}
 
 		Optional<User> found;
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			found = userRepository.findByEmail("bruno@acme.com");
 		}
 
@@ -72,7 +72,7 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 	@Test
 	void shouldReturnEmptyWhenEmailNotFound() {
 		Optional<User> found;
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			found = userRepository.findByEmail("nobody@acme.com");
 		}
 
@@ -85,7 +85,7 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 		User first = new User(UUID.randomUUID(), "Carla", "carla@acme.com", "hash", Role.MEMBER, false, now);
 		User duplicate = new User(UUID.randomUUID(), "Carla 2", "carla@acme.com", "hash2", Role.MEMBER, false, now);
 
-		try (TenantContextScope scope = TenantContextScope.open(schema)) {
+		try (var _ = TenantContextScope.open(schema)) {
 			userRepository.save(first);
 			assertThatThrownBy(() -> userRepository.save(duplicate)).isInstanceOf(DataIntegrityViolationException.class);
 		}
@@ -102,19 +102,19 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 			User inFirstTenant = new User(UUID.randomUUID(), "Dani", "dani@acme.com", "hash", Role.MEMBER, false, now);
 			User inOtherTenant = new User(UUID.randomUUID(), "Dani", "dani@acme.com", "hash", Role.MEMBER, false, now);
 
-			try (TenantContextScope scope = TenantContextScope.open(schema)) {
+			try (var _ = TenantContextScope.open(schema)) {
 				userRepository.save(inFirstTenant);
 			}
-			try (TenantContextScope scope = TenantContextScope.open(otherSchema)) {
+			try (var _ = TenantContextScope.open(otherSchema)) {
 				userRepository.save(inOtherTenant);
 			}
 
 			Optional<User> foundInFirst;
 			Optional<User> foundInOther;
-			try (TenantContextScope scope = TenantContextScope.open(schema)) {
+			try (var _ = TenantContextScope.open(schema)) {
 				foundInFirst = userRepository.findByEmail("dani@acme.com");
 			}
-			try (TenantContextScope scope = TenantContextScope.open(otherSchema)) {
+			try (var _ = TenantContextScope.open(otherSchema)) {
 				foundInOther = userRepository.findByEmail("dani@acme.com");
 			}
 
