@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.stakevault.betting.auth.config.TenantContextScope;
 import com.stakevault.betting.auth.domain.model.Role;
+import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
 import com.stakevault.betting.auth.domain.port.out.PasswordHasher;
@@ -127,6 +128,34 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 				.isEqualTo(unknownTenant.body().replaceAll("\"instance\":\"[^\"]*\"", ""))
 				.isEqualTo(unknownEmail.body().replaceAll("\"instance\":\"[^\"]*\"", ""))
 				.isEqualTo(wrongPassword.body().replaceAll("\"instance\":\"[^\"]*\"", ""));
+	}
+
+	@Test
+	void shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail() throws Exception {
+		String otherSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+		TenantSchemaName otherSchema = TenantSchemaName.fromSlug(otherSlug);
+		provisionTenantSchema.ensureSchemaExists(otherSlug);
+
+		try {
+			String sharedEmail = "shared@example.com";
+			User inCurrentTenant = new User(UUID.randomUUID(), "Ana", sharedEmail, passwordHasher.hash(RAW_PASSWORD),
+					Role.MEMBER, false, Instant.now().truncatedTo(DB_PRECISION));
+			User inOtherTenant = new User(UUID.randomUUID(), "Ana", sharedEmail, passwordHasher.hash("other-tenant-password"),
+					Role.MEMBER, false, Instant.now().truncatedTo(DB_PRECISION));
+			try (var _ = TenantContextScope.open(schema)) {
+				userRepository.save(inCurrentTenant);
+			}
+			try (var _ = TenantContextScope.open(otherSchema)) {
+				userRepository.save(inOtherTenant);
+			}
+
+			HttpResponse<String> response = post(
+					"{\"slug\":\"" + tenantSlug + "\",\"email\":\"" + sharedEmail + "\",\"password\":\"other-tenant-password\"}");
+
+			assertThat(response.statusCode()).isEqualTo(401);
+		} finally {
+			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + otherSchema.value() + "\" CASCADE");
+		}
 	}
 
 	@Test
