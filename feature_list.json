@@ -392,7 +392,7 @@
         {
           "id": "feat-003.1",
           "name": "Config ADMIN_API_KEY",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-32",
           "detail": "Variavel nova consumida pelo AdminApiKeyFilter (feat-003.5) - precisa existir antes do filtro para nao deixar o profile test sem valor fixo.",
           "checklist": [
