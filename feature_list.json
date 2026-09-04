@@ -478,7 +478,7 @@
         {
           "id": "feat-003.7",
           "name": "Teste i18n (Accept-Language) + CHANGELOG + verificacao final",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-38",
           "detail": "Fecha o item pendente de docs/TESTING.md desde feat-001.5 (pelo menos um teste de integracao do servico provando title/detail mudando por Accept-Language) - achado MAJOR do Plan Reviewer.",
           "checklist": [
