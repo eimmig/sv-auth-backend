@@ -58,3 +58,5 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-57](https://stakevault.atlassian.net/browse/SV-57) - Pipeline de CI (GitHub Actions + SonarCloud)
 - [SV-58](https://stakevault.atlassian.net/browse/SV-58) - Auditoria do pipeline real vs description da feature
 - [SV-59](https://stakevault.atlassian.net/browse/SV-59) - CHANGELOG e verificacao final
+- [SV-159](https://stakevault.atlassian.net/browse/SV-159) - Porta HTTP fixa (8081)
+- [SV-160](https://stakevault.atlassian.net/browse/SV-160) - server.port fixo, CHANGELOG e verificacao final
