@@ -60,3 +60,7 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-59](https://stakevault.atlassian.net/browse/SV-59) - CHANGELOG e verificacao final
 - [SV-159](https://stakevault.atlassian.net/browse/SV-159) - Porta HTTP fixa (8081)
 - [SV-160](https://stakevault.atlassian.net/browse/SV-160) - server.port fixo, CHANGELOG e verificacao final
+- [SV-222](https://stakevault.atlassian.net/browse/SV-222) - GET /api/v1/users - listagem de usuarios do tenant
+- [SV-223](https://stakevault.atlassian.net/browse/SV-223) - ListUsersUseCase / ListUsersService + UserRepository.findAllOrderByName
+- [SV-224](https://stakevault.atlassian.net/browse/SV-224) - UsersController (GET /api/v1/users) + UserSummaryResponse + testes de integracao
+- [SV-225](https://stakevault.atlassian.net/browse/SV-225) - CHANGELOG e verificacao final
