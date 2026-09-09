@@ -1052,6 +1052,38 @@
         }
       ],
       "evidence": "Fechada em 2026-09-09 - 3 subtasks (feat-009.1..3), cada uma via PR real no GitHub (subtask/SV-223, SV-224, SV-225 -> feature/SV-222) com CI verde (pipeline + GitGuardian) antes do merge. GET /api/v1/users implementado ponta a ponta: ListUsersUseCase/ListUsersService (autorizacao role=admin identica a CreateUserService de feat-004) + UserRepository.findAllOrderByName (Sort por nome, isolamento cross-tenant via MultiTenantConnectionProvider/SET SEARCH_PATH, mesmo mecanismo que ja cobria findById/findByEmail - confirmado no Plan Review que cobre findAll() tambem, nao so lookup por id) + UsersController.list (GET, mesmos headers/codigos de erro 401/400/403 do POST) + UserSummaryResponse (DTO novo, achado do Plan Reviewer para nao quebrar a convencao de 1 DTO por operacao). 10 testes novos (4 unitarios ListUsersServiceTest + 6 integracao HTTP via Testcontainers, incluindo isolamento cross-tenant e ausencia de passwordHash no corpo). Delivery Reviewer: PASS, sem achado (autorizacao/isolamento verificados como corretos na logica, nao so nos testes; UserSummaryResponse confirmado sem passwordHash; consistencia total com o padrao de feat-004). Test Suite Auditor: PASS, sem achado bloqueante (2 P3 nao-bloqueantes: assercoes por substring de corpo em vez de parse estruturado, e ausencia de teste explicito para tenant com so o admin - ambos de risco marginal, mesmo padrao ja aceito em feat-004). ./init.sh verde localmente (mvn verify, Docker ativo, JaCoCo 80%). api-gateway nao precisou de mudanca (rota /api/v1/users/** ja e por prefixo de path, method-agnostic). Vault atualizado no mesmo commit separado (repositorio sv-harness): docs/services/auth-service.md ganhou o contrato do GET, docs/CONVENTIONS.md ganhou a convencao nova '1 DTO de resposta por operacao' (achado real do Plan Reviewer, reaproveitavel pelos outros 2 servicos Java). Destrava apps/web feat-002 (motivacao original desta feature, decisao do usuario via AskUserQuestion). epic-002 (auth-service) ja estava done na raiz - esta feature nao reabre nem fecha epic, so adiciona escopo a um servico ja concluido; ../../feature_list.json nao precisa mudar."
+    },
+    {
+      "id": "feat-010",
+      "name": "POST /api/v1/auth/login retorna userId e role",
+      "description": "Gap real encontrado ao planejar apps/web feat-002 (RF01/RF02 UI): o token PASETO v4.local e criptografado simetricamente (chave so no backend), entao o frontend nao consegue decodificar claims (userId/tenantId/role) no cliente. tenantId ja e conhecido no cliente (o proprio slug digitado no login), mas userId e role nao tem nenhuma outra fonte - sem eles a UI nao sabe se deve mostrar a tela de gestao de usuarios do tenant (exclusiva de role=admin, ver docs/services/web.md 'Modelo de tenant (UI)') nem tem um id estavel do usuario logado. Mesmo precedente de feat-009 (gap encontrado planejando a mesma feature de apps/web). Extensao minima de LoginResult/LoginResponse (2 records existentes, sem DTO novo, sem migration, sem endpoint novo) - epic-002 ja done na raiz, feature reaberta so para esta adicao indispensavel.",
+      "dependencies": [
+        "feat-005"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-09, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado antes de codificar - passe proprio, sem subagentes (risco baixo, extensao de 2 records existentes, mesmo padrao de feat-008/009, independencia reduzida declarada). Veredito: READY. Verificado: nenhum outro consumidor depende do formato atual de 2 campos - api-gateway roteia POST /api/v1/auth/login como passthrough puro de body (GatewayRoutingIntegrationTest.shouldRouteLoginRequestWithoutRequiringToken so verifica path/status, nunca parseia o corpo), telegram-integration nao tem nenhuma referencia a LoginResponse/auth/login (nao usa PASETO, autentica via X-Service-Key). Sem endpoint /me/whoami no backlog para alternativa. userId/role em JSON plano sobre HTTPS aceito sem ressalva - mesmo nivel de exposicao que UserSummaryResponse/CreateUserResponse ja devolvem hoje. Escopo confirmado minimo: LoginResult (domain/model) e LoginResponse (adapter/in/web) ganham userId (UUID) + role (Role enum, serializa ADMIN/MEMBER via Jackson default, mesmo padrao de UserSummaryResponse) - LoginService.login ja tem 'user' carregado antes de emitir o token, sem porta/dependencia nova. LoginServiceTest e AuthControllerIntegrationTest sao os mesmos arquivos que ja cobrem login, ajustados nesta mesma subtask (nao subtask de teste separada). docs/API-CONTRACTS.md e docs/services/auth-service.md atualizados no mesmo commit (contrato cross-service). Unica subtask, mesmo formato de feat-008 (mudanca pequena e coesa, sem necessidade de dividir implementacao/teste/fechamento).",
+      "jira": "SV-226",
+      "subtasks": [
+        {
+          "id": "feat-010.1",
+          "name": "LoginResult/LoginResponse ganham userId+role, CHANGELOG e verificacao final",
+          "status": "in-progress",
+          "jira": "SV-227",
+          "detail": "Extensao dos 2 records existentes (domain/model/LoginResult.java, adapter/in/web/LoginResponse.java) - LoginService.login ja carrega 'user' antes de emitir o token, so passa user.id()/user.role() adiante. AuthController repassa os 2 campos novos no construtor de LoginResponse.",
+          "checklist": [
+            "LoginResult ganha UUID userId, Role role - LoginService.login constroi com user.id()/user.role().",
+            "LoginResponse (DTO HTTP) ganha os mesmos 2 campos, AuthController repassa de LoginResult.",
+            "LoginServiceTest (registeredUser + asserts de LoginResult) e AuthControllerIntegrationTest (JSON body do login valido) atualizados para os campos novos.",
+            "docs/API-CONTRACTS.md e docs/services/auth-service.md (repositorio raiz) atualizados no mesmo commit logico com o contrato novo.",
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer e Test Suite Auditor rodados antes de done (Persistence Auditor dispensavel - sem migration/query nova, so repasse de campo ja carregado)."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) nao precisa mudar (epic-002 ja done, esta feature nao fecha epic).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
