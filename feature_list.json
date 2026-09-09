@@ -1060,7 +1060,7 @@
       "dependencies": [
         "feat-005"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-09, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado antes de codificar - passe proprio, sem subagentes (risco baixo, extensao de 2 records existentes, mesmo padrao de feat-008/009, independencia reduzida declarada). Veredito: READY. Verificado: nenhum outro consumidor depende do formato atual de 2 campos - api-gateway roteia POST /api/v1/auth/login como passthrough puro de body (GatewayRoutingIntegrationTest.shouldRouteLoginRequestWithoutRequiringToken so verifica path/status, nunca parseia o corpo), telegram-integration nao tem nenhuma referencia a LoginResponse/auth/login (nao usa PASETO, autentica via X-Service-Key). Sem endpoint /me/whoami no backlog para alternativa. userId/role em JSON plano sobre HTTPS aceito sem ressalva - mesmo nivel de exposicao que UserSummaryResponse/CreateUserResponse ja devolvem hoje. Escopo confirmado minimo: LoginResult (domain/model) e LoginResponse (adapter/in/web) ganham userId (UUID) + role (Role enum, serializa ADMIN/MEMBER via Jackson default, mesmo padrao de UserSummaryResponse) - LoginService.login ja tem 'user' carregado antes de emitir o token, sem porta/dependencia nova. LoginServiceTest e AuthControllerIntegrationTest sao os mesmos arquivos que ja cobrem login, ajustados nesta mesma subtask (nao subtask de teste separada). docs/API-CONTRACTS.md e docs/services/auth-service.md atualizados no mesmo commit (contrato cross-service). Unica subtask, mesmo formato de feat-008 (mudanca pequena e coesa, sem necessidade de dividir implementacao/teste/fechamento).",
       "jira": "SV-226",
       "subtasks": [
