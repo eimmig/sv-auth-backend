@@ -2,8 +2,8 @@
 
 ## Estado Atual (Current State)
 
-**Última atualização:** 2026-09-04
-**Feature ativa:** nenhuma (`feat-006` `done`, `feat-007` liberada)
+**Última atualização:** 2026-09-09
+**Feature ativa:** nenhuma (`feat-001..009` todas `done`, backlog atual esgotado)
 
 ## Status
 
@@ -197,15 +197,46 @@
   *Response}` (novos), `config/PublicSchemaMigrationRunner` (novo), `db/migration-public/`
   (novo) — ver commits em `feature/SV-50` (mergeada em `develop`, `a6f92fd`).
 
+## `feat-009` fechada — GET /api/v1/users, listagem de usuários do tenant (2026-09-09)
+
+Motivada por um gap real encontrado nesta mesma sessão ao planejar `apps/web feat-002` (tela de
+gestão de usuários do tenant precisa de "lista + criar", mas o backend só tinha o `POST` de
+`feat-004`) — decisão do usuário via `AskUserQuestion` para fechar o gap aqui antes de seguir
+para `apps/web`. `ListUsersUseCase`/`ListUsersService` reaproveita a mesma checagem de
+autorização (`role = admin`) e as mesmas exceções (`MissingTenantContextException`/
+`AdminRoleRequiredException`) de `CreateUserService` (`feat-004`), sem duplicar nada.
+`UserRepository.findAllOrderByName()` (`Sort.by(ASC, "name")`) — isolamento cross-tenant
+confirmado no Plan Review: o mesmo `MultiTenantConnectionProvider`/`SET SEARCH_PATH` que já
+isolava `findById`/`findByEmail` cobre qualquer query sem `WHERE` explícito na mesma conexão,
+`findAll()` incluído.
+
+DTO de resposta novo, `UserSummaryResponse` (não reaproveita `CreateUserResponse`) — achado do
+Plan Reviewer: o serviço mantém a convenção implícita de 1 DTO por operação (nenhum dos 5 DTOs
+existentes era reusado entre 2 endpoints), reusar quebraria isso só para economizar um `record`
+de 5 campos. Convenção documentada em `docs/CONVENTIONS.md` para os outros 2 serviços Java.
+
+3 subtasks (SV-223..225), cada uma via PR real subtask→story no GitHub com CI verde antes do
+merge (mesmo fluxo de 4 níveis já em uso desde `feat-008`). Story→`develop` (PR #46) com o gate
+completo: `./init.sh` local verde (Docker ativo, Testcontainers, JaCoCo 80%), Delivery Reviewer
+e Test Suite Auditor rodados contra o diff inteiro (ambos PASS, sem achado bloqueante — 2 P3 não
+bloqueantes do Test Suite Auditor: asserções por substring de corpo em vez de parse estruturado,
+e ausência de teste explícito para tenant com só o admin — mesmo padrão já aceito em `feat-004`),
+CI completa incluindo SonarCloud verde. `api-gateway` não precisou de mudança (rota
+`/api/v1/users/**` já é por prefixo de path, method-agnostic — `GET` já roteava). Destrava
+`apps/web feat-002`. Evidência completa em `feature_list.json` (campo `evidence` de `feat-009`).
+
 ## Evidência de conclusão
 
-- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004`/`feat-005`/`feat-006` em
+- Ver campo `evidence` de `feat-002`/`feat-003`/`feat-004`/`feat-005`/`feat-006`/`feat-009` em
   `feature_list.json` (objeto estruturado com 4 seções: verificação real executada, divergência
-  do plano original, defeitos encontrados antes de causar dano, skills e ferramentas).
+  do plano original, defeitos encontrados antes de causar dano, skills e ferramentas — exceto
+  `feat-009`, evidência em texto corrido).
 
 ## Notas para a próxima sessão
 
-- `feat-007` (pipeline de CI) é a única feature liberada restante deste serviço.
+- Backlog atual deste serviço esgotado (`feat-001..009` todas `done`). Próximo trabalho aqui só
+  surge de um novo gap cross-service (como `feat-008`/`feat-009`) ou de uma nova feature
+  planejada na raiz.
 - Padrão novo de `feat-006`, reaproveitável por `bets-service`/`stats-service` se algum dia
   precisarem de uma tabela global fora do schema-per-tenant: entidade JPA com `@Table(schema =
   "public")` explícito (convive com a multi-tenancy do Hibernate sem precisar de um segundo
