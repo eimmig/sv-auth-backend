@@ -1067,7 +1067,7 @@
         {
           "id": "feat-010.1",
           "name": "LoginResult/LoginResponse ganham userId+role, CHANGELOG e verificacao final",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-227",
           "detail": "Extensao dos 2 records existentes (domain/model/LoginResult.java, adapter/in/web/LoginResponse.java) - LoginService.login ja carrega 'user' antes de emitir o token, so passa user.id()/user.role() adiante. AuthController repassa os 2 campos novos no construtor de LoginResponse.",
           "checklist": [
@@ -1083,7 +1083,7 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": "feat-010.1 fechada em 2026-09-09 via PR real (subtask/SV-227 -> feature/SV-226, PR #47), CI (pipeline + GitGuardian) verde antes do merge. LoginResult (domain/model) e LoginResponse (adapter/in/web) ganharam userId (UUID) + role (Role enum, serializa ADMIN/MEMBER via Jackson default, mesmo padrao de UserSummaryResponse) - LoginService.login repassa user.id()/user.role() (ja carregados, sem porta/dependencia nova), AuthController repassa os 2 campos no construtor de LoginResponse. LoginServiceTest e AuthControllerIntegrationTest atualizados (asserts de igualdade/corpo JSON incluindo os campos novos no caminho de sucesso - caminhos de erro nao mudam, LoginResponse so aparece no 200). Delivery Reviewer (passe proprio, sem subagentes - diff de 6 arquivos, risco baixo, independencia reduzida declarada): PASS, sem achado - confirmado sem consumidor quebrado (api-gateway roteia /api/v1/auth/login como passthrough puro de body, GatewayRoutingIntegrationTest nunca parseia o corpo; telegram-integration nao referencia LoginResponse/PASETO). Test Suite Auditor (mesmo padrao, passe proprio): PASS, sem achado - cobertura no caminho de sucesso e suficiente (userId/role so aparecem no 200, caminhos de erro 400/401 continuam sem eles por desenho). Persistence Auditor dispensado (sem migration/query nova, so repasse de campo ja carregado por SELECT existente). ./init.sh (mvn verify, JaCoCo 80%) verde localmente antes do push. docs/API-CONTRACTS.md nao precisou mudar (nao documentava o corpo do login); docs/services/auth-service.md (repositorio raiz) atualizado no mesmo commit logico com o contrato novo."
     }
   ]
 }
