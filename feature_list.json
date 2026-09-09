@@ -993,6 +993,65 @@
         }
       ],
       "evidence": "Fechada em 2026-09-07 - server.port=8081 fixado no bloco base de application.yml (sem profile, aplica dev/test/prod), destravando api-gateway feat-003. Delivery Reviewer (passe proprio, sem subagentes - risco baixo, independencia reduzida declarada): PASS, sem achado - confirmado que nenhum teste hardcoda porta (todos RANDOM_PORT + @LocalServerPort), sem referencia a 8080/porta em .github/workflows/ci.yml, sem dependencia implicita em nenhum profile. Test Suite Auditor/Persistence Auditor dispensados (zero codigo/teste/persistencia tocado, so um valor de configuracao). ./init.sh do servico verde (exit 0) na branch feature/SV-159 apos merge da subtask. CHANGELOG.md atualizado automaticamente por tools/jira_story.py."
+    },
+    {
+      "id": "feat-009",
+      "name": "GET /api/v1/users - listagem de usuarios do tenant",
+      "description": "Endpoint de listagem dos usuarios do tenant do chamador, restrito a role=admin (mesma checagem de autorizacao de feat-004/POST /api/v1/users). Motivada por um gap real encontrado ao planejar apps/web feat-002 (RF01/RF02 UI): a tela de gestao de usuarios do tenant precisa de 'lista + criar', mas o backend so tinha o POST de feat-004 - decisao do usuario, 2026-09-09, mesmo precedente do gap de roteamento encontrado em api-gateway feat-007 durante telegram-integration feat-004. Resposta 200 com array no mesmo formato de CreateUserResponse (id/name/email/role/mustChangePassword/createdAt, nunca passwordHash), mesmos headers X-User-Id/X-Tenant-Id e mesmos codigos de erro 401/400/403 de feat-004 (caller ausente/invalido, tenant ausente, caller nao-admin).",
+      "dependencies": [
+        "feat-004"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-09, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: READY WITH CONCERNS, 2 MINOR incorporados ao plano (nada bloqueante, nenhuma decisao pendente do usuario alem da ja tomada via AskUserQuestion sobre adicionar este endpoint agora). (MINOR) reaproveitar CreateUserResponse como corpo da listagem quebraria a convencao existente de 1 DTO por operacao (CreateUserResponse/CreateTenantResponse/GenerateTelegramLinkResponse/LoginResponse/TelegramAccountLookupResponse, nenhum reusado entre 2 operacoes) - corrigido para DTO novo UserSummaryResponse (mesmos 5 campos, sem passwordHash), CreateUserResponse intocado. (MINOR) ordenacao da lista nao tinha requisito em nenhuma nota do vault - decidido por nome ascendente (usabilidade de tela de admin), metodo UserRepository.findAllOrderByName() (mesmo estilo de findById/findByEmail). Verificado e confirmado sem gap: isolamento cross-tenant de un findAll() sem WHERE explicito - MultiTenantConnectionProvider chama Connection.setSchema() no checkout da conexao (SET SEARCH_PATH via driver Postgres), escopando toda query sem schema explicito na sessao, nao so find-by-id; UserJpaEntity nao declara @Table(schema=...), confirmando que depende do search_path como o resto do dado do tenant (docs/CONVENTIONS.md secao multi-tenancy). Sem paginacao: nenhum requisito pede, lista de usuarios de um tenant provisionado manualmente e pequena por natureza (KISS). Rodada de desafio independente executada como passe proprio, sem subagentes - risco baixo, precedente direto de feat-004, independencia reduzida declarada.",
+      "jira": "SV-222",
+      "subtasks": [
+        {
+          "id": "feat-009.1",
+          "name": "ListUsersUseCase / ListUsersService + UserRepository.findAllOrderByName",
+          "status": "done",
+          "jira": "SV-223",
+          "detail": "Mesmo padrao de autorizacao de CreateUserService (feat-004.2), sem exceptions/i18n novos - reaproveita MissingTenantContextException/AdminRoleRequiredException ja existentes.",
+          "checklist": [
+            "domain/port/in/ListUsersUseCase.listUsers(UUID callerId): List<User>.",
+            "domain/port/out/UserRepository ganha List<User> findAllOrderByName().",
+            "adapter/out/persistence/JpaUserRepository implementa via jpaRepository.findAll(Sort.by(Sort.Direction.ASC, \"name\")), mesmo toDomain() ja existente.",
+            "application/ListUsersService: TenantContextHolder.current()==null -> MissingTenantContextException; userRepository.findById(callerId) ausente OU role!=ADMIN -> AdminRoleRequiredException; caso contrario userRepository.findAllOrderByName()."
+          ],
+          "validation": "Teste unitario (fakes de UserRepository) cobre sucesso (lista ordenada por nome, inclui o proprio caller), tenant ausente, caller ausente, caller nao-admin - mesmo estilo de CreateUserServiceTest.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-009.2",
+          "name": "UsersController (GET /api/v1/users) + UserSummaryResponse + testes de integracao",
+          "status": "not-started",
+          "jira": "SV-224",
+          "detail": "Mesmo parsing de X-User-Id/X-Tenant-Id ja existente no controller (metodo privado parseCallerId reaproveitado, sem duplicar). UserSummaryResponse e DTO novo (nao reaproveita CreateUserResponse, achado do Plan Reviewer) para manter a convencao de 1 DTO por operacao.",
+          "checklist": [
+            "adapter/in/web/UserSummaryResponse (id,name,email,role,mustChangePassword,createdAt - nunca passwordHash).",
+            "UsersController ganha @GetMapping retornando 200 List<UserSummaryResponse> ordenada por nome.",
+            "Teste de integracao (mesma classe UsersControllerIntegrationTest, TenantSchemaIntegrationSupport): 200 com lista incluindo o proprio admin chamador; 401 sem X-User-Id (e malformado); 400 sem X-Tenant-Id; 403 caller nao-admin; 403 admin de outro tenant nao ve usuarios deste tenant (isolamento cross-tenant).",
+            "docs/services/auth-service.md e docs/API-CONTRACTS.md atualizados no mesmo commit com o contrato exato do GET."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-009.3",
+          "name": "CHANGELOG e verificacao final",
+          "status": "not-started",
+          "jira": "SV-225",
+          "detail": "Fecha a feature com o gate real do harness. Ultima subtask - carrega o item fixo de revisao do vault (docs/) alem do checklist padrao.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer e Test Suite Auditor rodados antes de done (Persistence Auditor dispensavel - sem migration/schema novo, so um SELECT ja coberto pelo mecanismo de multi-tenancy existente, avaliar e justificar antes de pular).",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) nao precisa mudar (epic-002 ja done, esta feature nao fecha epic).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
