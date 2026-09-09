@@ -1023,7 +1023,7 @@
         {
           "id": "feat-009.2",
           "name": "UsersController (GET /api/v1/users) + UserSummaryResponse + testes de integracao",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-224",
           "detail": "Mesmo parsing de X-User-Id/X-Tenant-Id ja existente no controller (metodo privado parseCallerId reaproveitado, sem duplicar). UserSummaryResponse e DTO novo (nao reaproveita CreateUserResponse, achado do Plan Reviewer) para manter a convencao de 1 DTO por operacao.",
           "checklist": [
