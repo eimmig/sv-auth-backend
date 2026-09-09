@@ -58,7 +58,7 @@ public class LoginService implements LoginUseCase {
 		}
 
 		String token = accessTokenIssuer.issue(user.id(), tenantSlug);
-		return new LoginResult(token, user.mustChangePassword());
+		return new LoginResult(token, user.mustChangePassword(), user.id(), user.role());
 	}
 
 	private void burnHashingCost(String rawPassword) {

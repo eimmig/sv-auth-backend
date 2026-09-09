@@ -48,7 +48,7 @@ class LoginServiceTest {
 
 		LoginResult result = service.login("acme", "ana@acme", "raw-password");
 
-		assertThat(result).isEqualTo(new LoginResult("v4.local.token", true));
+		assertThat(result).isEqualTo(new LoginResult("v4.local.token", true, user.id(), Role.MEMBER));
 		verify(provisionTenantSchema).migrateIfPending("acme");
 	}
 

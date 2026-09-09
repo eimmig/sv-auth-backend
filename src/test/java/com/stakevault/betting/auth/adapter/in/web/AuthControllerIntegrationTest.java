@@ -63,7 +63,7 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 
 	@Test
 	void shouldReturnTokenAndMustChangePasswordOnValidLogin() throws Exception {
-		seedUser(true);
+		User user = seedUser(true);
 
 		HttpResponse<String> response = post(
 				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
@@ -71,6 +71,8 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		assertThat(response.statusCode()).isEqualTo(200);
 		assertThat(response.body()).contains("\"token\":\"v4.local.");
 		assertThat(response.body()).contains("\"mustChangePassword\":true");
+		assertThat(response.body()).contains("\"userId\":\"" + user.id() + "\"");
+		assertThat(response.body()).contains("\"role\":\"MEMBER\"");
 	}
 
 	@Test
