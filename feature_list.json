@@ -1123,7 +1123,27 @@
           "jira": "SV-312"
         }
       ],
-      "evidence": "Fechada em 2026-09-10. AccessTokenIssuer.issue(userId, tenantSlug, role) - novo parametro Role. PasetoAccessTokenIssuer.PasetoClaims ganha campo role (serializado como role.name(), uppercase ADMIN/MEMBER - mesmo casing ja usado em LoginResponse.role). LoginService passa user.role() (ja disponivel no ponto de chamada, sem query nova). Testes atualizados: PasetoAccessTokenIssuerTest prova o claim role aparece decriptado no payload; LoginServiceTest com o novo parametro no mock. mvn verify verde. Sem migration nem mudanca de schema - so o payload do token. Libera api-gateway (feature irma, extrair+injetar X-User-Role) e bets-service epic-013 (PATCH /api/v1/settings). Delivery Reviewer/Test Suite Auditor/Persistence Auditor: self-review proporcional ao escopo (mudanca mecanica de 2 campos, sem schema/persistencia tocados, sem subagent dedicado) - nenhum achado; Persistence Auditor N/A por nao haver superficie de persistencia nesta mudanca (so payload de token em memoria)."
+      "evidence": "Fechada em 2026-09-10. AccessTokenIssuer.issue(userId, tenantSlug, role) - novo parametro Role. PasetoAccessTokenIssuer.PasetoClaims ganha campo role (serializado como role.name().toLowerCase()). LoginService passa user.role() (ja disponivel no ponto de chamada, sem query nova). Testes atualizados: PasetoAccessTokenIssuerTest prova o claim role aparece decriptado no payload; LoginServiceTest com o novo parametro no mock. mvn verify verde. Sem migration nem mudanca de schema - so o payload do token. Libera api-gateway (feature irma, extrair+injetar X-User-Role) e bets-service epic-013 (PATCH /api/v1/settings). Delivery Reviewer/Test Suite Auditor/Persistence Auditor: self-review proporcional ao escopo (mudanca mecanica de 2 campos, sem schema/persistencia tocados, sem subagent dedicado) - nenhum achado; Persistence Auditor N/A por nao haver superficie de persistencia nesta mudanca (so payload de token em memoria). CORRECAO 2026-09-10, mesmo dia: o plan_review acima justificou uppercase (role.name() cru) alegando bater com o casing de LoginResponse.role - achado real do Plan Reviewer de bets-service epic-013 (chamado antes de implementar o consumidor do header): docs/API-CONTRACTS.md e docs/DECISIONS-LOG.md ja documentavam X-User-Role como lowercase ('admin'/'member', mesma convencao de BET.status/TransactionType), e os testes de api-gateway feat-010 (ja escritos) tambem assumiam lowercase - so o emissor (aqui) estava errado. Corrigido pra role.name().toLowerCase(), sem reabrir subtask nem story (Jira ja Done) - correcao direta, mesma sessao, antes de qualquer consumidor real (bets-service) depender do valor errado."
+    },
+    {
+      "id": "feat-013",
+      "name": "Corrigir casing do claim role (lowercase, nao role.name() cru)",
+      "description": "Achado real do Plan Reviewer de bets-service epic-013 (chamado antes de implementar o consumidor de X-User-Role): feat-012 emitiu o claim role com role.name() cru (uppercase ADMIN/MEMBER), justificando isso por bater com LoginResponse.role - mas docs/API-CONTRACTS.md e docs/DECISIONS-LOG.md ja documentavam X-User-Role como lowercase ('admin'/'member', mesma convencao de BET.status/TransactionType em outros servicos), e os testes de api-gateway feat-010 (ja implementados e mergeados) tambem assumiam lowercase. So o emissor (este servico) estava com o casing errado. Corrigido antes de qualquer consumidor real (bets-service) depender do valor.",
+      "dependencies": [
+        "feat-012"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-10 - correcao direta de um achado ja verificado (nao uma decisao de design nova): a fonte de verdade (docs/API-CONTRACTS.md, docs/DECISIONS-LOG.md, testes ja mergeados de api-gateway feat-010) ja apontava lowercase de forma inequivoca: nao havia ambiguidade a resolver, so um bug a corrigir.",
+      "jira": "SV-315",
+      "subtasks": [
+        {
+          "id": "feat-013.1",
+          "name": "role.name().toLowerCase() no claim do PASETO",
+          "status": "done",
+          "jira": "SV-316"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-10. PasetoAccessTokenIssuer: role.name() vira role.name().toLowerCase(). PasetoAccessTokenIssuerTest atualizado (assertion 'role':'admin' em vez de 'ADMIN'). mvn verify verde (mesmos 2 arquivos ja cobertos por feat-012). Nenhum outro consumidor de X-User-Role existia ainda alem de api-gateway (que so repassa a string, sem se importar com case) - correcao sem impacto em nenhum caminho ja em producao."
     }
   ]
 }

@@ -38,7 +38,7 @@ class PasetoAccessTokenIssuerTest {
 		assertThat(claimsJson)
 				.contains("\"userId\":\"" + userId + "\"")
 				.contains("\"tenantId\":\"acme\"")
-				.contains("\"role\":\"ADMIN\"")
+				.contains("\"role\":\"admin\"")
 				.contains("\"iat\":")
 				.contains("\"exp\":");
 	}
