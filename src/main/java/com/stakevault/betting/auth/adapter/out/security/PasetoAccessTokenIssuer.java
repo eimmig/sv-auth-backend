@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import tools.jackson.databind.ObjectMapper;
+import com.stakevault.betting.auth.domain.model.Role;
 import com.stakevault.betting.auth.domain.port.out.AccessTokenIssuer;
 
 @Component
@@ -29,15 +30,15 @@ public class PasetoAccessTokenIssuer implements AccessTokenIssuer {
 	}
 
 	@Override
-	public String issue(UUID userId, String tenantSlug) {
+	public String issue(UUID userId, String tenantSlug, Role role) {
 		Instant now = Instant.now();
 		Instant expiresAt = now.plus(accessTokenTtlMinutes, ChronoUnit.MINUTES);
-		PasetoClaims claims = new PasetoClaims(userId.toString(), tenantSlug, now.getEpochSecond(),
+		PasetoClaims claims = new PasetoClaims(userId.toString(), tenantSlug, role.name(), now.getEpochSecond(),
 				expiresAt.getEpochSecond());
 		String payload = objectMapper.writeValueAsString(claims);
 		return Paseto.encrypt(localKey, payload, "");
 	}
 
-	record PasetoClaims(String userId, String tenantId, long iat, long exp) {
+	record PasetoClaims(String userId, String tenantId, String role, long iat, long exp) {
 	}
 }

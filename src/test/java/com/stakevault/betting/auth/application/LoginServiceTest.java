@@ -44,7 +44,7 @@ class LoginServiceTest {
 		when(provisionTenantSchema.exists("acme")).thenReturn(true);
 		when(userRepository.findByEmail("ana@acme")).thenReturn(Optional.of(user));
 		when(passwordHasher.matches("raw-password", "hashed-password")).thenReturn(true);
-		when(accessTokenIssuer.issue(user.id(), "acme")).thenReturn("v4.local.token");
+		when(accessTokenIssuer.issue(user.id(), "acme", Role.MEMBER)).thenReturn("v4.local.token");
 
 		LoginResult result = service.login("acme", "ana@acme", "raw-password");
 
