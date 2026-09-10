@@ -1,61 +1,31 @@
 # Session Handoff — auth-service
 
-## Current Objective
+> Estado atual, não histórico. O diário cronológico é o `progress.md` — este arquivo é reescrito
+> a cada sessão para responder "o que a próxima sessão precisa saber agora".
 
-- Goal: `feat-001` (project setup) — done. `feat-002` (USER/TELEGRAM_ACCOUNT entities) next.
-- Current status: Spring Boot 4.1.1 skeleton, tenant schema provisioning, i18n, health checks,
-  JaCoCo gate all shipped and merged into `develop`.
-- Branch / commit: `develop` @ `d000c47` (merge of `feature/SV-10`, story SV-10, 9 subtasks).
+**Última atualização:** 2026-09-10
 
-## Completed This Session
+## Objetivo atual
 
-- [x] `feat-001` fully implemented across 9 subtasks (SV-11..SV-19) — see `progress.md` and the
-      `evidence` field of `feat-001` in `feature_list.json` for full detail.
-- [x] `/code-review` run before every subtask PR (new project-wide rule, adopted this session) —
-      caught and fixed 4 real issues before merge: RFC 7807 error format, a Flyway hot-path
-      caching gap, a locale-resolver fallback gap, and an MDC-placement gap.
-- [x] `Delivery Reviewer` (PASS, no findings), `Test Suite Auditor` (found and closed a domain
-      coverage gap — `TenantSchemaNameTest`), `Persistence Auditor` (found a hot-path query
-      issue; the first fix introduced a security-adjacent regression that `/code-review` caught
-      before merge — see `progress.md` "Decisões tomadas").
+`feat-001`..`feat-013` `done`. `feat-012` (claim `role` no token PASETO) e `feat-013` (correção
+de casing do mesmo claim) fechadas nesta sessão — achados de `bets-service epic-013`, ver
+`progress.md`.
 
-## Verification Evidence
+## Concluído nesta sessão (2026-09-10)
 
-| Check | Command | Result | Notes |
-|---|---|---|---|
-| Build/test | `./init.sh` | exit 0 | 22 tests, 0 failures, JaCoCo 80% gate passed, Docker required (Testcontainers). |
-| CI | GitHub Actions, all 10 PRs | green | Includes SonarCloud on the final story→develop PR. |
-| Secrets scan | GitGuardian | historical false positive | See "Blockers / Risks" below — fixed in HEAD, flagged commits remain in history. |
+- [x] `feat-012` fechada (story SV-311, PRs #51/#52). `AccessTokenIssuer.issue` ganha `Role`,
+      `PasetoClaims` ganha campo `role`. Libera `api-gateway` (feature irmã, extrair+injetar
+      `X-User-Role`) e `bets-service epic-013` (`PATCH /api/v1/settings`).
+- [x] `feat-013` fechada (story SV-315, PRs #53/#54) — correção real do casing do claim `role`
+      (lowercase, não `role.name()` cru), achado do Plan Reviewer de `bets-service epic-013`.
 
-## Files Changed
+## Bloqueios / Riscos
 
-- Full project skeleton: `pom.xml`, `src/main/**`, `src/test/**`, `application.yml`,
-  `.env.example`, `CHANGELOG.md`, `.github/workflows/ci.yml`, `feature_list.json`.
+Nenhum.
 
-## Decisions Made
+## Próxima sessão — por onde começar
 
-- See `progress.md` "Decisões tomadas" — `spring-dotenv` not used, `@RestControllerAdvice`
-  skeleton not created (YAGNI, no real exception to map yet), `migrateIfPending` never caches
-  `exists()` (security-relevant check, always runs).
-
-## Blockers / Risks
-
-- GitGuardian (GitHub App check, not part of this harness's own CI) flagged an example password
-  in `.env.example` — only on the final story→develop PR, since it only scans `pull_request`
-  events and no earlier subtask PR had touched that file after it existed with that value. Fixed
-  in `feat-001.9` (placeholder changed to `CHANGE_ME`), but the flagged commits remain in git
-  history (not rewritten — rewriting published history over a false positive isn't worth the
-  risk). Dashboard still shows the finding as "Triggered" against those old commits; no action
-  needed unless GitGuardian is configured to block merges in the future.
-
-## Next Session Startup
-
-1. Read `../../CLAUDE.md` and `../../docs/services/auth-service.md`.
-2. Read this directory's `CLAUDE.md`, `feature_list.json`, `progress.md`.
-3. Run `./init.sh` (needs Docker running for Testcontainers).
-
-## Recommended Next Step
-
-- Start `feat-002` (USER/TELEGRAM_ACCOUNT entities + first real Flyway migrations). Plan Reviewer
-  first, per `CLAUDE.md` (raiz) — this is the first feature to actually populate
-  `src/main/resources/db/migration/` and to need Lombok in `adapter/out/persistence/`.
+1. Rodar `./init.sh` (deve sair `0`).
+2. Nenhuma feature elegível neste harness até surgir novo achado cross-service.
+3. Fora deste serviço: `api-gateway` precisa da feature irmã (extrair `role` do token, injetar
+   `X-User-Role`) antes de `bets-service epic-013` poder confiar no header.

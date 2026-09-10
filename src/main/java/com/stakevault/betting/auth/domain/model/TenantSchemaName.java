@@ -2,13 +2,13 @@ package com.stakevault.betting.auth.domain.model;
 
 import java.util.regex.Pattern;
 
-/** Nome do schema Postgres de um tenant ({@code tenant_<slug>}). */
 public record TenantSchemaName(String value) {
 
 	private static final Pattern SLUG = Pattern.compile("^[a-z][a-z0-9-]{1,55}$");
+	private static final String TENANT_PREFIX = "tenant_";
 
 	public TenantSchemaName {
-		if (value == null || !value.startsWith("tenant_")) {
+		if (value == null || !value.startsWith(TENANT_PREFIX)) {
 			throw new IllegalArgumentException("nome de schema de tenant invalido: " + value);
 		}
 	}
@@ -17,6 +17,10 @@ public record TenantSchemaName(String value) {
 		if (slug == null || !SLUG.matcher(slug).matches()) {
 			throw new IllegalArgumentException("slug de tenant invalido: " + slug);
 		}
-		return new TenantSchemaName("tenant_" + slug);
+		return new TenantSchemaName(TENANT_PREFIX + slug);
+	}
+
+	public String slug() {
+		return value.substring(TENANT_PREFIX.length());
 	}
 }

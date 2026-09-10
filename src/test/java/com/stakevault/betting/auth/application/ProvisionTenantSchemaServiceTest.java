@@ -1,5 +1,6 @@
 package com.stakevault.betting.auth.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -30,14 +31,21 @@ class ProvisionTenantSchemaServiceTest {
 	}
 
 	@Test
-	void ensureSchemaExists_delegaCriacaoEMigracaoAoGateway() {
+	void shouldDelegateExistenceCheckToGateway() {
+		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true);
+
+		assertThat(service.exists("acme")).isTrue();
+	}
+
+	@Test
+	void shouldDelegateCreationAndMigrationToGateway() {
 		service.ensureSchemaExists("acme");
 
 		verify(gateway).createAndMigrate(new TenantSchemaName("tenant_acme"));
 	}
 
 	@Test
-	void migrateIfPending_migraQuandoSchemaExiste() {
+	void shouldMigrateWhenSchemaExists() {
 		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true);
 
 		service.migrateIfPending("acme");
@@ -46,7 +54,7 @@ class ProvisionTenantSchemaServiceTest {
 	}
 
 	@Test
-	void migrateIfPending_lancaExceptionSemMigrarQuandoSchemaNaoExiste() {
+	void shouldThrowWithoutMigratingWhenSchemaDoesNotExist() {
 		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(false);
 
 		assertThatThrownBy(() -> service.migrateIfPending("acme"))
@@ -56,7 +64,7 @@ class ProvisionTenantSchemaServiceTest {
 	}
 
 	@Test
-	void migrateIfPending_confereExistenciaEmTodaChamadaMesmoRepetida() {
+	void shouldCheckExistenceOnEveryCallEvenWhenRepeated() {
 		when(gateway.exists(new TenantSchemaName("tenant_acme"))).thenReturn(true, false);
 		service.migrateIfPending("acme");
 

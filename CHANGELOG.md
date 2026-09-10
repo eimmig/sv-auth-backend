@@ -20,3 +20,58 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-19](https://stakevault.atlassian.net/browse/SV-19) - Corrigir falso positivo do GitGuardian em .env.example
 - [SV-20](https://stakevault.atlassian.net/browse/SV-20) - Resolver achados reais do SonarCloud vistos so na PR develop->main
 - [SV-21](https://stakevault.atlassian.net/browse/SV-21) - Remover SQL de DDL escrito a mao; cortar comentarios longos
+- [SV-22](https://stakevault.atlassian.net/browse/SV-22) - Entidades USER e TELEGRAM_ACCOUNT
+- [SV-23](https://stakevault.atlassian.net/browse/SV-23) - Lombok e reorganizacao de TenantContextHolder
+- [SV-24](https://stakevault.atlassian.net/browse/SV-24) - Migration Flyway: tabelas users e telegram_accounts
+- [SV-25](https://stakevault.atlassian.net/browse/SV-25) - Modelo de dominio e ports/out
+- [SV-26](https://stakevault.atlassian.net/browse/SV-26) - Entidades JPA e adapters de persistencia
+- [SV-27](https://stakevault.atlassian.net/browse/SV-27) - Multi-tenancy do Hibernate por schema
+- [SV-28](https://stakevault.atlassian.net/browse/SV-28) - Testes de mapeamento e isolamento por tenant
+- [SV-29](https://stakevault.atlassian.net/browse/SV-29) - CHANGELOG e verificacao final
+- [SV-30](https://stakevault.atlassian.net/browse/SV-30) - Corrigir 27 apontamentos do SonarCloud ignorados no merge e travar o gate
+- [SV-31](https://stakevault.atlassian.net/browse/SV-31) - Provisionamento de tenant (rota admin)
+- [SV-32](https://stakevault.atlassian.net/browse/SV-32) - Config ADMIN_API_KEY
+- [SV-33](https://stakevault.atlassian.net/browse/SV-33) - Exceptions de dominio com chave de mensagem + entradas i18n
+- [SV-34](https://stakevault.atlassian.net/browse/SV-34) - Ports/out + adapters de senha (hash e geracao)
+- [SV-35](https://stakevault.atlassian.net/browse/SV-35) - CreateTenantUseCase / CreateTenantService
+- [SV-36](https://stakevault.atlassian.net/browse/SV-36) - AdminApiKeyFilter
+- [SV-37](https://stakevault.atlassian.net/browse/SV-37) - RestControllerAdvice + endpoint POST /api/v1/admin/tenants
+- [SV-38](https://stakevault.atlassian.net/browse/SV-38) - Teste i18n (Accept-Language) + CHANGELOG + verificacao final
+- [SV-39](https://stakevault.atlassian.net/browse/SV-39) - RF01 - Criacao de usuario dentro do tenant
+- [SV-40](https://stakevault.atlassian.net/browse/SV-40) - Excecoes de dominio, i18n e handler de Bean Validation
+- [SV-41](https://stakevault.atlassian.net/browse/SV-41) - CreateUserUseCase / CreateUserService
+- [SV-42](https://stakevault.atlassian.net/browse/SV-42) - UsersController (POST /api/v1/users) + testes de integracao
+- [SV-43](https://stakevault.atlassian.net/browse/SV-43) - CHANGELOG e verificacao final
+- [SV-44](https://stakevault.atlassian.net/browse/SV-44) - RF02 - Autenticacao com token PASETO
+- [SV-45](https://stakevault.atlassian.net/browse/SV-45) - Dependencia PASETO + config da chave simetrica
+- [SV-46](https://stakevault.atlassian.net/browse/SV-46) - AccessTokenIssuer (emissao de token PASETO)
+- [SV-47](https://stakevault.atlassian.net/browse/SV-47) - PasswordHasher.matches() + InvalidCredentialsException + LoginUseCase/LoginService
+- [SV-48](https://stakevault.atlassian.net/browse/SV-48) - AuthController (POST /api/v1/auth/login) + testes de integracao + docs
+- [SV-49](https://stakevault.atlassian.net/browse/SV-49) - CHANGELOG e verificacao final
+- [SV-50](https://stakevault.atlassian.net/browse/SV-50) - RF05 (suporte) - Vinculo de conta Telegram
+- [SV-51](https://stakevault.atlassian.net/browse/SV-51) - Migration eager do schema public + runner no boot
+- [SV-52](https://stakevault.atlassian.net/browse/SV-52) - Dominio: TelegramLink, PendingTelegramLink, excecoes, TenantSchemaName.slug(), gerador de codigo
+- [SV-53](https://stakevault.atlassian.net/browse/SV-53) - Persistencia JPA das tabelas public (TelegramLink, PendingTelegramLink)
+- [SV-54](https://stakevault.atlassian.net/browse/SV-54) - Application services: gerar codigo, confirmar vinculo, lookup
+- [SV-55](https://stakevault.atlassian.net/browse/SV-55) - Web adapter: 3 endpoints + DTOs + i18n
+- [SV-56](https://stakevault.atlassian.net/browse/SV-56) - CHANGELOG e verificacao final
+- [SV-57](https://stakevault.atlassian.net/browse/SV-57) - Pipeline de CI (GitHub Actions + SonarCloud)
+- [SV-58](https://stakevault.atlassian.net/browse/SV-58) - Auditoria do pipeline real vs description da feature
+- [SV-59](https://stakevault.atlassian.net/browse/SV-59) - CHANGELOG e verificacao final
+- [SV-159](https://stakevault.atlassian.net/browse/SV-159) - Porta HTTP fixa (8081)
+- [SV-160](https://stakevault.atlassian.net/browse/SV-160) - server.port fixo, CHANGELOG e verificacao final
+- [SV-222](https://stakevault.atlassian.net/browse/SV-222) - GET /api/v1/users - listagem de usuarios do tenant
+- [SV-223](https://stakevault.atlassian.net/browse/SV-223) - ListUsersUseCase / ListUsersService + UserRepository.findAllOrderByName
+- [SV-224](https://stakevault.atlassian.net/browse/SV-224) - UsersController (GET /api/v1/users) + UserSummaryResponse + testes de integracao
+- [SV-225](https://stakevault.atlassian.net/browse/SV-225) - CHANGELOG e verificacao final
+- [SV-226](https://stakevault.atlassian.net/browse/SV-226) - POST /api/v1/auth/login retorna userId e role
+- [SV-227](https://stakevault.atlassian.net/browse/SV-227) - LoginResult/LoginResponse ganham userId+role, CHANGELOG e verificacao final
+- [SV-276](https://stakevault.atlassian.net/browse/SV-276) - Dockerfile para imagem de producao
+- [SV-277](https://stakevault.atlassian.net/browse/SV-277) - Dockerfile multi-stage + verificacao real do container contra a infra
+- [SV-311](https://stakevault.atlassian.net/browse/SV-311) - Claim role no token PASETO (X-User-Role)
+- [SV-312](https://stakevault.atlassian.net/browse/SV-312) - PasetoClaims ganha role, issue() recebe Role
+- [SV-315](https://stakevault.atlassian.net/browse/SV-315) - Corrigir casing do claim role (lowercase, nao role.name() cru)
+- [SV-316](https://stakevault.atlassian.net/browse/SV-316) - role.name().toLowerCase() no claim do PASETO
+- [SV-325](https://stakevault.atlassian.net/browse/SV-325) - CI: build e push da imagem Docker pro GHCR
+- [SV-326](https://stakevault.atlassian.net/browse/SV-326) - Job build-and-push-image no ci.yml
+- [SV-327](https://stakevault.atlassian.net/browse/SV-327) - CHANGELOG e verificacao final

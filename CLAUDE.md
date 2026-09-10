@@ -86,6 +86,9 @@ Uma feature deste serviço só está `done` quando (done only when):
       `Accept-Language` em pelo menos um teste).
 - [ ] `Delivery Reviewer`, `Test Suite Auditor` e `Persistence Auditor` rodados contra a feature
       (ver `../../docs/AGENT-SKILLS.md`).
+- [ ] Vault (`docs/`) revisado (item de checklist obrigatório na última subtask, ver `CLAUDE.md`
+      da raiz seção "Feature se quebra em subtasks"): alguma descoberta desta feature sem nota
+      correspondente foi atualizada/criada no mesmo commit.
 - [ ] `CHANGELOG.md` deste serviço tem uma entrada em `[Unreleased]` descrevendo a mudança.
 - [ ] `feature_list.json` atualizado com status e evidência.
 - [ ] `../../feature_list.json` (raiz) atualizado se este foi o marco que fecha `epic-002`.

@@ -13,6 +13,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Escopo compartilhado pelos passos de story->develop/main (changelog, SonarCloud) - ver docs/CI-CD.md
+      - name: Calcular escopo de story->develop/main
+        id: story-gate
+        run: |
+          if [ "${{ github.event_name != 'pull_request' || github.base_ref == 'develop' || github.base_ref == 'main' }}" = "true" ]; then
+            echo "applies=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applies=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # 1. Changelog - so no PR pra develop/main, ver docs/CI-CD.md
       - name: Validar atualizacao do CHANGELOG.md
         if: github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main')
@@ -48,14 +58,59 @@ jobs:
         if: hashFiles('pom.xml') != ''
         run: mvn -B verify
 
-      # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md
+      # 5. SonarCloud - pulado em PR de subtask, ver docs/CI-CD.md. qualitygate.wait pulado em
+      # push p/ develop (API recusa computar gate pra branch != main, mesma causa raiz do passo 6)
       - name: SonarCloud
-        if: hashFiles('pom.xml') != '' && (github.event_name != 'pull_request' || github.base_ref == 'develop' || github.base_ref == 'main')
+        if: hashFiles('pom.xml') != '' && steps.story-gate.outputs.applies == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          WAIT_FLAG="-Dsonar.qualitygate.wait=true"
+          if [ "${{ github.event_name == 'push' && github.ref_name == 'develop' }}" = "true" ]; then
+            WAIT_FLAG=""
+          fi
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
+            -Dsonar.projectKey=eimmig_sv-auth-backend \
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} \
+            -Dsonar.host.url=https://sonarcloud.io \
+            $WAIT_FLAG
+
+      # 6. Gate de issue/hotspot do SonarCloud - pulado em push p/ develop (API bloqueia branch != main)
+      - name: Validar zero issues no SonarCloud
+        if: hashFiles('pom.xml') != '' && steps.story-gate.outputs.applies == 'true' && !(github.event_name == 'push' && github.ref_name == 'develop')
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
-          -Dsonar.projectKey=eimmig_sv-auth-backend
-          -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-          -Dsonar.host.url=https://sonarcloud.io
+          python3 .github/scripts/validate-sonar-issues.py
+          --project-key eimmig_sv-auth-backend
+          ${{ github.event_name == 'pull_request' && format('--pull-request {0}', github.event.pull_request.number) || format('--branch {0}', github.ref_name) }}
+
+  build-and-push-image:
+    needs: pipeline
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Login no GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push da imagem
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/eimmig/sv-auth-backend:${{ github.sha }}
+            ghcr.io/eimmig/sv-auth-backend:latest

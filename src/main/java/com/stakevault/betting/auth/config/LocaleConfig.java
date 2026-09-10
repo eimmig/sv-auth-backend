@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
-/** Accept-Language restrito aos 3 locales suportados; fora disso cai em pt-BR. */
 @Configuration
 public class LocaleConfig {
 

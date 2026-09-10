@@ -216,24 +216,323 @@
       "dependencies": [
         "feat-001"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-03, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 achados MAJOR + 2 MINOR, todos corrigidos no plano antes da implementacao (nenhum exigia decisao do usuario). (MAJOR) TenantContextHolder vivia em adapter/in/web/, mas o novo CurrentTenantIdentifierResolver (persistencia) precisa le-lo - acoplamento adapter-a-adapter de tras para frente; corrigido movendo TenantContextHolder para config/ antes de qualquer wiring de multi-tenancy, TenantSchemaFilter passa a importar de la. (MAJOR) chave de configuracao exata do Hibernate para habilitar multi-tenancy por schema nao estava confirmada contra doc oficial da versao instalada (hibernate-core 7.4.5.Final, resolvida via Spring Boot 4.1.1 - confirmado no .m2 local) - doc oficial (hibernate-orm/documentation, branch main) so confirma a abordagem (MultiTenantConnectionProvider + CurrentTenantIdentifierResolver), nao a chave exata para 7.4.x; corrigido exigindo verificacao contra a doc/javadoc da propria versao instalada como parte da subtask de wiring, nao assumida de memoria. (MINOR) nomes fisicos de tabela (users/telegram_accounts, nao user/telegram_account - USER e palavra reservada no Postgres) divergem do nome logico do ERD (docs/DATA-MODEL.md) sem nota cruzada - corrigido, nota adicionada no mesmo commit da migration. (MINOR) ON DELETE CASCADE em telegram_accounts.user_id antecipa uma operacao (exclusao de usuario) que nenhuma feature do backlog cobre ainda - mantido como postura padrao de integridade referencial de relacao 1:1, nunca exercitado ate existir a operacao, registrado aqui para nao parecer implementacao antecipada sem explicacao. Escopo confirmado sem invasao de feat-003 (rota de provisionamento)/feat-004 (autorizacao)/feat-005 (hash de senha, PASETO) - feat-002 nao expoe endpoint HTTP. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-22",
+      "subtasks": [
+        {
+          "id": "feat-002.1",
+          "name": "Lombok e reorganizacao de TenantContextHolder",
+          "status": "done",
+          "jira": "SV-23",
+          "detail": "Preparacao antes do restante da feature: Lombok so e permitido em adapter/out/persistence/ (docs/CONVENTIONS.md), e o Plan Reviewer apontou que TenantContextHolder precisa sair de adapter/in/web/ antes do wiring de multi-tenancy (feat-002.5) para nao criar acoplamento adapter-a-adapter de tras para frente.",
+          "checklist": [
+            "Adicionar dependencia org.projectlombok:lombok (scope provided) ao pom.xml.",
+            "Mover TenantContextHolder de adapter/in/web/ para config/, atualizar o import em TenantSchemaFilter."
+          ],
+          "validation": "mvn compile passa; TenantSchemaFilterTest continua verde sem alteracao de comportamento.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.2",
+          "name": "Migration Flyway: tabelas users e telegram_accounts",
+          "status": "done",
+          "jira": "SV-24",
+          "detail": "Primeira migration real do servico (db/migration estava vazio desde feat-001). Nomes fisicos users/telegram_accounts (nao user/telegram_account - USER e palavra reservada no Postgres), divergencia do nome logico do ERD documentada no mesmo commit por pedido do Plan Reviewer.",
+          "checklist": [
+            "V<timestamp>__create_user_and_telegram_account_tables.sql: users (id uuid PK, name varchar not null, email varchar not null, password_hash varchar not null, role varchar not null check in ('admin','member'), must_change_password boolean not null default false, created_at timestamptz not null default now()), unique(email).",
+            "telegram_accounts (id uuid PK, user_id uuid not null unique FK -> users(id) ON DELETE CASCADE, telegram_user_id varchar not null unique, linked_at timestamptz not null default now()).",
+            "Nota em docs/DATA-MODEL.md (secao auth-service) sobre o nome fisico divergir do ERD por palavra reservada."
+          ],
+          "validation": "Migration aplicada com sucesso via ProvisionTenantSchemaUseCase.ensureSchemaExists em um schema de teste (Testcontainers).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.3",
+          "name": "Modelo de dominio e ports/out",
+          "status": "done",
+          "jira": "SV-25",
+          "detail": "domain/ puro (sem import de framework) - Role, User, TelegramAccount como record (imutaveis, ver docs/CONVENTIONS.md). Ports/out sao o contrato de persistencia que a propria suite de testes desta feature consome (nao ha caso de uso/endpoint ainda - reservado para feat-003/004).",
+          "checklist": [
+            "domain/model/Role.java: enum ADMIN, MEMBER.",
+            "domain/model/User.java: record (id, name, email, passwordHash, role, mustChangePassword, createdAt).",
+            "domain/model/TelegramAccount.java: record (id, userId, telegramUserId, linkedAt).",
+            "domain/port/out/UserRepository.java: save, findByEmail, findById.",
+            "domain/port/out/TelegramAccountRepository.java: save, findByUserId, findByTelegramUserId."
+          ],
+          "validation": "mvn compile passa; nenhuma classe em domain/ importa org.springframework.* ou jakarta.persistence.*.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.4",
+          "name": "Entidades JPA e adapters de persistencia",
+          "status": "done",
+          "jira": "SV-26",
+          "detail": "Mapeamento JPA das duas tabelas + implementacao dos ports/out definidos em feat-002.3, traduzindo entidade JPA <-> record de dominio. Achado do /code-review em feat-002.3: Role.ADMIN/MEMBER (Java, maiusculo) nao pode usar o mapeamento default @Enumerated(EnumType.STRING) - a migration de feat-002.2 tem CHECK (role IN ('admin','member')), minusculo; resolvido com AttributeConverter<Role,String>. Descoberta real durante a implementacao (nao coberta pelo plan_review original): o gate de cobertura JaCoCo (mvn verify, obrigatorio em toda PR de subtask, nao so no merge final - ver ci.yml passo 4) so passa com teste de integracao de verdade tocando o codigo novo, e um teste de integracao de JPA so funciona com o roteamento de schema (feat-002.5) ja existindo - as duas subtasks sao interdependentes na pratica, absorvidas nesta (ver feat-002.5).",
+          "checklist": [
+            "adapter/out/persistence/UserJpaEntity.java e TelegramAccountJpaEntity.java com Lombok (@Getter/@Setter/@NoArgsConstructor) - Persistable<UUID> em vez de @AllArgsConstructor puro (achado do /code-review: id pre-preenchido pelo dominio faz Spring Data tratar todo save() como merge()+SELECT sem isso).",
+            "AttributeConverter<Role, String> mapeando ADMIN/MEMBER <-> 'admin'/'member'.",
+            "Spring Data JPA repositories (UserJpaRepository, TelegramAccountJpaRepository).",
+            "Classes implementando UserRepository/TelegramAccountRepository (port/out) que mapeiam JPA <-> domain.",
+            "RoleAttributeConverterTest (unitario) + JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest (integracao, via TenantSchemaIntegrationSupport + TenantContextScope) - save/find basicos, cobertura volta de 71.9% para 97.5%."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% ok, 97.5% real).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.5",
+          "name": "Multi-tenancy do Hibernate por schema",
+          "status": "done",
+          "jira": "SV-27",
+          "detail": "Absorvida na mesma branch/PR de feat-002.4 (SV-26) - descoberta durante a implementacao, nao no plan_review: o teste de integracao de feat-002.4 nao compila/passa sem o roteamento de schema existir primeiro (gate de cobertura da CI exige teste de verdade em toda PR de subtask, nao so no merge final). Chave de configuracao confirmada via javap contra o jar realmente instalado (hibernate-core-7.4.5.Final.jar, org.hibernate.cfg.MultiTenancySettings): hibernate.multi_tenant_connection_provider / hibernate.tenant_identifier_resolver - nao existe mais hibernate.multiTenancy=SCHEMA (Hibernate 5). CurrentTenantIdentifierResolver<T>/MultiTenantConnectionProvider<T> confirmados genericos via javap - usados com T=String.",
+          "checklist": [
+            "TenantIdentifierResolver (config/): le TenantContextHolder.current(); sem tenant no contexto (ex.: actuator) cai no schema public.",
+            "SchemaMultiTenantConnectionProvider (config/): Connection.setSchema() (driver do Postgres executa SET SEARCH_PATH internamente) no checkout, reset para public no release.",
+            "TenantHibernatePropertiesCustomizer (config/): registra os dois beans via org.hibernate.cfg.MultiTenancySettings.MULTI_TENANT_CONNECTION_PROVIDER/MULTI_TENANT_IDENTIFIER_RESOLVER."
+          ],
+          "validation": "JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest (feat-002.4) provam save/find roteando pelo schema certo - prova de cross-tenant (dois schemas, mesmo dado) fica para feat-002.6.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.6",
+          "name": "Testes de isolamento e unicidade por tenant",
+          "status": "done",
+          "jira": "SV-28",
+          "detail": "Save/find basico ja provado em feat-002.4/002.5 (JpaUserRepositoryIntegrationTest/JpaTelegramAccountRepositoryIntegrationTest). O que faltava e especificamente: violacao de constraint sendo rejeitada, e isolamento entre dois schemas de tenant diferentes - os dois exigem cenario multi-schema que os testes basicos nao cobriam. Pedido do usuario nesta subtask: nomes de teste em ingles, padrao should... (nao mais portugues, ver docs/TESTING.md nova secao); zero comentario de racional/documentacao em codigo, mesmo de uma linha (endurece a regra anterior, ver docs/CONVENTIONS.md) - conteudo movido para docs/CONVENTIONS.md (padroes Persistable/multi-tenancy/converter/Lombok, reaproveitaveis por bets-service/stats-service) e docs/services/auth-service.md.",
+          "checklist": [
+            "Integracao: unicidade de email dentro do mesmo schema de tenant (insercao duplicada rejeitada, DataIntegrityViolationException).",
+            "Integracao: mesmo email permitido em dois schemas de tenant diferentes (prova de isolamento via multi-tenancy do Hibernate, nao so SQL cru) - o teste mais importante desta feature.",
+            "Integracao: unicidade 1:1 de TelegramAccount.userId (segundo vinculo para o mesmo userId rejeitado)."
+          ],
+          "validation": "mvn verify verde, gate de cobertura 80% mantido.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.7",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-29",
+          "detail": "Fecha a feature com o gate real do harness. Delivery Reviewer achou limpeza retroativa de feat-002.6 incompleta (5 comentarios + 6 classes de teste em portugues ainda restantes) - corrigido. Test Suite Auditor achou fallback para schema public (sem contexto de tenant) nunca testado - shouldFailWhenNoTenantContextIsOpen adicionado, prova falha alta (DataAccessException), nao silenciosa.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-002.8",
+          "name": "Corrigir 27 apontamentos do SonarCloud ignorados no merge e travar o gate",
+          "status": "done",
+          "jira": "SV-30",
+          "detail": "Descoberta pos-merge (usuario revisou a PR #20 feature/SV-22 -> develop): o Quality Gate padrao do SonarCloud (plano gratuito, sem gate customizavel - API recusa associar gate customizado a projeto: 'Organization is not allowed to modify Quality gates') so mede rating/cobertura/duplicacao, nao quantidade de issue nova, entao a PR passou com 27 issues abertas (1 CRITICAL, 8 MAJOR, 18 MINOR) nunca revisadas. mvn sonar:sonar tambem nao tinha -Dsonar.qualitygate.wait=true, entao o passo do CI nem esperava/falhava pelo resultado do gate. /code-review achou mais 4 problemas reais durante a correcao: hotspot do SonarCloud fica numa API separada (/hotspots/search), nao coberta pelo script original; docstring do script novo violava a regra de zero-comentario (racional movido pra docs/CI-CD.md); paginacao ausente (so ps=100, sem loop); __pycache__ do novo script sem entrada no .gitignore.",
+          "checklist": [
+            "Corrigir os 27 apontamentos reais (nao suprimir): S1481 (variavel 'scope' de try-with-resources nao lida - unnamed variable Java 21+, try (var _ = ...)), S5673 (@Component -> @Repository em JpaUserRepository/JpaTelegramAccountRepository), S1948 (dataSource nao-transient em classe que implementa Service extends Serializable), S5778 (assertThatThrownBy com mais de uma invocacao que pode lancar - UUID/Instant pre-computados fora da lambda).",
+            "-Dsonar.qualitygate.wait=true no goal do sonar-maven-plugin em ci.yml.",
+            ".github/scripts/validate-sonar-issues.py (novo): falha o build se /issues/search ou /hotspots/search (pullRequest ou branch=main - outras branches retornam 403 no plano gratuito) retornar qualquer item aberto, com paginacao real (nao so a primeira pagina).",
+            "Branch protection em develop e main do repositorio real (GitHub API): required_status_checks com o check 'pipeline', strict=true - sem isso nenhum check do ci.yml bloqueava o botao de merge de fato, mesmo falhando.",
+            "docs/CI-CD.md atualizado (6 passos, nao mais 5) com o achado completo para os outros 5 repositorios Java/frontend nao caírem na mesma armadilha."
+          ],
+          "validation": "mvn verify local verde (Docker precisou ser reiniciado a meio da sessao - nao regressao do fix); script testado manualmente contra a API real do SonarCloud (branch main = OK, PR 20 ainda mostra os 27 antigos ate o scanner rodar de novo nesta branch); branch protection confirmada via API do GitHub.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-22, story SV-22 com 7 subtasks SV-23..SV-29, 5 PRs mergeados - feat-002.4/002.5 e feat-002.1..002.3 cada um seu proprio PR, feat-002.6 e feat-002.7 idem). Reaberta no mesmo dia (feat-002.8/SV-30, branch bugfix/SV-30-sonar-issues, PR #21): usuario apontou que o merge da PR #20 (feature/SV-22 -> develop) ignorou 27 apontamentos reais do SonarCloud, nunca revisados - gate padrao do plano gratuito nao bloqueia por issue nova. Corrigidos todos os 27 + travado o gate de verdade (script novo consultando a API do SonarCloud direto + branch protection no GitHub) - ver evidencia completa no campo detail de feat-002.8.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 61 testes, 0 falha, 96.7% cobertura de linha real.",
+              "CI verde em todos os PRs de subtask (subtask/SV-23..SV-28 -> feature/SV-22), confirmado com gh pr checks a cada push.",
+              "Delivery Reviewer (achado corrigido: limpeza retroativa incompleta), Test Suite Auditor (achado corrigido: fallback sem tenant sem teste), Persistence Auditor (PASS, 1 nota P3 nao-bloqueante sobre reset de schema possivelmente redundante com HikariCP) rodados antes do fechamento."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "feat-002.4 e feat-002.5 (JPA/persistencia e multi-tenancy do Hibernate) absorvidas na mesma branch/PR - descoberta durante a implementacao: teste de integracao de JPA nao compila/passa sem o roteamento de schema existir primeiro, e o gate de cobertura da CI roda em toda PR de subtask, nao so no merge final.",
+              "Pedidos do usuario a meio da sessao, aplicados a feat-002 inteira e retroativamente a feat-001: nomes de teste sempre em ingles, padrao should... (nao mais portugues); zero comentario de racional/documentacao/regra de negocio no codigo, nem de uma linha (endurece a regra de 'no maximo uma linha' da sessao anterior) - conteudo movido para docs/CONVENTIONS.md e docs/services/auth-service.md; package-info.java removidos (duplicavam o diagrama de pacotes ja documentado no vault); @Autowired banido em favor de injecao por construtor em toda parte, inclusive em classes de teste (habilitado via src/test/resources/junit-platform.properties); `any` banido no TypeScript do apps/web (regra registrada, sem codigo Angular ainda para aplicar)."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 2 MAJOR + 2 MINOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "/code-review (antes de cada PR de subtask): TenantContextHolder com set/clear public demais (feat-002.1, corrigido com TenantContextScope); Role/User sem validacao de invariante e casing Role/DB nao documentado (feat-002.3); Persistable ausente causando merge()+SELECT em todo insert, @Convert redundante, package config/ documentado como 'so Spring' mas recebendo utilitario transversal (feat-002.4/002.5); DB_PRECISION duplicado entre testes, comentario de racional reintroduzido em TelegramAccountRepository (feat-002.6).",
+              "Delivery Reviewer (feat-002.7): limpeza retroativa de comentarios/nomes de teste pedida pelo usuario em feat-002.6 ficou incompleta - 5 arquivos main (TenantSchemaFilter, ProvisionTenantSchemaUseCase, LocaleConfig, TenantSchemaNotFoundException, TenantSchemaName) e 6 classes de teste (incluindo TenantSchemaFilterTest com um comentario de 2 linhas) ainda tinham comentario de racional ou nome em portugues - corrigido; racional do TenantSchemaFilter (ThreadLocal/MDC inseguro sob dispatch assincrono) preservado em docs/CONVENTIONS.md antes de remover do codigo, nao descartado.",
+              "Test Suite Auditor (feat-002.7): fallback do TenantIdentifierResolver para schema public quando nenhum tenant esta resolvido nunca era exercitado por nenhum teste - shouldFailWhenNoTenantContextIsOpen adicionado, confirma falha alta (relation users does not exist) em vez de comportamento silencioso.",
+              "Persistence Auditor (feat-002.7): nenhum achado bloqueante - confirmou correcao do MultiTenantConnectionProvider contra HikariCP, ausencia de indice faltando, limite do save() (so create) sem risco para feat-003 (proxima feature so insere, nunca atualiza)."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados - achados reais em todos exceto o ultimo, todos corrigidos antes de done.",
+              "/code-review rodado antes de cada PR de subtask (5 PRs) - achados reais corrigidos em 4 das 5 rodadas.",
+              "javap usado diretamente contra os jars instalados (hibernate-core-7.4.5.Final, spring-test-7.0.9) para confirmar API de multi-tenancy e propriedade de injecao por construtor em teste - nao assumido de memoria, dado o achado MAJOR do Plan Reviewer sobre isso.",
+              "Jira sincronizado a cada transicao real de status (nao-started->in-progress->done por subtask), corrigindo um erro cometido no meio da sessao (varias subtasks pularam direto pra done sem passar por in-progress no board) - regra nova documentada em CLAUDE.md."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-003",
       "name": "Provisionamento de tenant (rota admin)",
-      "description": "Rota administrativa que cria um tenant novo: schema tenant_<slug> neste servico, roda as migrations nele, cria o primeiro usuario admin@<slug> (role=admin) com senha aleatoria e mustChangePassword=true. Restrita ao operador da plataforma via header X-Admin-Api-Key (segredo estatico, ver docs/API-CONTRACTS.md) - NAO e autocadastro publico. Orquestracao: 3 chamadas manuais separadas do operador (auth-service primeiro, depois bets-service, depois stats-service, mesma X-Admin-Api-Key) - este servico NAO chama os outros dois em codigo (decisao de 2026-08-02, ver docs/DECISIONS-LOG.md item 3). USER ganha coluna mustChangePassword (boolean) - backend bloqueia qualquer acao do admin recem-criado ate a senha ser trocada.",
+      "description": "Rota administrativa POST /api/v1/admin/tenants (payload {slug, tenantName?}, resposta 201 {userId, email, temporaryPassword}) que cria um tenant novo: schema tenant_<slug> neste servico, roda as migrations nele, cria o primeiro usuario admin@<slug> (role=admin) com senha aleatoria e mustChangePassword=true. Restrita ao operador da plataforma via header X-Admin-Api-Key (segredo estatico, ver docs/API-CONTRACTS.md) - NAO e autocadastro publico. Orquestracao: 3 chamadas manuais separadas do operador (auth-service primeiro, depois bets-service, depois stats-service, mesma X-Admin-Api-Key) - este servico NAO chama os outros dois em codigo (decisao de 2026-08-02, ver docs/DECISIONS-LOG.md item 3). USER ganha coluna mustChangePassword (boolean) - enforcement do bloqueio fica para feat-005 (nao ha consumidor/login ainda nesta feature).",
       "dependencies": [
         "feat-002"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 achados BLOCKER + 2 MAJOR + 3 MINOR, todos corrigidos no plano antes da implementacao (nenhum exigia decisao do usuario). (BLOCKER) plano original nao checava gateway.exists(schema) antes de ensureSchemaExists - createAndMigrate e idempotente (CREATE SCHEMA IF NOT EXISTS), entao slug duplicado reprovisionaria em silencio e a segunda insercao de admin@<slug> estouraria DataIntegrityViolationException crua (500) em vez do 409 que o proprio plano prometia testar; corrigido exigindo gateway.exists(schema) como primeiro passo do use case, TenantAlreadySlugException (409) antes de qualquer escrita. (BLOCKER) rota admin usa X-Admin-Api-Key, nao X-Tenant-Id - nenhum filtro existente abre TenantContextScope para essa requisicao (so TenantSchemaFilter abre, disparado por X-Tenant-Id), entao UserRepository.save() cairia no schema public em vez de tenant_<slug>; corrigido exigindo TenantContextScope.open(schema) explicito dentro do proprio use case, nao dependente do filtro HTTP existente. (MAJOR) plano ignorava o mecanismo de i18n ja documentado em docs/CONVENTIONS.md (exception carrega chave de mensagem, @RestControllerAdvice resolve via MessageSource) e nunca implementado de verdade (TenantSchemaFilter escreve texto pt-BR hardcoded, TenantSchemaNotFoundException carrega mensagem literal nao chave) - item pendente de docs/TESTING.md (pelo menos um teste de integracao do servico provando title/detail mudando por Accept-Language) continuava em aberto desde feat-001.5; corrigido exigindo @RestControllerAdvice real, exceptions novas com chave de mensagem, novas entradas nos 3 messages_*.properties, e pelo menos um teste trocando Accept-Language nos 3 locales sobre um erro real do endpoint novo. (MAJOR) mapear IllegalArgumentException genericamente no advice seria amplo demais (TenantSchemaName.fromSlug usa essa exception generica, capturaria bugs nao relacionados como 400 enganoso) - corrigido: CreateTenantService traduz para InvalidTenantSlugException dedicada antes de propagar, advice nunca mapeia IllegalArgumentException cru. (MINOR) contrato HTTP (rota/payload/resposta) nao estava fixado em nenhum documento do vault - aceito o proposto (POST /api/v1/admin/tenants, ver description desta feature) como decisao desta feature, exigindo documentacao em docs/services/auth-service.md e docs/API-CONTRACTS.md no mesmo commit da implementacao. (MINOR) camada de gerador/hash de senha deixada ambigua no plano original (application/ ou adapter/out) - corrigido para seguir o padrao ja estabelecido do servico (port/out + adapter/out, mesmo molde de TenantSchemaGateway): PasswordHasher/BCryptPasswordHasher, TemporaryPasswordGenerator/SecureRandomPasswordGenerator. (MINOR) versao do spring-security-crypto confirmada via BOM local (spring-boot-dependencies-4.1.1.pom gerencia spring-security.version=7.1.1, jar ja presente no .m2) - dependencia isolada sem starter completo, sem conflito com AdminApiKeyFilter dedicado. Residual aceito: AdminApiKeyFilter roda fora do DispatcherServlet (nao passa pelo @RestControllerAdvice), resolve locale diretamente via MessageSource/LocaleResolver injetados - mesma limitacao estrutural que TenantSchemaFilter ja tem, nao corrigida aqui (fora de escopo, nao e regressao introduzida por este plano). Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-31",
+      "subtasks": [
+        {
+          "id": "feat-003.1",
+          "name": "Config ADMIN_API_KEY",
+          "status": "done",
+          "jira": "SV-32",
+          "detail": "Variavel nova consumida pelo AdminApiKeyFilter (feat-003.5) - precisa existir antes do filtro para nao deixar o profile test sem valor fixo.",
+          "checklist": [
+            ".env.example (profile dev) ganha ADMIN_API_KEY=CHANGE_ME.",
+            "application.yml profile test ganha valor fixo consumido pelo Testcontainers/MockMvc.",
+            "docs/OBSERVABILITY-AND-CONFIG.md confirmado/atualizado com o nome exato da env var."
+          ],
+          "validation": "mvn compile passa; nenhuma outra subtask depende de env var ainda nao existente.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.2",
+          "name": "Exceptions de dominio com chave de mensagem + entradas i18n",
+          "status": "done",
+          "jira": "SV-33",
+          "detail": "Primeira implementacao real do padrao ja documentado em docs/CONVENTIONS.md (exception carrega chave, nao texto) - TenantSchemaNotFoundException (feat-001.3) nunca seguiu esse padrao, nao e reaberta aqui (fora de escopo).",
+          "checklist": [
+            "domain/model/TenantAlreadySlugException, InvalidTenantSlugException, InvalidAdminApiKeyException - cada uma com getMessageKey(), sem texto final embutido.",
+            "Novas chaves nos 3 messages_{pt_BR,en_US,es}.properties (validado por .github/scripts/validate-i18n-keys.py)."
+          ],
+          "validation": "mvn compile passa; validate-i18n-keys.py (rodado localmente) confirma as 3 chaves presentes nos 3 arquivos.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.3",
+          "name": "Ports/out + adapters de senha (hash e geracao)",
+          "status": "done",
+          "jira": "SV-34",
+          "detail": "Mesmo padrao ja estabelecido do servico (port/out + adapter/out, molde de TenantSchemaGateway) - achado do Plan Reviewer contra a ambiguidade do plano original.",
+          "checklist": [
+            "Dependencia spring-security-crypto no pom.xml (sem versao explicita - herdada do BOM spring-boot-dependencies, ja confirmado 7.1.1).",
+            "domain/port/out/PasswordHasher (hash(raw): String) e TemporaryPasswordGenerator (generate(): String).",
+            "adapter/out/security/BCryptPasswordHasher e SecureRandomPasswordGenerator (SecureRandom, alfabeto seguro)."
+          ],
+          "validation": "mvn verify verde com testes unitarios dos dois adapters.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.4",
+          "name": "CreateTenantUseCase / CreateTenantService",
+          "status": "done",
+          "jira": "SV-35",
+          "detail": "Ordem obrigatoria corrigida pelo Plan Reviewer (2 achados BLOCKER): checar existencia antes de escrever, e abrir TenantContextScope explicitamente antes de UserRepository.save().",
+          "checklist": [
+            "TenantSchemaName.fromSlug(slug) - IllegalArgumentException relancada como InvalidTenantSlugException.",
+            "gateway.exists(schema) - true lanca TenantAlreadySlugException ANTES de qualquer escrita.",
+            "ensureSchemaExists(slug) (reaproveita feat-001.3/002).",
+            "Gerar senha (TemporaryPasswordGenerator) + hash (PasswordHasher).",
+            "try (var _ = TenantContextScope.open(schema)) ao redor de UserRepository.save(new User(..., role=ADMIN, mustChangePassword=true)) - abertura explicita, nao depende do TenantSchemaFilter.",
+            "Retorna userId/email/senha em texto plano - nunca persistida nem logada em texto plano."
+          ],
+          "validation": "Teste unitario com fakes de PasswordHasher/TemporaryPasswordGenerator/UserRepository/TenantSchemaGateway cobre os 4 caminhos (sucesso, slug invalido, slug duplicado, e confirma TenantContextScope aberto durante o save).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.5",
+          "name": "AdminApiKeyFilter",
+          "status": "done",
+          "jira": "SV-36",
+          "detail": "Filtro de servlet (nao passa pelo @RestControllerAdvice de feat-003.6) - resolve locale diretamente, mesma limitacao estrutural que TenantSchemaFilter ja tem (nao corrigida aqui, fora de escopo).",
+          "checklist": [
+            "OncePerRequestFilter escopado a /api/v1/admin/**.",
+            "Le X-Admin-Api-Key, compara contra ADMIN_API_KEY via MessageDigest.isEqual (constant-time).",
+            "401 RFC7807 se ausente/incorreto, corpo localizado via MessageSource+LocaleResolver injetados (Accept-Language)."
+          ],
+          "validation": "Teste de integracao: sem header ou header errado -> 401, RFC7807, nenhuma escrita no banco (schema nao criado).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.6",
+          "name": "RestControllerAdvice + endpoint POST /api/v1/admin/tenants",
+          "status": "done",
+          "jira": "SV-37",
+          "detail": "Primeiro @RestControllerAdvice real do servico - mapeia so as exceptions de dominio nomeadas (nunca IllegalArgumentException cru, achado MAJOR do Plan Reviewer). Contrato HTTP documentado no mesmo commit (achado MINOR).",
+          "checklist": [
+            "adapter/in/web/AdminExceptionHandler (@RestControllerAdvice): TenantAlreadySlugException->409, InvalidTenantSlugException->400, ambos com title/detail via MessageSource.",
+            "POST /api/v1/admin/tenants: DTO entrada (slug @NotBlank, tenantName opcional), DTO saida (userId, email, temporaryPassword), 201.",
+            "docs/services/auth-service.md e docs/API-CONTRACTS.md ganham o contrato exato (rota, payload, resposta, status codes)."
+          ],
+          "validation": "Teste de integracao (Testcontainers): 201 fim-a-fim (schema criado, usuario criado no schema certo); slug duplicado 409; slug invalido 400.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-003.7",
+          "name": "Teste i18n (Accept-Language) + CHANGELOG + verificacao final",
+          "status": "done",
+          "jira": "SV-38",
+          "detail": "Fecha o item pendente de docs/TESTING.md desde feat-001.5 (pelo menos um teste de integracao do servico provando title/detail mudando por Accept-Language) - achado MAJOR do Plan Reviewer.",
+          "checklist": [
+            "Teste de integracao troca Accept-Language entre pt-BR/en-US/es sobre um erro real do endpoint (ex.: slug duplicado, 409) e confirma title/detail diferentes.",
+            "Entrada em CHANGELOG.md.",
+            "./init.sh (mvn verify) verde com Docker ativo.",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico e raiz, se fechar epic-002... nao fecha, feat-004..007 restam) atualizado com evidence.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-31, story SV-31 com 7 subtasks SV-32..SV-38, 7 PRs mergeados um por subtask, todos com CI verde). Primeira feature do servico a expor um endpoint HTTP real de negocio e a primeira a exercitar de verdade o mecanismo de i18n (@RestControllerAdvice + MessageSource) documentado desde feat-001 mas nunca implementado.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 87 testes, 0 falhas.",
+              "CI verde em todos os 7 PRs de subtask (subtask/SV-32..SV-38 -> feature/SV-31), confirmado com gh pr checks a cada push.",
+              "./init.sh verde ao final da feature.",
+              "Delivery Reviewer (PASS), Test Suite Auditor (PASS) e Persistence Auditor (PASS) rodados contra a entrega completa antes de done - nenhum achado bloqueante remanescente, so riscos residuais aceitos e documentados (ver abaixo)."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "TenantAlreadySlugException (nome do plan_review) implementada como TenantAlreadyProvisionedException - nome mais claro, mesmo papel.",
+              "InvalidAdminApiKeyException criada como classe LocalizedDomainException completa (nao so uma chave solta) para manter o mesmo padrao das outras duas exceptions, mesmo rodando fora do @RestControllerAdvice (AdminApiKeyFilter roda antes do DispatcherServlet).",
+              "LocalizedDomainException ganhou httpStatusCode() e messageArgs() (nao previsto no plan_review original) - permite um unico @ExceptionHandler generico em vez de um handler por excecao, e elimina duplicacao de resolucao de mensagem entre o filtro e o advice (extraido para ProblemDetailMessages, achado do /code-review).",
+              "InvalidTenantSlugException reclassificada de 400 para 422 a meio da implementacao - achado do /code-review contra docs/API-CONTRACTS.md ('violacoes de regra de negocio de dominio usam status 422', e TenantSchemaName.fromSlug e validacao de dominio, nao Bean Validation)."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 2 BLOCKER + 2 MAJOR + 3 MINOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "/code-review (antes de cada uma das 7 PRs de subtask, 5+ rodadas com multiplos agentes paralelos na subtask final feat-003.6): achados reais corrigidos incluem (a) BCryptPasswordHasher sem guarda de 72 bytes (limite hard do BCrypt, gerava IllegalArgumentException cru); (b) alfabeto do gerador de senha ainda deixava 'o' minusculo confundivel com '0'; (c) AdminApiKeyFilter.shouldNotFilter comparava contra request.getRequestURI() cru (nao decodificado) - bypass real de seguranca via path percent-encoded (/api/v1/adm%69n/tenants) que o Spring MVC decodificava e roteava mas o filtro nao reconhecia, corrigido com UriUtils.decode(); (d) TOCTOU entre exists() e o insert do admin mitigado com catch de DataIntegrityViolationException -> TenantAlreadyProvisionedException; (e) DomainExceptionHandler nunca chamava setInstance() no ProblemDetail, inconsistente com o corpo manual do filtro; (f) slug ausente do payload vazava o literal 'null' na mensagem de erro (MessageFormat renderizando null); (g) AdminApiKeyFilter duplicava (e chegou a divergir de) a resolucao de type/status que o advice ja fazia - unificado via ProblemDetailMessages compartilhado, filtro passou a usar exception.httpStatusCode()/typeSlug() em vez de literais.",
+              "Achado critico de infraestrutura, nao coberto por nenhuma skill de revisao (descoberto rodando o primeiro teste de integracao real do endpoint): MessageSourceAutoConfiguration do Spring Boot nunca ativava neste servico - a condicao de ativacao (confirmada via javap contra spring-boot-autoconfigure-4.1.1 real) exige um src/main/resources/messages.properties SEM sufixo de locale (classpath*:messages.properties), que nunca existiu (so messages_pt_BR/en_US/es.properties). Sem a autoconfiguracao, MessageSource nunca virava bean real - todo getMessage() da aplicacao recebia o DelegatingMessageSource interno do Spring e lancava NoSuchMessageException, silenciosamente, desde feat-001.5. Ficou sem deteccao ate agora porque MessagesTest (feat-001.5) e AdminApiKeyFilterTest (feat-003.5) sempre construiam seu proprio ResourceBundleMessageSource manualmente em vez de injetar o bean real - so o primeiro teste de integracao ponta a ponta de verdade (@SpringBootTest + RANDOM_PORT chamando o endpoint) expos o problema. Corrigido criando o arquivo base; documentado em docs/CONVENTIONS.md para os outros 3 servicos Java.",
+              "Segundo bug de encoding, relacionado mas distinto: MockHttpServletResponse (e HttpServletResponse real) assume ISO-8859-1 sem charset explicito no content-type, corrompendo texto UTF-8 com acento escrito pelo ObjectMapper - so apareceu ao testar a primeira mensagem de erro acentuada (es/pt-BR) de verdade. Corrigido com response.setCharacterEncoding('UTF-8') explicito no filtro.",
+              "Terceiro bug de encoding, so reproduzido no CI (Linux), nao localmente (Windows): ResourceBundleMessageSource construido manualmente em teste usa o cache estatico por JVM do ResourceBundle.getBundle(...), que nao leva o Control/encoding em conta na chave - se uma classe SEM setDefaultEncoding('UTF-8') roda primeiro na mesma JVM (Surefire reusa uma fork para todas as classes por padrao), ela popula o cache com a versao mal-decodificada e a classe seguinte (mesmo com o ajuste correto) reaproveita o cache errado. A ordem de execucao de classes difere entre Windows e Linux - passou local, falhou no CI. Corrigido aplicando setDefaultEncoding('UTF-8') em toda instancia manual do padrao (inclusive retroativamente em MessagesTest, feat-001.5) - confirmado order-independent forcando -Dsurefire.runOrder=alphabetical e reversealphabetical localmente."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer (REVISE, 2 BLOCKER + 2 MAJOR + 3 MINOR corrigidos antes do codigo), Delivery Reviewer (PASS), Test Suite Auditor (PASS, 1 achado P2 nao-bloqueante sobre ausencia de teste de concorrencia - risco residual aceito) e Persistence Auditor (PASS, confirmou que a ausencia de @Transactional no CreateTenantService e correta, nao uma lacuna) rodados.",
+              "/code-review rodado antes de cada uma das 7 PRs de subtask - achados reais corrigidos em quase todas as rodadas, a ultima (feat-003.6) com multiplos agentes paralelos (reuso/simplificacao, seguranca/conformidade com CLAUDE.md, rastreamento cross-file, diff linha-a-linha, auditoria de comportamento removido, eficiencia/altitude) dado o tamanho da subtask.",
+              "javap usado diretamente contra o jar real spring-boot-autoconfigure-4.1.1 para confirmar a condicao exata de ativacao do MessageSourceAutoConfiguration, em vez de assumir de memoria - mesma disciplina ja estabelecida em feat-002 para a API de multi-tenancy do Hibernate.",
+              "Jira sincronizado a cada transicao real de status (in-progress/done por subtask, com o disparo de fechamento da feature em edicao separada da ultima subtask, seguindo a correcao de processo registrada em CLAUDE.md apos o erro de feat-002)."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-004",
@@ -242,11 +541,102 @@
       "dependencies": [
         "feat-003"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 1 MAJOR corrigido no plano antes da implementacao (nenhum exigia decisao do usuario alem da ja tomada com o usuario sobre o modelo de confianca via X-User-Id/X-Tenant-Id, ver abaixo). (MAJOR) MissingCallerContextException estava planejada como 400, inconsistente com o precedente real do servico: InvalidAdminApiKeyException (X-Admin-Api-Key ausente/invalido) usa 401, e X-User-Id desempenha o mesmo papel de identidade do chamador, nao um campo de payload - corrigido para 401, e passou a cobrir tambem X-User-Id malformado (nao-UUID), que o plano original deixava vazar como IllegalArgumentException crua (500). MissingTenantContextException mantida em 400 (consistente com TenantSchemaFilter, que ja usa 400 para X-Tenant-Id malformado - ausencia total do header e a mesma familia de falha de contrato). Confirmado sem achado adicional: autorizacao com 403 unico para 'caller nao existe' e 'caller nao e admin' (evita enumeracao, mesmo espirito do 401 generico de feat-003 para chave admin incorreta); nenhum acoplamento indevido de camada (X-User-Id lido no controller/adapter, valor puro passado ao use case, mesmo padrao de AdminTenantController/CreateTenantService). DECISAO DO USUARIO (AskUserQuestion, antes do plan review): como feat-005 (login/PASETO) ainda nao existe, este endpoint confia diretamente nos headers X-User-Id/X-Tenant-Id informados pelo chamador - mesmo modelo de confianca que bets-service/stats-service vao usar do api-gateway (docs/API-CONTRACTS.md 'Confianca entre servicos') e mesmo padrao que TenantSchemaFilter ja aplica a X-Tenant-Id desde feat-001.3; api-gateway (epic-008) ainda nao existe, entao por ora quem chama informa os headers diretamente. Risco residual aceito: TOCTOU entre findById(callerId) e save() (dois admins criando o mesmo email concorrentemente) - mesmo residual aceito em feat-003, desproporcional sem evidencia real de concorrencia. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-39",
+      "subtasks": [
+        {
+          "id": "feat-004.1",
+          "name": "Excecoes de dominio, i18n e handler de Bean Validation",
+          "status": "done",
+          "jira": "SV-40",
+          "detail": "Camada de erro completa antes do use case/controller existirem, mesmo molde de TenantAlreadyProvisionedException/InvalidAdminApiKeyException - MissingCallerContextException (401, cobre ausente e malformado), MissingTenantContextException (400), AdminRoleRequiredException (403), EmailAlreadyRegisteredException (409). Primeira vez que o servico usa Bean Validation (@Valid) de verdade - precisa do handler generico de MethodArgumentNotValidException no mesmo commit, senao nenhuma subtask seguinte consegue testar 400 de payload invalido.",
+          "checklist": [
+            "domain/model/{MissingCallerContextException,MissingTenantContextException,AdminRoleRequiredException,EmailAlreadyRegisteredException} implementando LocalizedDomainException.",
+            "4 chaves novas x 3 locales em messages_{pt_BR,en_US,es}.properties (error.missing-caller-context, error.missing-tenant-context, error.admin-role-required, error.email-already-registered) + error.validation-failed (title/detail generico).",
+            "DomainExceptionHandler: as 4 exceptions novas no @ExceptionHandler existente + @ExceptionHandler(MethodArgumentNotValidException.class) novo, 400 RFC7807 localizado agregando nomes de campo invalidos no detail."
+          ],
+          "validation": "mvn verify verde; LocalizedDomainExceptionTest estendido cobre as 4 exceptions novas.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-004.2",
+          "name": "CreateUserUseCase / CreateUserService",
+          "status": "done",
+          "jira": "SV-41",
+          "detail": "Nao abre TenantContextScope (diferente de CreateTenantService) - a rota passa pelo TenantSchemaFilter existente, que ja abre o contexto antes do controller quando X-Tenant-Id esta presente.",
+          "checklist": [
+            "domain/port/in/CreateUserUseCase.createUser(UUID callerId, String name, String email, String rawPassword).",
+            "application/CreateUserService: TenantContextHolder.current()==null -> MissingTenantContextException; userRepository.findById(callerId) ausente OU role!=ADMIN -> AdminRoleRequiredException; hash via PasswordHasher; save(new User(UUID.randomUUID(), name, email, hash, Role.MEMBER, false, Instant.now())); catch DataIntegrityViolationException -> EmailAlreadyRegisteredException."
+          ],
+          "validation": "Teste unitario (fakes de UserRepository/PasswordHasher) cobre sucesso, tenant ausente, caller ausente, caller nao-admin, caller inexistente, email duplicado - mesmo estilo de CreateTenantServiceTest.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-004.3",
+          "name": "UsersController (POST /api/v1/users) + testes de integracao",
+          "status": "done",
+          "jira": "SV-42",
+          "detail": "X-User-Id lido no controller (adapter), nao no use case - parse de UUID com catch mapeando pra MissingCallerContextException. Fecha o item pendente de docs (contrato exato) e o gap de docs/API-CONTRACTS.md sobre a convencao de status code pra header de identidade ausente vs contexto de negocio ausente.",
+          "checklist": [
+            "adapter/in/web/{UsersController,CreateUserRequest,CreateUserResponse} - payload {name,email,password} com @NotBlank/@Email; resposta 201 {id,name,email,role,mustChangePassword,createdAt} (nunca passwordHash).",
+            "Teste de integracao (Testcontainers, via TenantSchemaIntegrationSupport): 201 fim-a-fim; 401 sem X-User-Id (e com X-User-Id malformado); 403 caller nao-admin/inexistente; 409 email duplicado; 400 payload invalido; Accept-Language sobre um dos erros novos.",
+            "docs/services/auth-service.md (contrato exato) e docs/API-CONTRACTS.md (convencao 401 identidade ausente / 400 contexto de negocio ausente / 422 regra de dominio) atualizados no mesmo commit."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso); teste i18n confirma title/detail mudando por Accept-Language.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-004.4",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-43",
+          "detail": "Fecha a feature com o gate real do harness.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-39, story SV-39 com 4 subtasks SV-40..43, 4 PRs mergeados - 3 de subtask + 1 de feature->develop, todos com CI verde incluindo o gate completo de SonarCloud/GitGuardian na PR final). Primeiro endpoint HTTP de negocio do servico fora da rota admin de feat-003, e primeiro uso real de Bean Validation (@Valid) no servico.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 102 testes, 0 falhas.",
+              "CI verde em todas as 4 PRs (subtask/SV-40..42 -> feature/SV-39, feature/SV-39 -> develop), confirmado com gh pr checks a cada push - a ultima PR passou pelo gate completo (pipeline, SonarCloud Code Analysis, GitGuardian Security Checks).",
+              "./init.sh verde em develop apos o merge."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Nenhuma divergencia de escopo - unica correcao foi a do Plan Reviewer (MissingCallerContextException de 400 para 401), aplicada antes de qualquer codigo."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 1 MAJOR corrigido no plano - detalhe completo no campo plan_review desta feature.",
+              "Decisao do usuario (AskUserQuestion, antes do plan review): sem PASETO/login (feat-005) ainda, o endpoint confia diretamente nos headers X-User-Id/X-Tenant-Id informados pelo chamador - mesmo modelo que bets-service/stats-service vao usar do api-gateway.",
+              "Delivery Reviewer (PASS, sem achado bloqueante) - confirmou ausencia de vazamento de senha/hash na resposta, nenhuma colisao de rota com AdminApiKeyFilter (/api/v1/admin/ vs /api/v1/users), e 1 nota P3 nao-bloqueante sobre prioridade 401 vs 400 quando os dois headers faltam ao mesmo tempo (comportamento correto, so nao documentado).",
+              "Test Suite Auditor (achado real corrigido): isolamento cross-tenant so estava provado implicitamente (dependia da chance de colisao de UUID nunca ter sido exercitada) - adicionado shouldReturn403WhenCallerIsAnAdminOfADifferentTenant, prova explicita de que um admin de um tenant nao consegue agir como admin de outro.",
+              "Persistence Auditor (PASS, sem achado) - confirmou multi-tenancy do Hibernate sem vazamento entre schemas, ausencia de @Transactional continua correta (mesmo raciocinio ja validado em feat-003), e o catch de DataIntegrityViolationException cobre exatamente uk_users_email."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor (1 teste adicionado) e Persistence Auditor rodados antes de done - achado real corrigido no Test Suite Auditor, demais PASS.",
+              "docs/services/auth-service.md (contrato exato de POST /api/v1/users) e docs/API-CONTRACTS.md (convencao nova: 401 para header de identidade ausente/invalido, 400 para header de contexto de negocio ausente, reaproveitavel por bets-service/stats-service) atualizados no repositorio raiz (sv-harness), fora deste repositorio."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-005",
@@ -255,11 +645,121 @@
       "dependencies": [
         "feat-004"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: READY WITH CONCERNS, 2 MINOR corrigidos no plano antes da implementacao. (MINOR) LoginRequest usava campo tenantSlug, inconsistente com CreateTenantRequest (campo slug) - corrigido para slug, mesmo nome nos dois DTOs do servico. (MINOR) PASETO_LOCAL_KEY precisa de nota explicita de que e a MESMA chave que sera configurada em services/api-gateway quando epic-008 existir (nao gerar uma independente la, ou tokens emitidos aqui ficam indecifraveis) - corrigido: comentario em .env.example + nota em docs/OBSERVABILITY-AND-CONFIG.md (raiz). Confirmado sem achado adicional: mitigacao de timing attack (chamar PasswordHasher.hash() no lugar de PasswordHasher.matches() contra um dummy hash fixo) e solida - hash()/matches() do BCryptPasswordEncoder fazem exatamente um round de BCrypt no mesmo fator de custo (10, default), e todo hash gravado no banco (feat-003/004) usa esse mesmo default, entao os 4 caminhos de falha (slug invalido/tenant inexistente/email inexistente/senha errada) e o de sucesso tem custo dominado pelo mesmo unico round; erro unico InvalidCredentialsException (401, mensagem sempre generica, nunca diferencia o motivo) correto e alinhado a pratica padrao de nao dar pista de enumeracao; SecretKey.fromHexString/fromBytes ja valida 32 bytes no construtor compacto (Conditions.verify) - uma PASETO_LOCAL_KEY malformada derruba o bean no boot (fail-fast), nao precisa de smoke-test adicional. Biblioteca externa confirmada nesta sessao via Maven Central API + GitHub releases (nao assumida de memoria, dado o cutoff de conhecimento): io.github.nbaars:paseto4j-version4:2024.3, unica versao publicada (release 2024-09-10), API (Paseto.encrypt/decrypt, SecretKey.fromHexString) lida direto do codigo-fonte do modulo v4 no GitHub. DECISAO DO USUARIO (AskUserQuestion, antes do plan review): mustChangePassword=true (admin criado em feat-003) NAO bloqueia login - sempre autentica se a senha bater, mustChangePassword devolvido no corpo da resposta pro frontend decidir a UX; nao ha endpoint de troca de senha no backlog ainda, bloquear travaria o admin pra sempre sem via de escape. Residual aceito: resposta de login nao devolve userId/nome/tenantName pra exibicao (token v4.local e opaco, criptografado) - nao pedido pela description desta feature, sinalizado para quando epic-006 (web) comecar. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-44",
+      "subtasks": [
+        {
+          "id": "feat-005.1",
+          "name": "Dependencia PASETO + config da chave simetrica",
+          "status": "done",
+          "jira": "SV-45",
+          "detail": "io.github.nbaars:paseto4j-version4:2024.3 (Maven Central, confirmado nesta sessao) - traz org.bouncycastle:bcprov-jdk18on transitivo, nao precisa declarar. Mesmo molde de admin.api-key (feat-003.1): variavel nova, profile test com valor fixo, .env.example so com o que a feature realmente le.",
+          "checklist": [
+            "pom.xml: dependencia io.github.nbaars:paseto4j-version4:2024.3.",
+            ".env.example ganha PASETO_LOCAL_KEY=CHANGE_ME (comentario: 32 bytes hex de 64 chars, gerar com `openssl rand -hex 32`; MESMA chave que sera configurada em services/api-gateway quando epic-008 existir, nao gerar uma independente).",
+            "application.yml: paseto.local-key: ${PASETO_LOCAL_KEY} (dev/prod), valor hex fixo de 64 chars no profile test; paseto.access-token-ttl-minutes com default 480 (8h, sem endpoint de refresh no backlog atual)."
+          ],
+          "validation": "mvn compile passa; nenhuma outra subtask depende de env var ainda nao existente.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.2",
+          "name": "AccessTokenIssuer (emissao de token PASETO)",
+          "status": "done",
+          "jira": "SV-46",
+          "detail": "Isola o detalhe de biblioteca (paseto4j) no adapter/out/security, mesmo padrao de BCryptPasswordHasher/SecureRandomPasswordGenerator. SecretKey construido uma vez no bean, nao a cada chamada.",
+          "checklist": [
+            "domain/port/out/AccessTokenIssuer.issue(UUID userId, String tenantSlug): String.",
+            "adapter/out/security/PasetoAccessTokenIssuer: record PasetoClaims(userId, tenantId, iat, exp) serializado via ObjectMapper injetado (tools.jackson, ja usado no projeto); Paseto.encrypt(SecretKey, payloadJson, \"\")."
+          ],
+          "validation": "Teste unitario: token emitido comeca com v4.local., e decriptavel (Paseto.decrypt) com a mesma chave, claims userId/tenantId/exp batendo com o esperado.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.3",
+          "name": "PasswordHasher.matches() + InvalidCredentialsException + LoginUseCase/LoginService",
+          "status": "done",
+          "jira": "SV-47",
+          "detail": "Extensao do port existente (mesmo molde de hash()). Erro unico e generico pra qualquer falha de autenticacao - nao diferenciar motivo, evita enumeracao. Timing attack mitigado chamando hash() (nao matches() contra dummy) nos caminhos de tenant/email inexistente - mesmo custo computacional de um round de BCrypt.",
+          "checklist": [
+            "domain/port/out/PasswordHasher ganha matches(String rawPassword, String hashedPassword): boolean; BCryptPasswordHasher.matches() delega pra BCryptPasswordEncoder.matches().",
+            "domain/model/InvalidCredentialsException (LocalizedDomainException, 401, mensagem sempre generica) + chave i18n nos 3 locales.",
+            "domain/port/in/LoginUseCase.login(String slug, String email, String rawPassword): LoginResult (record LoginResult(String token, boolean mustChangePassword)).",
+            "application/LoginService: TenantSchemaName.fromSlug (IllegalArgumentException -> InvalidCredentialsException) -> provisionTenantSchema.exists(slug) (false -> passwordHasher.hash(rawPassword) descartado + InvalidCredentialsException) -> migrateIfPending(slug) -> TenantContextScope aberto, userRepository.findByEmail(email) (ausente -> mesmo truque de hash() + InvalidCredentialsException) -> passwordHasher.matches(rawPassword, user.passwordHash()) (falso -> InvalidCredentialsException) -> sucesso: accessTokenIssuer.issue(user.id(), slug) + LoginResult(token, user.mustChangePassword())."
+          ],
+          "validation": "Teste unitario (fakes/mocks) cobre sucesso, slug invalido, tenant inexistente, email inexistente, senha errada - todos lancando a MESMA excecao.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.4",
+          "name": "AuthController (POST /api/v1/auth/login) + testes de integracao + docs",
+          "status": "done",
+          "jira": "SV-48",
+          "detail": "Campo slug (nao tenantSlug) no request, mesmo nome de CreateTenantRequest - achado do Plan Reviewer.",
+          "checklist": [
+            "adapter/in/web/AuthController: POST /api/v1/auth/login, LoginRequest(String slug, String email, String password) com @NotBlank nos 3, resposta 200 LoginResponse(token, mustChangePassword).",
+            "DomainExceptionHandler ganha InvalidCredentialsException no @ExceptionHandler existente.",
+            "Teste de integracao (Testcontainers, via TenantSchemaIntegrationSupport + fixture de usuario salvo direto): 200 com token valido (decriptavel na mesma chave, claims batendo) e mustChangePassword refletindo o usuario; 401 pros 4 casos de falha (corpo identico, prova de nao-enumeracao); 400 payload invalido; Accept-Language.",
+            "docs/services/auth-service.md (contrato exato, decisao de nao bloquear por mustChangePassword, TTL de 8h sem refresh) e docs/OBSERVABILITY-AND-CONFIG.md (nota da chave compartilhada com api-gateway) atualizados no repositorio raiz, fora deste repositorio."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso); teste i18n confirma title/detail mudando por Accept-Language.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-005.5",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-49",
+          "detail": "Fecha a feature com o gate real do harness.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-44, story SV-44 com 5 subtasks SV-45..49, 1 PR de subtask (#34, bundlando feat-005.1..4 - descoberto durante a implementacao que config/issuer/service/controller so compilam e testam juntos, mesmo padrao de feat-002.4/002.5) + PR feature->develop, CI verde incluindo o gate completo). Primeira feature de EMISSAO de credencial do servico (PASETO v4.local) e primeiro endpoint publico nao-administrativo (sem X-Admin-Api-Key nem X-User-Id/X-Tenant-Id ja resolvidos - o proprio login resolve o tenant a partir do slug no corpo).",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 119 testes, 0 falhas.",
+              "CI verde na PR de subtask (#34, bundlada) e na PR feature->develop, confirmado com gh pr checks - a ultima passou pelo gate completo (pipeline, SonarCloud Code Analysis, GitGuardian Security Checks).",
+              "./init.sh verde em feature/SV-44 antes do merge."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Biblioteca PASETO: a API do README/main branch do paseto4j estava desatualizada em relacao ao release 2024.3 realmente publicado no Maven Central (SecretKey.fromHexString/fromBytes so existem no main nao-lancado) - descoberto via erro de compilacao, corrigido usando javap contra o jar real instalado, revelando o construtor real (deprecated mas funcional) new SecretKey(byte[], Version). Nao assumido de memoria nem do README - verificado contra o artefato de verdade.",
+              "feat-005.1..4 bundladas numa unica branch/PR (subtask/SV-45) - interdependencia descoberta durante a implementacao (config so testavel junto do issuer que a consome; issuer so testavel junto do service que o usa), mesmo padrao ja usado em feat-002.4/002.5."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes do codigo): READY WITH CONCERNS, 2 MINOR corrigidos no plano - detalhe completo no campo plan_review desta feature.",
+              "Decisao do usuario (AskUserQuestion, antes do plan review): mustChangePassword=true nao bloqueia login - devolvido no corpo da resposta pro frontend decidir a UX; nao ha endpoint de troca de senha no backlog, bloquear travaria o admin de feat-003 pra sempre.",
+              "Achado real durante a implementacao (nao no plan_review): LoginService.burnHashingCost (chamado nos caminhos de tenant/email inexistente para manter timing consistente) usava PasswordHasher.hash(), que tem guarda de 72 bytes (BCryptPasswordHasher) - um rawPassword acima desse limite contra um tenant/email inexistente vazaria IllegalArgumentException crua (500) em vez do 401 generico esperado. Corrigido com try/catch relancando InvalidCredentialsException; teste dedicado (shouldRejectWhenTenantDoesNotExistAndPasswordIsTooLongForBCrypt) adicionado.",
+              "Delivery Reviewer (PASS, sem achado bloqueante) - confirmou a correcao do bug de burnHashingCost completa nos dois pontos de chamada, ausencia de vazamento de senha/token/hash, corpo identico nos 4 casos de falha (teste dedicado), e ausencia de regressao nas rotas de feat-003/004 (PasswordHasher com unico implementador).",
+              "Test Suite Auditor (achado real corrigido): isolamento cross-tenant no LOGIN so estava provado na persistencia (feat-002), nao no endpoint - adicionado shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail, prova explicita de que o mesmo e-mail em dois tenants com senhas diferentes nao permite login cruzado.",
+              "Persistence Auditor (PASS, sem achado) - confirmou no maximo 1 operacao BCrypt por request em qualquer caminho (nao 3 como a hipotese inicial sugeria), ausencia de query redundante com TenantSchemaFilter (login nao envia X-Tenant-Id, filtro e no-op nessa rota), e TenantContextScope usado exatamente onde ja e o padrao validado (so ao redor de findByEmail)."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor (1 teste adicionado) e Persistence Auditor rodados antes de done - achados reais corrigidos no Plan Reviewer (2 MINOR) e Test Suite Auditor (1 gap), demais PASS.",
+              "Pesquisa externa real (nao de memoria): Maven Central API + GitHub releases API confirmaram io.github.nbaars:paseto4j-version4:2024.3 como unica versao publicada; javap contra os jars instalados (paseto4j-commons/version4 2024.3) confirmou a API real quando o README/main branch divergiu do release.",
+              "docs/services/auth-service.md (contrato exato, decisao de nao bloquear por mustChangePassword) e docs/OBSERVABILITY-AND-CONFIG.md (PASETO_LOCAL_KEY compartilhada com api-gateway) atualizados no repositorio raiz, fora deste repositorio."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-006",
@@ -268,23 +768,431 @@
       "dependencies": [
         "feat-005"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
-      "evidence": ""
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 MAJOR + 3 MINOR corrigidos no plano antes da implementacao. (MAJOR) plano original criava um segundo mecanismo de persistencia (JdbcTemplate cru) so para TELEGRAM_LINK/PENDING_TELEGRAM_LINK (schema public), dependendo de o JdbcTemplate compartilhar por acidente a mesma conexao/transacao do EntityManager (nao garantido pelo autoconfigure) - corrigido para mapear as duas como entidades JPA normais com @Table(schema = \"public\") explicito (Hibernate sempre qualifica totalmente essas tabelas, independente do schema corrente setado pelo SchemaMultiTenantConnectionProvider para a sessao), reaproveitando o EntityManagerFactory/JpaTransactionManager ja configurado - ConfirmTelegramLinkService ganha @Transactional (primeiro uso no servico) cobrindo tenant schema (TELEGRAM_ACCOUNT) + public (TELEGRAM_LINK/delete do pending) na mesma transacao real. (MAJOR) padrao Persistable.isNew=true sempre (usado em USER/TELEGRAM_ACCOUNT desde feat-002) nao suporta o \"upsert\" de TELEGRAM_LINK descrito no plano original (reconfirmacao com telegramUserId ja vinculado a outro tenant colidiria na PK em vez de atualizar) - corrigido: ConfirmTelegramLinkService busca a linha existente antes de salvar (mesmo mecanismo de @PostLoad -> isNew=false ja usado), TELEGRAM_ACCOUNT do tenant antigo fica orfao mas nao bloqueia a nova confirmacao. (MINOR) migration eager separada (classpath:db/migration-public, runner proprio no boot) confirmada como necessaria - nao existe hoje nenhum caminho de migration para o schema public (spring.flyway.enabled=false, unico gateway existente e lazy por tenant) - documentar o mecanismo novo em docs/CONVENTIONS.md secao Migrations no mesmo commit. (MINOR) endpoints internos (confirmar vinculo + lookup) sem header de autenticacao de servico ate epic-008 existir - confirmado como o MESMO risco residual ja aceito hoje para bets-service/stats-service e para o proprio GET .../{telegramUserId} ja documentado neste CLAUDE.md, nao uma regressao nova - mantido sem correcao, documentado como risco aceito. (MINOR) docs/services/auth-service.md linha ~145 (\"PENDING_TELEGRAM_LINK... alem de no schema do tenant\") contradiz o ERD de docs/DATA-MODEL.md (tabela so existe em public) - confirmado como erro de prosa, corrigido no mesmo commit desta feature. DECISAO DO USUARIO (AskUserQuestion, apos o plan review): quando telegramUserId ja vinculado a outro tenant/usuario recebe nova confirmacao valida, sobrescreve o vinculo antigo (TELEGRAM_LINK.telegramUserId e PK unica, so um vinculo ativo por vez) - TELEGRAM_ACCOUNT do tenant anterior fica orfao, sem endpoint de desvinculo nesta feature. Residual aceito: @Table(schema=public) convivendo com CurrentTenantIdentifierResolver e padrao documentado do Hibernate mas nunca usado neste codigo-base - subtask feat-006.4 inclui teste de integracao provando rollback cross-schema (falha forcada no upsert de TelegramLink reverte tambem a escrita em TELEGRAM_ACCOUNT) antes de fechar. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-50",
+      "subtasks": [
+        {
+          "id": "feat-006.1",
+          "name": "Migration eager do schema public + runner no boot",
+          "status": "done",
+          "jira": "SV-51",
+          "detail": "Primeiro caminho de migration nao-lazy do servico - schema public sempre existe e pertence ao proprio servico, sem a ambiguidade de \"quem provisiona\" que motivou a lazy migration por tenant (feat-001.3).",
+          "checklist": [
+            "src/main/resources/db/migration-public/V<timestamp>__create_telegram_link_tables.sql: TELEGRAM_LINK (telegram_user_id PK varchar, tenant_id varchar, user_id uuid) e PENDING_TELEGRAM_LINK (code PK varchar, tenant_id varchar, user_id uuid, expires_at timestamptz).",
+            "Novo @Component (ApplicationRunner) que roda Flyway.configure().schemas(\"public\").createSchemas(false).locations(\"classpath:db/migration-public\").load().migrate() uma vez no boot - nao mexe em spring.flyway.enabled (continua false).",
+            "docs/CONVENTIONS.md secao Migrations ganha um paragrafo descrevendo esse mecanismo novo (eager, so para public, separado da lazy por tenant) - no repositorio raiz."
+          ],
+          "validation": "Aplicacao sobe local (docker compose) e as duas tabelas existem no schema public; teste de integracao minimo confirma a migration rodando contra Postgres efemero (Testcontainers).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.2",
+          "name": "Dominio: TelegramLink, PendingTelegramLink, excecoes, TenantSchemaName.slug(), gerador de codigo",
+          "status": "done",
+          "jira": "SV-52",
+          "detail": "Gerador de codigo dedicado (nao reaproveita TemporaryPasswordGenerator - alfabeto/tamanho/proposito diferentes).",
+          "checklist": [
+            "domain/model/TelegramLink (telegramUserId, tenantSlug, userId) e domain/model/PendingTelegramLink (code, tenantSlug, userId, expiresAt) - records com validacao no construtor compacto, mesmo molde de TelegramAccount.",
+            "domain/model/CallerNotFoundException, TelegramLinkCodeNotFoundException, TelegramLinkCodeExpiredException (LocalizedDomainException) + chaves em messages_pt_BR/en_US/es.properties.",
+            "TenantSchemaName ganha slug() (remove prefixo tenant_) - evita expor TenantContextHolder fora de config/.",
+            "domain/port/out/TelegramLinkCodeGenerator + adapter/out/security/SecureRandomTelegramLinkCodeGenerator (SecureRandom, alfabeto sem ambiguos, 8 chars).",
+            "application.yml: telegram.link-code-ttl-minutes: 15 (mesmo padrao de paseto.access-token-ttl-minutes)."
+          ],
+          "validation": "mvn compile passa; teste unitario do gerador (tamanho, alfabeto, unicidade estatistica basica).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.3",
+          "name": "Persistencia JPA das tabelas public (TelegramLink, PendingTelegramLink)",
+          "status": "done",
+          "jira": "SV-53",
+          "detail": "Entidades JPA normais com @Table(schema = \"public\") explicito - achado do Plan Reviewer, substitui o adapter JDBC cru do plano original. Upsert real (busca antes de salvar), nao Persistable.isNew=true sempre.",
+          "checklist": [
+            "adapter/out/persistence/TelegramLinkJpaEntity (@Table(name=\"telegram_link\", schema=\"public\"), PK telegramUserId, Persistable<String> com isNew via @PostLoad, mesmo molde de TelegramAccountJpaEntity) + TelegramLinkJpaRepository (Spring Data).",
+            "adapter/out/persistence/PendingTelegramLinkJpaEntity (@Table(name=\"pending_telegram_link\", schema=\"public\"), PK code) + PendingTelegramLinkJpaRepository.",
+            "domain/port/out/TelegramLinkRepository (upsert, findByTelegramUserId) e domain/port/out/PendingTelegramLinkRepository (save, findByCode, deleteByCode) + adapters implementando-os sobre os repositories acima."
+          ],
+          "validation": "Teste de integracao (Testcontainers): salvar TelegramLink/PendingTelegramLink persiste de fato no schema public (nao no schema do tenant corrente, mesmo com TenantContextScope aberto durante o teste).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.4",
+          "name": "Application services: gerar codigo, confirmar vinculo, lookup",
+          "status": "done",
+          "jira": "SV-54",
+          "detail": "ConfirmTelegramLinkService e o primeiro @Transactional do servico - cobre tenant schema + public na mesma transacao real. Reconfirmacao sobrescreve vinculo antigo (decisao do usuario).",
+          "checklist": [
+            "domain/port/in/GenerateTelegramLinkCodeUseCase + application/GenerateTelegramLinkCodeService: valida caller (UserRepository.findById, ausente -> CallerNotFoundException, 401), gera codigo, grava PendingTelegramLink com tenantSlug corrente (TenantContextHolder + slug()) e expiresAt = now + TTL.",
+            "domain/port/in/ConfirmTelegramLinkUseCase + application/ConfirmTelegramLinkService (@Transactional): busca PendingTelegramLink por code (ausente -> TelegramLinkCodeNotFoundException, 404; expirado -> consome o codigo + TelegramLinkCodeExpiredException, 422); abre TenantContextScope para o tenantSlug resolvido; upsert de TelegramAccount (schema do tenant, via TelegramAccountRepository existente) e upsert de TelegramLink (schema public, sobrescreve vinculo anterior se telegramUserId ja apontava para outro tenant/usuario); deleta o PendingTelegramLink consumido.",
+            "domain/port/in/LookupTelegramAccountUseCase + application/LookupTelegramAccountService: TelegramLinkRepository.findByTelegramUserId (ausente -> 404).",
+            "Teste de integracao provando rollback cross-schema: falha forcada no upsert de TelegramLink dentro de ConfirmTelegramLinkService reverte tambem a escrita em TELEGRAM_ACCOUNT feita na mesma chamada (prova que @Transactional cobre as duas escritas de verdade, nao so por coincidencia de configuracao)."
+          ],
+          "validation": "Teste unitario dos 3 services (mocks dos ports) cobrindo sucesso e cada excecao; teste de integracao do rollback cross-schema passa.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.5",
+          "name": "Web adapter: 3 endpoints + DTOs + i18n",
+          "status": "done",
+          "jira": "SV-55",
+          "detail": "Sem verbo na URL (POST cria o recurso = confirma o vinculo) - mesma convencao de docs/API-CONTRACTS.md.",
+          "checklist": [
+            "adapter/in/web/TelegramLinksController: POST /api/v1/telegram-links (header X-User-Id obrigatorio, MissingCallerContextException se ausente/malformado, mesmo padrao de UsersController) -> 201 GenerateTelegramLinkResponse(code, expiresAt).",
+            "adapter/in/web/TelegramAccountsController: POST /api/v1/telegram-accounts (body ConfirmTelegramLinkRequest(telegramUserId, code)) -> 201; GET /api/v1/telegram-accounts/{telegramUserId} -> 200 TelegramAccountLookupResponse(userId, tenantId) ou 404.",
+            "DomainExceptionHandler ganha CallerNotFoundException (401), TelegramLinkCodeNotFoundException (404 - excecao propria, nao reusa o @ExceptionHandler de LocalizedDomainException se o status nao bater com o padrao atual), TelegramLinkCodeExpiredException (422).",
+            "Teste de integracao HTTP ponta a ponta dos 3 endpoints: gerar codigo -> confirmar -> lookup; isolamento cross-tenant (dois tenants, codigos nao colidem); codigo expirado; reconfirmacao trocando o tenant vinculado a um telegramUserId; i18n (title/detail mudando por Accept-Language em pelo menos 1 caso, ex.: codigo expirado)."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-006.6",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-56",
+          "detail": "Fecha a feature com o gate real do harness.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "Corrigir docs/services/auth-service.md linha ~145 (remover mencao a copia de PENDING_TELEGRAM_LINK no schema do tenant) - repositorio raiz.",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done.",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto no mesmo commit (mecanismo de migration eager para schema public e @Table(schema=) convivendo com multi-tenancy sao candidatos fortes para docs/CONVENTIONS.md)."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) atualizado se este foi o marco que fecha epic-002 (nao e - feat-007 ainda fica).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-50, story SV-50 com 6 subtasks SV-51..56, PR de subtask #36 bundlando feat-006.1..5 - descoberto durante a implementacao que migration/dominio/persistencia/services/web sao interdependentes, mesmo padrao de feat-002.4/5 e feat-005.1..4 -, CI verde incluindo o gate completo). Primeira feature do servico a introduzir dado fora do schema-per-tenant (schema public, diretorio global TELEGRAM_LINK/PENDING_TELEGRAM_LINK) e a primeira transacao real (@Transactional) do servico, cruzando schema do tenant e schema public na mesma transacao.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "mvn verify (JaCoCo 80% incluso) verde localmente com Docker ativo - 162 testes, 0 falhas.",
+              "CI verde na PR de subtask (#36, bundlada) - gh pr checks confirmou pipeline pass antes do merge.",
+              "./init.sh verde em feature/SV-50 apos o merge do subtask."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Plan Reviewer (antes do codigo): REVISE, 2 MAJOR corrigidos no plano - persistencia via entidades JPA com @Table(schema = \"public\") em vez de um adapter JDBC cru separado, e upsert real (busca antes de salvar) em vez do padrao Persistable.isNew=true sempre usado em USER/TELEGRAM_ACCOUNT - detalhe completo no campo plan_review.",
+              "Achado real durante a implementacao (nao previsto no plan_review): ler PENDING_TELEGRAM_LINK (schema public) e depois escrever em TELEGRAM_ACCOUNT (schema do tenant) DENTRO da mesma sessao Hibernate ja aberta e inseguro - a sessao resolve o schema da conexao uma unica vez, na primeira aquisicao, nao a cada query. Corrigido isolando a escrita cruzada num componente separado (TelegramLinkConfirmationTransaction, @Transactional) chamado APOS o TenantContextScope do tenant ja estar aberto (nao durante) - ConfirmTelegramLinkService faz a leitura do schema public primeiro (sem contexto de tenant, sessao propria) e so entao abre o escopo e delega. Prova empirica em TelegramLinkConfirmationTransactionRollbackIntegrationTest.",
+              "DECISAO DO USUARIO (AskUserQuestion, apos o plan review): quando telegramUserId ja vinculado a outro tenant/usuario recebe nova confirmacao valida, sobrescreve o vinculo antigo - TELEGRAM_ACCOUNT do tenant anterior fica orfao, sem endpoint de desvinculo nesta feature."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Persistence Auditor (CONCERNS, 2 achados corrigiveis + 1 residual aceito): (1) CONFIRMADO E CORRIGIDO - PublicSchemaMigrationRunner usava ApplicationRunner, que roda DEPOIS do servidor embutido ja aceitar conexoes (SpringApplication.run() inicia o SmartLifecycle do servidor dentro de refreshContext(), antes de callRunners()) - uma requisicao logo apos o boot podia cair no schema public antes da migration rodar. Corrigido trocando para InitializingBean.afterPropertiesSet() (mesmo mecanismo do FlywayMigrationInitializer oficial do Spring Boot), que roda garantidamente antes do servidor subir. (2) CONFIRMADO, aceito como risco residual (mesma categoria do TOCTOU ja aceito em feat-003) - upsert()/pre-check de TelegramLinkConfirmationTransaction sao find-then-save, nao atomicos; duas confirmacoes concorrentes pro mesmo telegramUserId podem gerar um 500 bruto em vez de 409 limpo no perdedor da corrida, mas a transacao inteira ainda reverte de forma consistente (sem corrupcao de dado) - desproporcional de corrigir para um endpoint interno de baixo volume antes do api-gateway existir. (3) sem job de limpeza de PENDING_TELEGRAM_LINK expirado - aceito, volume esperado e pequeno.",
+              "Test Suite Auditor (achado real corrigido): o caminho 409 (TelegramAccountAlreadyLinkedException) so estava provado no nivel de mock (TelegramLinkConfirmationTransactionTest), sem prova de que o controller + DomainExceptionHandler real retornam 409 de fato - adicionado shouldReturn409WhenCallerAlreadyHasALinkedTelegramAccount em TelegramLinkFlowIntegrationTest (10 casos HTTP ponta a ponta no total).",
+              "Delivery Reviewer (PASS, sem achado bloqueante) - diff conferido contra develop: mudancas nos 2 arquivos existentes tocados (DomainExceptionHandler, TenantSchemaName) sao puramente aditivas, sem regressao nas rotas existentes (login, admin/tenants, users); nenhum dado sensivel vazado nas respostas; convencoes de rota (sem verbo, RFC 7807, X-User-Id/X-Tenant-Id) respeitadas."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer, Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done - achados reais corrigidos no Plan Reviewer (2 MAJOR), Persistence Auditor (1 corrigido, 2 residuais aceitos) e Test Suite Auditor (1 gap de cobertura HTTP), Delivery Reviewer sem achado.",
+              "docs/CONVENTIONS.md (mecanismo novo de migration eager para schema public + InitializingBean vs ApplicationRunner) e docs/services/auth-service.md (contrato exato dos 3 endpoints, correcao da discrepancia sobre PENDING_TELEGRAM_LINK nao existir tambem no schema do tenant) atualizados no repositorio raiz, fora deste repositorio."
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "feat-007",
       "name": "Pipeline de CI (GitHub Actions + SonarCloud)",
-      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 5 passos: validacao de CHANGELOG.md atualizado, validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn package), testes unitarios + cobertura (mvn test jacoco:report), qualidade/cobertura no SonarCloud (mvn sonar:sonar, projectKey sv-auth-backend). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. So funciona de fato apos este repositorio existir no GitHub e o setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) estar feito - ver docs/CI-CD.md secao 'Setup pendente'.",
+      "description": "Workflow ja versionado em .github/workflows/ci.yml (dentro deste repositorio - este servico e seu proprio repositorio Git, nao um monorepo, ver docs/CI-CD.md) com 6 passos (corrigido de '5' nesta feature - passo 6 adicionado em feat-002.8/SV-30, description desatualizada ate aqui): validacao de CHANGELOG.md atualizado (so PR story->develop/main), validacao de chaves de traducao (messages_pt_BR/en_US/es.properties), build (mvn -DskipTests package), testes unitarios + cobertura (mvn verify), qualidade/cobertura no SonarCloud (mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar - coordenadas completas, nao o atalho mvn sonar:sonar que nunca resolve sem pluginGroups/pom, ver docs/CI-CD.md 'Terceira armadilha' -, projectKey eimmig_sv-auth-backend, sonar.qualitygate.wait=true condicional - pulado em push direto p/ develop), gate de zero issue/hotspot do SonarCloud (validate-sonar-issues.py). Scripts de validacao em .github/scripts/ (duplicados neste repositorio, nao compartilhados). Repositorio GitHub: https://github.com/eimmig/sv-auth-backend.git. Setup do SonarCloud (org, projeto, SONAR_TOKEN, SONAR_ORGANIZATION) e branch protection real feitos em epic-009/feat-002.8 - ver docs/CI-CD.md secao 'Setup pendente'.",
       "dependencies": [
         "feat-001"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
+      "status": "done",
+      "plan_review": "2026-09-04, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer mudanca. Veredito: REVISE, 1 achado MAJOR corrigido no plano (nenhum exigia decisao do usuario). (MAJOR) description original desta feature dizia '5 passos' (changelog/i18n/build/testes/sonar) e citava mvn sonar:sonar sem o goal totalmente qualificado - mas o ci.yml real deste repositorio e docs/CI-CD.md ja tem 6 passos desde a reabertura de feat-002.8/SV-30 (passo 6 = gate de zero issue/hotspot via validate-sonar-issues.py, mais o fix de sonar.qualitygate.wait condicional documentado em CI-CD.md 'Terceira armadilha') - a description desta feature nunca foi atualizada quando isso foi corrigido incrementalmente dentro de feat-002, ficando desalinhada do proprio pipeline que descreve. Corrigido: description reescrita para 6 passos, coordenadas/flags exatas do ci.yml atual. Auditoria completa (ci.yml, .github/scripts/*, docs/CI-CD.md, historico das evidence de feat-001..006) nao encontrou nenhum outro gap real: repositorio GitHub/SonarCloud/branch protection/GitGuardian ja provados em producao nas 6 features anteriores (CI verde em toda PR, gh pr checks confirmado a cada uma). Escopo desta feature, portanto, e so formalizar o fechamento (sem codigo/workflow novo) - trabalho de CI em si ja foi inteiramente absorvido incrementalmente por feat-001..006. Delivery Reviewer roda sobre o diff desta feature (so feature_list.json/CHANGELOG.md); Test Suite Auditor e Persistence Auditor nao se aplicam (zero codigo/teste/persistencia tocado) - residual aceito, documentado aqui em vez de rodados sem proposito. Rodada de desafio independente executada como passe proprio, sem subagentes - independencia reduzida, declarada.",
+      "jira": "SV-57",
+      "subtasks": [
+        {
+          "id": "feat-007.1",
+          "name": "Auditoria do pipeline real vs description da feature",
+          "status": "done",
+          "jira": "SV-58",
+          "detail": "Achado do Plan Reviewer: description desta feature dizia '5 passos', ci.yml/docs/CI-CD.md real ja tem 6 desde feat-002.8 (SV-30) - corrigido para nao deixar o backlog contradizendo o proprio pipeline que documenta.",
+          "checklist": [
+            "Comparar ci.yml, .github/scripts/{validate-changelog.sh,validate-i18n-keys.py,validate-sonar-issues.py} deste repositorio contra docs/CI-CD.md 'Os 6 passos' - confirmado sem divergencia.",
+            "Corrigir description desta feature (feature_list.json) de 5 para 6 passos, com as flags/coordenadas exatas do ci.yml atual.",
+            "Confirmar (via historico de evidence de feat-001..006, sem repetir chamada de API) que repositorio GitHub, SonarCloud, branch protection e GitGuardian ja estao funcionando de fato - nenhum novo setup necessario."
+          ],
+          "validation": "Nenhuma divergencia restante entre ci.yml/scripts/docs/CI-CD.md e a description desta feature.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-007.2",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-59",
+          "detail": "Fecha a feature e o epic-002 da raiz (ultima feature liberada deste servico) - sem codigo/teste/persistencia tocados, so Delivery Reviewer sobre o diff (feature_list.json/CHANGELOG.md).",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo.",
+            "Delivery Reviewer rodado sobre o diff desta feature (Test Suite Auditor/Persistence Auditor nao se aplicam - zero codigo/teste/persistencia tocado, ver plan_review).",
+            "Vault (docs/) revisado: alguma descoberta desta feature sem nota correspondente? (nenhuma alem da correcao de description ja feita em feat-007.1)."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) e ../../feature_list.json (raiz, epic-002) atualizados com evidence.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": {
+        "resumo": "Entregue em 2026-09-04 (branch feature/SV-57, story SV-57 com 2 subtasks SV-58/SV-59, PR de subtask #39 mergeado). Feature de fechamento formal, sem codigo/workflow novo - o pipeline de CI (GitHub Actions + SonarCloud) deste servico ja existia e ja rodava de verdade em producao desde epic-009 (setup) e feat-001..006 (endurecimento incremental: guardas por arquivo-marcador, sonar.qualitygate.wait, gate de zero issue/hotspot, branch protection real). Ultima feature liberada do backlog de auth-service - fecha epic-002 na raiz.",
+        "secoes": [
+          {
+            "titulo": "Verificacao real executada",
+            "itens": [
+              "./init.sh (mvn verify) verde com Docker ativo - 162 testes, 0 falhas (nenhum teste novo, feature nao toca codigo de aplicacao).",
+              "CI verde na PR de subtask (#39, subtask/SV-58 -> feature/SV-57), confirmado com gh pr checks."
+            ]
+          },
+          {
+            "titulo": "Divergencia do plano original",
+            "itens": [
+              "Nenhuma - o Plan Reviewer ja constatou que nao havia mais nenhuma peca de CI faltando (setup do GitHub/SonarCloud/branch protection provados em producao pelas 6 features anteriores); o unico trabalho real era corrigir a description desatualizada da propria feature."
+            ]
+          },
+          {
+            "titulo": "Defeitos encontrados antes de causar dano",
+            "itens": [
+              "Plan Reviewer (antes de qualquer mudanca): REVISE, 1 MAJOR corrigido no plano - description desta feature dizia '5 passos' de CI, ci.yml/docs/CI-CD.md real ja tem 6 desde feat-002.8/SV-30 (gate de zero issue/hotspot). Detalhe completo no campo plan_review.",
+              "Delivery Reviewer (feat-007.2): achado real na propria correcao de feat-007.1 - a description reescrita ainda citava o atalho 'mvn sonar:sonar', exatamente o formato que docs/CI-CD.md documenta como armadilha corrigida ('No plugin found for prefix sonar' - so resolve com coordenadas completas do plugin). Corrigido para as coordenadas completas (org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar), batendo com o ci.yml real deste repositorio."
+            ]
+          },
+          {
+            "titulo": "Skills e ferramentas",
+            "itens": [
+              "Plan Reviewer (1 MAJOR corrigido) e Delivery Reviewer (1 achado real corrigido, diff puramente documental) rodados antes de done - Test Suite Auditor e Persistence Auditor nao se aplicam (zero codigo/teste/persistencia tocado nesta feature), documentado no plan_review em vez de rodados sem proposito.",
+              "tools/jira_story.py usado normalmente (criacao da story + 2 subtasks, --sync-status a cada transicao real)."
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "feat-008",
+      "name": "Porta HTTP fixa (8081)",
+      "description": "Fixar server.port=8081 em application.yml. Motivada por lacuna encontrada ao planejar api-gateway feat-003 (tabela de rotas): nenhum dos 4 servicos Java tinha porta HTTP explicita (todos no default 8080 do Spring Boot, colidindo em dev local com os outros 3 - nenhum ainda e containerizado). Decisao cross-service registrada em docs/DECISIONS-LOG.md ('Porta HTTP fixa por servico Java + URL de roteamento configuravel no Gateway', 2026-09-07) e docs/OBSERVABILITY-AND-CONFIG.md (secao 'Portas HTTP'), tomada durante a sessao de api-gateway - epic-002 ja estava done, feature reaberta so para esta mudanca minima e indispensavel.",
+      "dependencies": [
+        "feat-001"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-07, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado antes da mudanca - passe proprio, sem subagentes (risco baixo, mudanca de configuracao unica linha, independencia reduzida declarada). Veredito: READY. Verificado: nenhum teste do servico fixa porta hardcoded - todos os testes de integracao HTTP usam @SpringBootTest(webEnvironment = RANDOM_PORT) + @LocalServerPort (AdminTenantControllerIntegrationTest, AuthControllerIntegrationTest, TelegramLinkFlowIntegrationTest, UsersControllerIntegrationTest, HealthChecksTest) - RANDOM_PORT sobrescreve server.port em runtime de teste independente do valor configurado, confirmado rodando ./init.sh do servico apos a mudanca (verde, exit 0, nenhuma regressao). Sem mudanca de codigo Java, sem teste novo (nao ha comportamento novo a testar, so um valor de configuracao ja usado por nenhum caminho de codigo do proprio servico). Unica subtask.",
+      "jira": "SV-159",
+      "subtasks": [
+        {
+          "id": "feat-008.1",
+          "name": "server.port fixo, CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-160"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-07 - server.port=8081 fixado no bloco base de application.yml (sem profile, aplica dev/test/prod), destravando api-gateway feat-003. Delivery Reviewer (passe proprio, sem subagentes - risco baixo, independencia reduzida declarada): PASS, sem achado - confirmado que nenhum teste hardcoda porta (todos RANDOM_PORT + @LocalServerPort), sem referencia a 8080/porta em .github/workflows/ci.yml, sem dependencia implicita em nenhum profile. Test Suite Auditor/Persistence Auditor dispensados (zero codigo/teste/persistencia tocado, so um valor de configuracao). ./init.sh do servico verde (exit 0) na branch feature/SV-159 apos merge da subtask. CHANGELOG.md atualizado automaticamente por tools/jira_story.py."
+    },
+    {
+      "id": "feat-009",
+      "name": "GET /api/v1/users - listagem de usuarios do tenant",
+      "description": "Endpoint de listagem dos usuarios do tenant do chamador, restrito a role=admin (mesma checagem de autorizacao de feat-004/POST /api/v1/users). Motivada por um gap real encontrado ao planejar apps/web feat-002 (RF01/RF02 UI): a tela de gestao de usuarios do tenant precisa de 'lista + criar', mas o backend so tinha o POST de feat-004 - decisao do usuario, 2026-09-09, mesmo precedente do gap de roteamento encontrado em api-gateway feat-007 durante telegram-integration feat-004. Resposta 200 com array no mesmo formato de CreateUserResponse (id/name/email/role/mustChangePassword/createdAt, nunca passwordHash), mesmos headers X-User-Id/X-Tenant-Id e mesmos codigos de erro 401/400/403 de feat-004 (caller ausente/invalido, tenant ausente, caller nao-admin).",
+      "dependencies": [
+        "feat-004"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-09, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: READY WITH CONCERNS, 2 MINOR incorporados ao plano (nada bloqueante, nenhuma decisao pendente do usuario alem da ja tomada via AskUserQuestion sobre adicionar este endpoint agora). (MINOR) reaproveitar CreateUserResponse como corpo da listagem quebraria a convencao existente de 1 DTO por operacao (CreateUserResponse/CreateTenantResponse/GenerateTelegramLinkResponse/LoginResponse/TelegramAccountLookupResponse, nenhum reusado entre 2 operacoes) - corrigido para DTO novo UserSummaryResponse (mesmos 5 campos, sem passwordHash), CreateUserResponse intocado. (MINOR) ordenacao da lista nao tinha requisito em nenhuma nota do vault - decidido por nome ascendente (usabilidade de tela de admin), metodo UserRepository.findAllOrderByName() (mesmo estilo de findById/findByEmail). Verificado e confirmado sem gap: isolamento cross-tenant de un findAll() sem WHERE explicito - MultiTenantConnectionProvider chama Connection.setSchema() no checkout da conexao (SET SEARCH_PATH via driver Postgres), escopando toda query sem schema explicito na sessao, nao so find-by-id; UserJpaEntity nao declara @Table(schema=...), confirmando que depende do search_path como o resto do dado do tenant (docs/CONVENTIONS.md secao multi-tenancy). Sem paginacao: nenhum requisito pede, lista de usuarios de um tenant provisionado manualmente e pequena por natureza (KISS). Rodada de desafio independente executada como passe proprio, sem subagentes - risco baixo, precedente direto de feat-004, independencia reduzida declarada.",
+      "jira": "SV-222",
+      "subtasks": [
+        {
+          "id": "feat-009.1",
+          "name": "ListUsersUseCase / ListUsersService + UserRepository.findAllOrderByName",
+          "status": "done",
+          "jira": "SV-223",
+          "detail": "Mesmo padrao de autorizacao de CreateUserService (feat-004.2), sem exceptions/i18n novos - reaproveita MissingTenantContextException/AdminRoleRequiredException ja existentes.",
+          "checklist": [
+            "domain/port/in/ListUsersUseCase.listUsers(UUID callerId): List<User>.",
+            "domain/port/out/UserRepository ganha List<User> findAllOrderByName().",
+            "adapter/out/persistence/JpaUserRepository implementa via jpaRepository.findAll(Sort.by(Sort.Direction.ASC, \"name\")), mesmo toDomain() ja existente.",
+            "application/ListUsersService: TenantContextHolder.current()==null -> MissingTenantContextException; userRepository.findById(callerId) ausente OU role!=ADMIN -> AdminRoleRequiredException; caso contrario userRepository.findAllOrderByName()."
+          ],
+          "validation": "Teste unitario (fakes de UserRepository) cobre sucesso (lista ordenada por nome, inclui o proprio caller), tenant ausente, caller ausente, caller nao-admin - mesmo estilo de CreateUserServiceTest.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-009.2",
+          "name": "UsersController (GET /api/v1/users) + UserSummaryResponse + testes de integracao",
+          "status": "done",
+          "jira": "SV-224",
+          "detail": "Mesmo parsing de X-User-Id/X-Tenant-Id ja existente no controller (metodo privado parseCallerId reaproveitado, sem duplicar). UserSummaryResponse e DTO novo (nao reaproveita CreateUserResponse, achado do Plan Reviewer) para manter a convencao de 1 DTO por operacao.",
+          "checklist": [
+            "adapter/in/web/UserSummaryResponse (id,name,email,role,mustChangePassword,createdAt - nunca passwordHash).",
+            "UsersController ganha @GetMapping retornando 200 List<UserSummaryResponse> ordenada por nome.",
+            "Teste de integracao (mesma classe UsersControllerIntegrationTest, TenantSchemaIntegrationSupport): 200 com lista incluindo o proprio admin chamador; 401 sem X-User-Id (e malformado); 400 sem X-Tenant-Id; 403 caller nao-admin; 403 admin de outro tenant nao ve usuarios deste tenant (isolamento cross-tenant).",
+            "docs/services/auth-service.md e docs/API-CONTRACTS.md atualizados no mesmo commit com o contrato exato do GET."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-009.3",
+          "name": "CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-225",
+          "detail": "Fecha a feature com o gate real do harness. Ultima subtask - carrega o item fixo de revisao do vault (docs/) alem do checklist padrao.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer e Test Suite Auditor rodados antes de done (Persistence Auditor dispensavel - sem migration/schema novo, so um SELECT ja coberto pelo mecanismo de multi-tenancy existente, avaliar e justificar antes de pular).",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) nao precisa mudar (epic-002 ja done, esta feature nao fecha epic).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-09 - 3 subtasks (feat-009.1..3), cada uma via PR real no GitHub (subtask/SV-223, SV-224, SV-225 -> feature/SV-222) com CI verde (pipeline + GitGuardian) antes do merge. GET /api/v1/users implementado ponta a ponta: ListUsersUseCase/ListUsersService (autorizacao role=admin identica a CreateUserService de feat-004) + UserRepository.findAllOrderByName (Sort por nome, isolamento cross-tenant via MultiTenantConnectionProvider/SET SEARCH_PATH, mesmo mecanismo que ja cobria findById/findByEmail - confirmado no Plan Review que cobre findAll() tambem, nao so lookup por id) + UsersController.list (GET, mesmos headers/codigos de erro 401/400/403 do POST) + UserSummaryResponse (DTO novo, achado do Plan Reviewer para nao quebrar a convencao de 1 DTO por operacao). 10 testes novos (4 unitarios ListUsersServiceTest + 6 integracao HTTP via Testcontainers, incluindo isolamento cross-tenant e ausencia de passwordHash no corpo). Delivery Reviewer: PASS, sem achado (autorizacao/isolamento verificados como corretos na logica, nao so nos testes; UserSummaryResponse confirmado sem passwordHash; consistencia total com o padrao de feat-004). Test Suite Auditor: PASS, sem achado bloqueante (2 P3 nao-bloqueantes: assercoes por substring de corpo em vez de parse estruturado, e ausencia de teste explicito para tenant com so o admin - ambos de risco marginal, mesmo padrao ja aceito em feat-004). ./init.sh verde localmente (mvn verify, Docker ativo, JaCoCo 80%). api-gateway nao precisou de mudanca (rota /api/v1/users/** ja e por prefixo de path, method-agnostic). Vault atualizado no mesmo commit separado (repositorio sv-harness): docs/services/auth-service.md ganhou o contrato do GET, docs/CONVENTIONS.md ganhou a convencao nova '1 DTO de resposta por operacao' (achado real do Plan Reviewer, reaproveitavel pelos outros 2 servicos Java). Destrava apps/web feat-002 (motivacao original desta feature, decisao do usuario via AskUserQuestion). epic-002 (auth-service) ja estava done na raiz - esta feature nao reabre nem fecha epic, so adiciona escopo a um servico ja concluido; ../../feature_list.json nao precisa mudar."
+    },
+    {
+      "id": "feat-010",
+      "name": "POST /api/v1/auth/login retorna userId e role",
+      "description": "Gap real encontrado ao planejar apps/web feat-002 (RF01/RF02 UI): o token PASETO v4.local e criptografado simetricamente (chave so no backend), entao o frontend nao consegue decodificar claims (userId/tenantId/role) no cliente. tenantId ja e conhecido no cliente (o proprio slug digitado no login), mas userId e role nao tem nenhuma outra fonte - sem eles a UI nao sabe se deve mostrar a tela de gestao de usuarios do tenant (exclusiva de role=admin, ver docs/services/web.md 'Modelo de tenant (UI)') nem tem um id estavel do usuario logado. Mesmo precedente de feat-009 (gap encontrado planejando a mesma feature de apps/web). Extensao minima de LoginResult/LoginResponse (2 records existentes, sem DTO novo, sem migration, sem endpoint novo) - epic-002 ja done na raiz, feature reaberta so para esta adicao indispensavel.",
+      "dependencies": [
+        "feat-005"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-09, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado antes de codificar - passe proprio, sem subagentes (risco baixo, extensao de 2 records existentes, mesmo padrao de feat-008/009, independencia reduzida declarada). Veredito: READY. Verificado: nenhum outro consumidor depende do formato atual de 2 campos - api-gateway roteia POST /api/v1/auth/login como passthrough puro de body (GatewayRoutingIntegrationTest.shouldRouteLoginRequestWithoutRequiringToken so verifica path/status, nunca parseia o corpo), telegram-integration nao tem nenhuma referencia a LoginResponse/auth/login (nao usa PASETO, autentica via X-Service-Key). Sem endpoint /me/whoami no backlog para alternativa. userId/role em JSON plano sobre HTTPS aceito sem ressalva - mesmo nivel de exposicao que UserSummaryResponse/CreateUserResponse ja devolvem hoje. Escopo confirmado minimo: LoginResult (domain/model) e LoginResponse (adapter/in/web) ganham userId (UUID) + role (Role enum, serializa ADMIN/MEMBER via Jackson default, mesmo padrao de UserSummaryResponse) - LoginService.login ja tem 'user' carregado antes de emitir o token, sem porta/dependencia nova. LoginServiceTest e AuthControllerIntegrationTest sao os mesmos arquivos que ja cobrem login, ajustados nesta mesma subtask (nao subtask de teste separada). docs/API-CONTRACTS.md e docs/services/auth-service.md atualizados no mesmo commit (contrato cross-service). Unica subtask, mesmo formato de feat-008 (mudanca pequena e coesa, sem necessidade de dividir implementacao/teste/fechamento).",
+      "jira": "SV-226",
+      "subtasks": [
+        {
+          "id": "feat-010.1",
+          "name": "LoginResult/LoginResponse ganham userId+role, CHANGELOG e verificacao final",
+          "status": "done",
+          "jira": "SV-227",
+          "detail": "Extensao dos 2 records existentes (domain/model/LoginResult.java, adapter/in/web/LoginResponse.java) - LoginService.login ja carrega 'user' antes de emitir o token, so passa user.id()/user.role() adiante. AuthController repassa os 2 campos novos no construtor de LoginResponse.",
+          "checklist": [
+            "LoginResult ganha UUID userId, Role role - LoginService.login constroi com user.id()/user.role().",
+            "LoginResponse (DTO HTTP) ganha os mesmos 2 campos, AuthController repassa de LoginResult.",
+            "LoginServiceTest (registeredUser + asserts de LoginResult) e AuthControllerIntegrationTest (JSON body do login valido) atualizados para os campos novos.",
+            "docs/API-CONTRACTS.md e docs/services/auth-service.md (repositorio raiz) atualizados no mesmo commit logico com o contrato novo.",
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer e Test Suite Auditor rodados antes de done (Persistence Auditor dispensavel - sem migration/query nova, so repasse de campo ja carregado)."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) nao precisa mudar (epic-002 ja done, esta feature nao fecha epic).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": "feat-010.1 fechada em 2026-09-09 via PR real (subtask/SV-227 -> feature/SV-226, PR #47), CI (pipeline + GitGuardian) verde antes do merge. LoginResult (domain/model) e LoginResponse (adapter/in/web) ganharam userId (UUID) + role (Role enum, serializa ADMIN/MEMBER via Jackson default, mesmo padrao de UserSummaryResponse) - LoginService.login repassa user.id()/user.role() (ja carregados, sem porta/dependencia nova), AuthController repassa os 2 campos no construtor de LoginResponse. LoginServiceTest e AuthControllerIntegrationTest atualizados (asserts de igualdade/corpo JSON incluindo os campos novos no caminho de sucesso - caminhos de erro nao mudam, LoginResponse so aparece no 200). Delivery Reviewer (passe proprio, sem subagentes - diff de 6 arquivos, risco baixo, independencia reduzida declarada): PASS, sem achado - confirmado sem consumidor quebrado (api-gateway roteia /api/v1/auth/login como passthrough puro de body, GatewayRoutingIntegrationTest nunca parseia o corpo; telegram-integration nao referencia LoginResponse/PASETO). Test Suite Auditor (mesmo padrao, passe proprio): PASS, sem achado - cobertura no caminho de sucesso e suficiente (userId/role so aparecem no 200, caminhos de erro 400/401 continuam sem eles por desenho). Persistence Auditor dispensado (sem migration/query nova, so repasse de campo ja carregado por SELECT existente). ./init.sh (mvn verify, JaCoCo 80%) verde localmente antes do push. docs/API-CONTRACTS.md nao precisou mudar (nao documentava o corpo do login); docs/services/auth-service.md (repositorio raiz) atualizado no mesmo commit logico com o contrato novo."
+    },
+    {
+      "id": "feat-011",
+      "name": "Dockerfile para imagem de producao",
+      "description": "Achado real de infra/feat-004 (epic-010 da raiz, migracao para Kubernetes): este servico nunca teve Dockerfile proprio, apesar de docs/ARCHITECTURE.md ja documentar Kubernetes como alvo real de implantacao do TCC1. Mesmo precedente das features de 'porta HTTP fixa' (auth-service feat-008, bets-service feat-011, stats-service feat-008) - decisao cross-service implementada como pequena feature dedicada em cada repositorio de servico, para infra/feat-004 so precisar referenciar a imagem ja construida, sem editar codigo de build de outro repositorio (regra de escopo restrito daquele harness).",
+      "dependencies": [
+        "feat-001"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-10, achado durante infra/feat-004 - nao um plan review dedicado (build multi-stage padrao Spring Boot/Maven, mesmo padrao replicado nos outros 3 servicos Java, risco baixo). Grounding: pom.xml confirmado com spring-boot-maven-plugin (repackage configurado, produz jar executavel), java.version=25, sem finalName customizado (jar sai como target/auth-service-0.0.1-SNAPSHOT.jar, capturado por wildcard target/*.jar sem ambiguidade com o *.jar.original que o repackage gera). Imagens eclipse-temurin:25-jdk-alpine (build) e 25-jre-alpine (runtime) confirmadas existentes via docker manifest inspect antes de usar.",
+      "jira": "SV-276",
+      "subtasks": [
+        {
+          "id": "feat-011.1",
+          "name": "Dockerfile multi-stage + verificacao real do container contra a infra",
+          "status": "done",
+          "jira": "SV-277"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-10. Dockerfile multi-stage (build: eclipse-temurin:25-jdk-alpine, mvnw package; runtime: eclipse-temurin:25-jre-alpine, usuario nao-root) + .dockerignore. Build real (docker build) e execucao real do container testados contra a infra de verdade (rede stakevault-infra_stakevault, postgres-auth): GET /actuator/health respondeu 200 (db UP, migration Flyway aplicada) em ~5.5s de boot, sem nenhuma diferenca de comportamento do processo local (mvnw spring-boot:run). Imagem usada de fato por infra/feat-004 para os manifests Kubernetes."
+    },
+    {
+      "id": "feat-012",
+      "name": "Claim role no token PASETO (X-User-Role)",
+      "description": "Achado real durante bets-service epic-013 (PATCH /api/v1/settings, restrito a role=admin ja documentado em docs/API-CONTRACTS.md): bets-service nao tem tabela USER pra resolver role localmente como auth-service faz (ListUsersService/CreateUserService consultam a propria tabela pelo callerId), e o token PASETO hoje so carrega userId/tenantId. Decisao do usuario via AskUserQuestion (docs/DECISIONS-LOG.md 2026-09-10 'Claim role no PASETO'): estender o mesmo padrao de confianca ja usado pra userId/tenantId - token ganha claim role, api-gateway extrai e injeta X-User-Role, servicos downstream confiam sem revalidar. Esta feature e so a metade de auth-service (emitir o claim); api-gateway ganha a feature irma (extrair + injetar header) em paralelo.",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-10 - instrucao direta e inequivoca do usuario (AskUserQuestion, 3 opcoes apresentadas, escolheu a recomendada), nao uma decisao de design em aberto exigindo desafio independente. Risco tecnico baixo: mudanca mecanica (mais um campo no record PasetoClaims + um parametro a mais em AccessTokenIssuer.issue, ja tem user.role() disponivel no ponto de chamada em LoginService). Grounding: PasetoAccessTokenIssuer.java e LoginService.java lidos antes de codificar - role.name() serializa igual ao que LoginResponse.role ja devolve hoje (enum sem @JsonProperty, uppercase ADMIN/MEMBER), sem inconsistencia de casing entre o que o cliente ja recebe e o que vai no claim.",
+      "jira": "SV-311",
+      "subtasks": [
+        {
+          "id": "feat-012.1",
+          "name": "PasetoClaims ganha role, issue() recebe Role",
+          "status": "done",
+          "jira": "SV-312"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-10. AccessTokenIssuer.issue(userId, tenantSlug, role) - novo parametro Role. PasetoAccessTokenIssuer.PasetoClaims ganha campo role (serializado como role.name().toLowerCase()). LoginService passa user.role() (ja disponivel no ponto de chamada, sem query nova). Testes atualizados: PasetoAccessTokenIssuerTest prova o claim role aparece decriptado no payload; LoginServiceTest com o novo parametro no mock. mvn verify verde. Sem migration nem mudanca de schema - so o payload do token. Libera api-gateway (feature irma, extrair+injetar X-User-Role) e bets-service epic-013 (PATCH /api/v1/settings). Delivery Reviewer/Test Suite Auditor/Persistence Auditor: self-review proporcional ao escopo (mudanca mecanica de 2 campos, sem schema/persistencia tocados, sem subagent dedicado) - nenhum achado; Persistence Auditor N/A por nao haver superficie de persistencia nesta mudanca (so payload de token em memoria). CORRECAO 2026-09-10, mesmo dia: o plan_review acima justificou uppercase (role.name() cru) alegando bater com o casing de LoginResponse.role - achado real do Plan Reviewer de bets-service epic-013 (chamado antes de implementar o consumidor do header): docs/API-CONTRACTS.md e docs/DECISIONS-LOG.md ja documentavam X-User-Role como lowercase ('admin'/'member', mesma convencao de BET.status/TransactionType), e os testes de api-gateway feat-010 (ja escritos) tambem assumiam lowercase - so o emissor (aqui) estava errado. Corrigido pra role.name().toLowerCase(), sem reabrir subtask nem story (Jira ja Done) - correcao direta, mesma sessao, antes de qualquer consumidor real (bets-service) depender do valor errado."
+    },
+    {
+      "id": "feat-013",
+      "name": "Corrigir casing do claim role (lowercase, nao role.name() cru)",
+      "description": "Achado real do Plan Reviewer de bets-service epic-013 (chamado antes de implementar o consumidor de X-User-Role): feat-012 emitiu o claim role com role.name() cru (uppercase ADMIN/MEMBER), justificando isso por bater com LoginResponse.role - mas docs/API-CONTRACTS.md e docs/DECISIONS-LOG.md ja documentavam X-User-Role como lowercase ('admin'/'member', mesma convencao de BET.status/TransactionType em outros servicos), e os testes de api-gateway feat-010 (ja implementados e mergeados) tambem assumiam lowercase. So o emissor (este servico) estava com o casing errado. Corrigido antes de qualquer consumidor real (bets-service) depender do valor.",
+      "dependencies": [
+        "feat-012"
+      ],
+      "status": "done",
+      "plan_review": "2026-09-10 - correcao direta de um achado ja verificado (nao uma decisao de design nova): a fonte de verdade (docs/API-CONTRACTS.md, docs/DECISIONS-LOG.md, testes ja mergeados de api-gateway feat-010) ja apontava lowercase de forma inequivoca: nao havia ambiguidade a resolver, so um bug a corrigir.",
+      "jira": "SV-315",
+      "subtasks": [
+        {
+          "id": "feat-013.1",
+          "name": "role.name().toLowerCase() no claim do PASETO",
+          "status": "done",
+          "jira": "SV-316"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-10. PasetoAccessTokenIssuer: role.name() vira role.name().toLowerCase(). PasetoAccessTokenIssuerTest atualizado (assertion 'role':'admin' em vez de 'ADMIN'). mvn verify verde (mesmos 2 arquivos ja cobertos por feat-012). Nenhum outro consumidor de X-User-Role existia ainda alem de api-gateway (que so repassa a string, sem se importar com case) - correcao sem impacto em nenhum caminho ja em producao."
+    },
+    {
+      "id": "feat-014",
+      "name": "CI: build e push da imagem Docker pro GHCR",
+      "goal": "Publicar a imagem deste servico em ghcr.io/eimmig/sv-auth-backend a cada push estavel em main, pra viabilizar deploy real fora do cluster kind local.",
+      "scope": [
+        "Job novo build-and-push-image no ci.yml, condicionado a pipeline (todos os passos de qualidade) ja ter passado e a branch ser main",
+        "Nao inclui gerar o PAT/imagePullSecrets do cluster que vai consumir a imagem - isso e acao no lado do servidor de deploy, fora deste repositorio"
+      ],
+      "description": "Ate agora a imagem deste servico so existia como ghcr.io/eimmig/sv-auth-backend:local, carregada manualmente num cluster kind de teste (infra/feat-004, epic-010 da raiz). Sem publicar num registry, nao ha como um servidor de producao real puxar essa imagem. Job novo no ci.yml: docker/setup-buildx-action + docker/login-action (ghcr.io, github.actor/secrets.GITHUB_TOKEN) + docker/build-push-action, tags <sha> e latest, needs: pipeline, if restrito a push em main.",
+      "dependencies": [
+        "feat-011"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-10, Plan Reviewer (review-suite:ln-11-plan-reviewer) - READY WITH CONCERNS. Achados: MAJOR - packages: write no permissions do job so e concedido se o repositorio tiver 'Workflow permissions' = Read and write em Settings > Actions > General (default de repositorio novo costuma vir restrito a leitura, e nesse caso o job-level permissions e limitado silenciosamente, push falha com 403 em vez de erro de sintaxe) - verificar/configurar antes do primeiro push em main. MINOR (confirmado contra a documentacao oficial do docker/build-push-action) - nao obrigatorio mas recomendado adicionar docker/setup-buildx-action antes do build, incluido no plano corrigido. Escopo confirmado: PAT/imagePullSecrets do cluster de deploy fica fora desta feature.",
+      "jira": "SV-325",
+      "subtasks": [
+        {
+          "id": "feat-014.1",
+          "name": "Job build-and-push-image no ci.yml",
+          "detail": "Publica a imagem no GHCR so depois da pipeline de qualidade inteira ja ter passado, so na branch main - nunca em PR/subtask, pra nao pushar imagem de codigo nao revisado.",
+          "checklist": [
+            "docker/setup-buildx-action antes do login/build",
+            "docker/login-action contra ghcr.io com github.actor + secrets.GITHUB_TOKEN",
+            "docker/build-push-action com tags <sha> e latest",
+            "needs: pipeline + if restrito a push em main",
+            "permissions do job: contents: read, packages: write"
+          ],
+          "validation": "Push em main dispara o job, imagem aparece em ghcr.io/eimmig/sv-auth-backend (packages do repositorio) com as 2 tags.",
+          "owner": "agente",
+          "status": "done",
+          "jira": "SV-326"
+        },
+        {
+          "id": "feat-014.2",
+          "name": "CHANGELOG e verificacao final",
+          "detail": "Fechamento formal: CHANGELOG.md, init.sh, confirmar que o Workflow permissions do repositorio permite packages: write (achado do Plan Reviewer), e o item fixo de vault desta feature.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (Unreleased)",
+            "./init.sh do servico e da raiz verdes",
+            "Settings > Actions > General > Workflow permissions = Read and write confirmado neste repositorio",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC1) no mesmo commit"
+          ],
+          "validation": "Push real em main confirmado no GitHub Actions (job verde) e imagem visivel no pacote do repositorio.",
+          "owner": "agente",
+          "status": "done",
+          "jira": "SV-327"
+        }
+      ],
       "evidence": ""
     }
   ]
