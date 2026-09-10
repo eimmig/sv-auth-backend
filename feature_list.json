@@ -1112,7 +1112,7 @@
       "dependencies": [
         "feat-010"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-10 - instrucao direta e inequivoca do usuario (AskUserQuestion, 3 opcoes apresentadas, escolheu a recomendada), nao uma decisao de design em aberto exigindo desafio independente. Risco tecnico baixo: mudanca mecanica (mais um campo no record PasetoClaims + um parametro a mais em AccessTokenIssuer.issue, ja tem user.role() disponivel no ponto de chamada em LoginService). Grounding: PasetoAccessTokenIssuer.java e LoginService.java lidos antes de codificar - role.name() serializa igual ao que LoginResponse.role ja devolve hoje (enum sem @JsonProperty, uppercase ADMIN/MEMBER), sem inconsistencia de casing entre o que o cliente ja recebe e o que vai no claim.",
       "jira": "SV-311",
       "subtasks": [
@@ -1123,7 +1123,7 @@
           "jira": "SV-312"
         }
       ],
-      "evidence": "Fechada em 2026-09-10. AccessTokenIssuer.issue(userId, tenantSlug, role) - novo parametro Role. PasetoAccessTokenIssuer.PasetoClaims ganha campo role (serializado como role.name(), uppercase ADMIN/MEMBER - mesmo casing ja usado em LoginResponse.role). LoginService passa user.role() (ja disponivel no ponto de chamada, sem query nova). Testes atualizados: PasetoAccessTokenIssuerTest prova o claim role aparece decriptado no payload; LoginServiceTest com o novo parametro no mock. mvn verify verde. Sem migration nem mudanca de schema - so o payload do token. Libera api-gateway (feature irma, extrair+injetar X-User-Role) e bets-service epic-013 (PATCH /api/v1/settings)."
+      "evidence": "Fechada em 2026-09-10. AccessTokenIssuer.issue(userId, tenantSlug, role) - novo parametro Role. PasetoAccessTokenIssuer.PasetoClaims ganha campo role (serializado como role.name(), uppercase ADMIN/MEMBER - mesmo casing ja usado em LoginResponse.role). LoginService passa user.role() (ja disponivel no ponto de chamada, sem query nova). Testes atualizados: PasetoAccessTokenIssuerTest prova o claim role aparece decriptado no payload; LoginServiceTest com o novo parametro no mock. mvn verify verde. Sem migration nem mudanca de schema - so o payload do token. Libera api-gateway (feature irma, extrair+injetar X-User-Role) e bets-service epic-013 (PATCH /api/v1/settings). Delivery Reviewer/Test Suite Auditor/Persistence Auditor: self-review proporcional ao escopo (mudanca mecanica de 2 campos, sem schema/persistencia tocados, sem subagent dedicado) - nenhum achado; Persistence Auditor N/A por nao haver superficie de persistencia nesta mudanca (so payload de token em memoria)."
     }
   ]
 }
