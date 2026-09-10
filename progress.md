@@ -276,6 +276,17 @@ proporcional ao escopo, sem subagent dedicado (Persistence Auditor N/A, sem supe
 persistência). 1 subtask (SV-312, story SV-311), 2 PRs (#51 subtask->feature, #52
 feature->develop), CI+SonarCloud verdes nos dois. `mvn verify` verde.
 
+## `feat-013` — Corrigir casing do claim `role` (2026-09-10, mesmo dia)
+
+Achado real do Plan Reviewer de `bets-service epic-013` (chamado antes de implementar o
+consumidor de `X-User-Role`): `feat-012` tinha emitido `role.name()` cru (`ADMIN`/`MEMBER`
+uppercase), justificado então por bater com `LoginResponse.role` — mas `docs/API-CONTRACTS.md`/
+`docs/DECISIONS-LOG.md` já documentavam `X-User-Role` como lowercase (mesma convenção de
+`BET.status`/`TransactionType`), e os testes de `api-gateway feat-010` (já mergeados) também
+assumiam lowercase. Corrigido pra `role.name().toLowerCase()` antes de qualquer consumidor real
+depender do valor errado — nenhum caminho em produção foi afetado. 1 subtask (SV-316, story
+SV-315), 2 PRs (#53/#54), CI+SonarCloud verdes.
+
 ## `feat-011` — Dockerfile para imagem de produção (2026-09-10)
 
 Achado real de `infra/feat-004` (migração para Kubernetes, `epic-010` da raiz): este serviço

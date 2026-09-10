@@ -7,14 +7,17 @@
 
 ## Objetivo atual
 
-`feat-001`..`feat-012` `done`. `feat-012` (claim `role` no token PASETO) fechada nesta sessão —
-achado real de `bets-service epic-013`, ver `progress.md`.
+`feat-001`..`feat-013` `done`. `feat-012` (claim `role` no token PASETO) e `feat-013` (correção
+de casing do mesmo claim) fechadas nesta sessão — achados de `bets-service epic-013`, ver
+`progress.md`.
 
 ## Concluído nesta sessão (2026-09-10)
 
 - [x] `feat-012` fechada (story SV-311, PRs #51/#52). `AccessTokenIssuer.issue` ganha `Role`,
       `PasetoClaims` ganha campo `role`. Libera `api-gateway` (feature irmã, extrair+injetar
       `X-User-Role`) e `bets-service epic-013` (`PATCH /api/v1/settings`).
+- [x] `feat-013` fechada (story SV-315, PRs #53/#54) — correção real do casing do claim `role`
+      (lowercase, não `role.name()` cru), achado do Plan Reviewer de `bets-service epic-013`.
 
 ## Bloqueios / Riscos
 
