@@ -66,3 +66,5 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-225](https://stakevault.atlassian.net/browse/SV-225) - CHANGELOG e verificacao final
 - [SV-226](https://stakevault.atlassian.net/browse/SV-226) - POST /api/v1/auth/login retorna userId e role
 - [SV-227](https://stakevault.atlassian.net/browse/SV-227) - LoginResult/LoginResponse ganham userId+role, CHANGELOG e verificacao final
+- [SV-276](https://stakevault.atlassian.net/browse/SV-276) - Dockerfile para imagem de producao
+- [SV-277](https://stakevault.atlassian.net/browse/SV-277) - Dockerfile multi-stage + verificacao real do container contra a infra
