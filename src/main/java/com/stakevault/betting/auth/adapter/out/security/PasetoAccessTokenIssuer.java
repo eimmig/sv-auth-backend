@@ -33,8 +33,11 @@ public class PasetoAccessTokenIssuer implements AccessTokenIssuer {
 	public String issue(UUID userId, String tenantSlug, Role role) {
 		Instant now = Instant.now();
 		Instant expiresAt = now.plus(accessTokenTtlMinutes, ChronoUnit.MINUTES);
-		PasetoClaims claims = new PasetoClaims(userId.toString(), tenantSlug, role.name(), now.getEpochSecond(),
-				expiresAt.getEpochSecond());
+		// Lowercase, matching this project's wire-value convention for every other enum sent
+		// across a service boundary (BET.status, TransactionType) - X-User-Role downstream
+		// compares against "admin" (docs/API-CONTRACTS.md), not the Java enum's own casing.
+		PasetoClaims claims = new PasetoClaims(userId.toString(), tenantSlug, role.name().toLowerCase(),
+				now.getEpochSecond(), expiresAt.getEpochSecond());
 		String payload = objectMapper.writeValueAsString(claims);
 		return Paseto.encrypt(localKey, payload, "");
 	}
