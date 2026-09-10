@@ -256,3 +256,14 @@ CI completa incluindo SonarCloud verde. `api-gateway` não precisou de mudança 
   `bets-service`/`stats-service` podem reaproveitar diretamente quando chegarem no próprio
   `feat-001`/mapeamento JPA, sem precisar rederivar as chaves de configuração do Hibernate via
   `javap` de novo (só reconferir se a versão instalada mudou).
+
+## `feat-011` — Dockerfile para imagem de produção (2026-09-10)
+
+Achado real de `infra/feat-004` (migração para Kubernetes, `epic-010` da raiz): este serviço
+nunca teve `Dockerfile` próprio. Multi-stage (`eclipse-temurin:25-jdk-alpine` build,
+`25-jre-alpine` runtime, usuário não-root) — mesmo padrão replicado nos outros 3 serviços Java
+(`bets-service feat-013`, `stats-service feat-011`, `api-gateway feat-009`). Build real e
+execução real testados contra a infra de verdade (rede do `docker-compose`, `postgres-auth`):
+`/actuator/health` UP em ~5.5s. Imagem usada de fato pelos manifests Kubernetes de
+`infra/feat-004`. 1 subtask (SV-277, story SV-276), 2 PRs (#49 subtask->feature, #50
+feature->develop), CI verde nos dois.
