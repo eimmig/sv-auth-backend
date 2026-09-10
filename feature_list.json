@@ -1144,6 +1144,56 @@
         }
       ],
       "evidence": "Fechada em 2026-09-10. PasetoAccessTokenIssuer: role.name() vira role.name().toLowerCase(). PasetoAccessTokenIssuerTest atualizado (assertion 'role':'admin' em vez de 'ADMIN'). mvn verify verde (mesmos 2 arquivos ja cobertos por feat-012). Nenhum outro consumidor de X-User-Role existia ainda alem de api-gateway (que so repassa a string, sem se importar com case) - correcao sem impacto em nenhum caminho ja em producao."
+    },
+    {
+      "id": "feat-014",
+      "name": "CI: build e push da imagem Docker pro GHCR",
+      "goal": "Publicar a imagem deste servico em ghcr.io/eimmig/sv-auth-backend a cada push estavel em main, pra viabilizar deploy real fora do cluster kind local.",
+      "scope": [
+        "Job novo build-and-push-image no ci.yml, condicionado a pipeline (todos os passos de qualidade) ja ter passado e a branch ser main",
+        "Nao inclui gerar o PAT/imagePullSecrets do cluster que vai consumir a imagem - isso e acao no lado do servidor de deploy, fora deste repositorio"
+      ],
+      "description": "Ate agora a imagem deste servico so existia como ghcr.io/eimmig/sv-auth-backend:local, carregada manualmente num cluster kind de teste (infra/feat-004, epic-010 da raiz). Sem publicar num registry, nao ha como um servidor de producao real puxar essa imagem. Job novo no ci.yml: docker/setup-buildx-action + docker/login-action (ghcr.io, github.actor/secrets.GITHUB_TOKEN) + docker/build-push-action, tags <sha> e latest, needs: pipeline, if restrito a push em main.",
+      "dependencies": [
+        "feat-011"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-10, Plan Reviewer (review-suite:ln-11-plan-reviewer) - READY WITH CONCERNS. Achados: MAJOR - packages: write no permissions do job so e concedido se o repositorio tiver 'Workflow permissions' = Read and write em Settings > Actions > General (default de repositorio novo costuma vir restrito a leitura, e nesse caso o job-level permissions e limitado silenciosamente, push falha com 403 em vez de erro de sintaxe) - verificar/configurar antes do primeiro push em main. MINOR (confirmado contra a documentacao oficial do docker/build-push-action) - nao obrigatorio mas recomendado adicionar docker/setup-buildx-action antes do build, incluido no plano corrigido. Escopo confirmado: PAT/imagePullSecrets do cluster de deploy fica fora desta feature.",
+      "jira": "SV-325",
+      "subtasks": [
+        {
+          "id": "feat-014.1",
+          "name": "Job build-and-push-image no ci.yml",
+          "detail": "Publica a imagem no GHCR so depois da pipeline de qualidade inteira ja ter passado, so na branch main - nunca em PR/subtask, pra nao pushar imagem de codigo nao revisado.",
+          "checklist": [
+            "docker/setup-buildx-action antes do login/build",
+            "docker/login-action contra ghcr.io com github.actor + secrets.GITHUB_TOKEN",
+            "docker/build-push-action com tags <sha> e latest",
+            "needs: pipeline + if restrito a push em main",
+            "permissions do job: contents: read, packages: write"
+          ],
+          "validation": "Push em main dispara o job, imagem aparece em ghcr.io/eimmig/sv-auth-backend (packages do repositorio) com as 2 tags.",
+          "owner": "agente",
+          "status": "done",
+          "jira": "SV-326"
+        },
+        {
+          "id": "feat-014.2",
+          "name": "CHANGELOG e verificacao final",
+          "detail": "Fechamento formal: CHANGELOG.md, init.sh, confirmar que o Workflow permissions do repositorio permite packages: write (achado do Plan Reviewer), e o item fixo de vault desta feature.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (Unreleased)",
+            "./init.sh do servico e da raiz verdes",
+            "Settings > Actions > General > Workflow permissions = Read and write confirmado neste repositorio",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC1) no mesmo commit"
+          ],
+          "validation": "Push real em main confirmado no GitHub Actions (job verde) e imagem visivel no pacote do repositorio.",
+          "owner": "agente",
+          "status": "not-started",
+          "jira": "SV-327"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
