@@ -1104,6 +1104,26 @@
         }
       ],
       "evidence": "Fechada em 2026-09-10. Dockerfile multi-stage (build: eclipse-temurin:25-jdk-alpine, mvnw package; runtime: eclipse-temurin:25-jre-alpine, usuario nao-root) + .dockerignore. Build real (docker build) e execucao real do container testados contra a infra de verdade (rede stakevault-infra_stakevault, postgres-auth): GET /actuator/health respondeu 200 (db UP, migration Flyway aplicada) em ~5.5s de boot, sem nenhuma diferenca de comportamento do processo local (mvnw spring-boot:run). Imagem usada de fato por infra/feat-004 para os manifests Kubernetes."
+    },
+    {
+      "id": "feat-012",
+      "name": "Claim role no token PASETO (X-User-Role)",
+      "description": "Achado real durante bets-service epic-013 (PATCH /api/v1/settings, restrito a role=admin ja documentado em docs/API-CONTRACTS.md): bets-service nao tem tabela USER pra resolver role localmente como auth-service faz (ListUsersService/CreateUserService consultam a propria tabela pelo callerId), e o token PASETO hoje so carrega userId/tenantId. Decisao do usuario via AskUserQuestion (docs/DECISIONS-LOG.md 2026-09-10 'Claim role no PASETO'): estender o mesmo padrao de confianca ja usado pra userId/tenantId - token ganha claim role, api-gateway extrai e injeta X-User-Role, servicos downstream confiam sem revalidar. Esta feature e so a metade de auth-service (emitir o claim); api-gateway ganha a feature irma (extrair + injetar header) em paralelo.",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-10 - instrucao direta e inequivoca do usuario (AskUserQuestion, 3 opcoes apresentadas, escolheu a recomendada), nao uma decisao de design em aberto exigindo desafio independente. Risco tecnico baixo: mudanca mecanica (mais um campo no record PasetoClaims + um parametro a mais em AccessTokenIssuer.issue, ja tem user.role() disponivel no ponto de chamada em LoginService). Grounding: PasetoAccessTokenIssuer.java e LoginService.java lidos antes de codificar - role.name() serializa igual ao que LoginResponse.role ja devolve hoje (enum sem @JsonProperty, uppercase ADMIN/MEMBER), sem inconsistencia de casing entre o que o cliente ja recebe e o que vai no claim.",
+      "jira": "SV-311",
+      "subtasks": [
+        {
+          "id": "feat-012.1",
+          "name": "PasetoClaims ganha role, issue() recebe Role",
+          "status": "done",
+          "jira": "SV-312"
+        }
+      ],
+      "evidence": "Fechada em 2026-09-10. AccessTokenIssuer.issue(userId, tenantSlug, role) - novo parametro Role. PasetoAccessTokenIssuer.PasetoClaims ganha campo role (serializado como role.name(), uppercase ADMIN/MEMBER - mesmo casing ja usado em LoginResponse.role). LoginService passa user.role() (ja disponivel no ponto de chamada, sem query nova). Testes atualizados: PasetoAccessTokenIssuerTest prova o claim role aparece decriptado no payload; LoginServiceTest com o novo parametro no mock. mvn verify verde. Sem migration nem mudanca de schema - so o payload do token. Libera api-gateway (feature irma, extrair+injetar X-User-Role) e bets-service epic-013 (PATCH /api/v1/settings)."
     }
   ]
 }
