@@ -70,3 +70,5 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-277](https://stakevault.atlassian.net/browse/SV-277) - Dockerfile multi-stage + verificacao real do container contra a infra
 - [SV-311](https://stakevault.atlassian.net/browse/SV-311) - Claim role no token PASETO (X-User-Role)
 - [SV-312](https://stakevault.atlassian.net/browse/SV-312) - PasetoClaims ganha role, issue() recebe Role
+- [SV-315](https://stakevault.atlassian.net/browse/SV-315) - Corrigir casing do claim role (lowercase, nao role.name() cru)
+- [SV-316](https://stakevault.atlassian.net/browse/SV-316) - role.name().toLowerCase() no claim do PASETO
