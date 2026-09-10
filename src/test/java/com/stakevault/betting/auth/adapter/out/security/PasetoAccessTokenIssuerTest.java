@@ -11,6 +11,7 @@ import org.paseto4j.commons.Version;
 import org.paseto4j.version4.Paseto;
 
 import tools.jackson.databind.ObjectMapper;
+import com.stakevault.betting.auth.domain.model.Role;
 
 class PasetoAccessTokenIssuerTest {
 
@@ -20,16 +21,16 @@ class PasetoAccessTokenIssuerTest {
 
 	@Test
 	void shouldIssueTokenStartingWithV4LocalHeader() {
-		String token = issuer.issue(UUID.randomUUID(), "acme");
+		String token = issuer.issue(UUID.randomUUID(), "acme", Role.MEMBER);
 
 		assertThat(token).startsWith("v4.local.");
 	}
 
 	@Test
-	void shouldIssueTokenDecryptableWithSameKeyCarryingUserIdAndTenantId() {
+	void shouldIssueTokenDecryptableWithSameKeyCarryingUserIdTenantIdAndRole() {
 		UUID userId = UUID.randomUUID();
 
-		String token = issuer.issue(userId, "acme");
+		String token = issuer.issue(userId, "acme", Role.ADMIN);
 
 		SecretKey key = new SecretKey(HexFormat.of().parseHex(KEY_HEX), Version.V4);
 		String claimsJson = Paseto.decrypt(key, token, "");
@@ -37,6 +38,7 @@ class PasetoAccessTokenIssuerTest {
 		assertThat(claimsJson)
 				.contains("\"userId\":\"" + userId + "\"")
 				.contains("\"tenantId\":\"acme\"")
+				.contains("\"role\":\"ADMIN\"")
 				.contains("\"iat\":")
 				.contains("\"exp\":");
 	}
@@ -45,6 +47,6 @@ class PasetoAccessTokenIssuerTest {
 	void shouldIssueDifferentTokensForSameInputDueToRandomNonce() {
 		UUID userId = UUID.randomUUID();
 
-		assertThat(issuer.issue(userId, "acme")).isNotEqualTo(issuer.issue(userId, "acme"));
+		assertThat(issuer.issue(userId, "acme", Role.MEMBER)).isNotEqualTo(issuer.issue(userId, "acme", Role.MEMBER));
 	}
 }

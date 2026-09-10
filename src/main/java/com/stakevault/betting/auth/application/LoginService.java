@@ -57,7 +57,7 @@ public class LoginService implements LoginUseCase {
 			throw new InvalidCredentialsException();
 		}
 
-		String token = accessTokenIssuer.issue(user.id(), tenantSlug);
+		String token = accessTokenIssuer.issue(user.id(), tenantSlug, user.role());
 		return new LoginResult(token, user.mustChangePassword(), user.id(), user.role());
 	}
 

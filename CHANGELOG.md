@@ -68,3 +68,5 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-227](https://stakevault.atlassian.net/browse/SV-227) - LoginResult/LoginResponse ganham userId+role, CHANGELOG e verificacao final
 - [SV-276](https://stakevault.atlassian.net/browse/SV-276) - Dockerfile para imagem de producao
 - [SV-277](https://stakevault.atlassian.net/browse/SV-277) - Dockerfile multi-stage + verificacao real do container contra a infra
+- [SV-311](https://stakevault.atlassian.net/browse/SV-311) - Claim role no token PASETO (X-User-Role)
+- [SV-312](https://stakevault.atlassian.net/browse/SV-312) - PasetoClaims ganha role, issue() recebe Role
