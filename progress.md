@@ -257,6 +257,25 @@ CI completa incluindo SonarCloud verde. `api-gateway` não precisou de mudança 
   `feat-001`/mapeamento JPA, sem precisar rederivar as chaves de configuração do Hibernate via
   `javap` de novo (só reconferir se a versão instalada mudou).
 
+## `feat-012` — Claim `role` no token PASETO (2026-09-10, mesmo dia)
+
+Achado real de `bets-service epic-013` (`PATCH /api/v1/settings`, restrito a `role=admin`):
+`bets-service` não tem tabela `USER` pra resolver role localmente como este serviço faz
+(`ListUsersService`/`CreateUserService` consultam a própria tabela pelo `callerId`). Decisão do
+usuário via `AskUserQuestion` (`docs/DECISIONS-LOG.md` raiz, "Claim role no PASETO"): estender o
+mesmo padrão de confiança já usado pra `userId`/`tenantId` — token ganha claim `role`,
+`api-gateway` extrai e injeta `X-User-Role` (feature irmã naquele repositório), serviços
+downstream confiam sem revalidar.
+
+`AccessTokenIssuer.issue(userId, tenantSlug, role)` — novo parâmetro. `PasetoClaims` ganha campo
+`role` (`role.name()`, uppercase `ADMIN`/`MEMBER` — mesmo casing que `LoginResponse.role` já
+devolve ao cliente hoje, sem inconsistência nova). `LoginService` passa `user.role()` (já
+disponível no ponto de chamada, sem query nova). Mudança mecânica, sem schema/persistência
+tocados — Delivery Reviewer/Test Suite Auditor/Persistence Auditor rodados como self-review
+proporcional ao escopo, sem subagent dedicado (Persistence Auditor N/A, sem superfície de
+persistência). 1 subtask (SV-312, story SV-311), 2 PRs (#51 subtask->feature, #52
+feature->develop), CI+SonarCloud verdes nos dois. `mvn verify` verde.
+
 ## `feat-011` — Dockerfile para imagem de produção (2026-09-10)
 
 Achado real de `infra/feat-004` (migração para Kubernetes, `epic-010` da raiz): este serviço
