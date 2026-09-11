@@ -76,3 +76,4 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-326](https://stakevault.atlassian.net/browse/SV-326) - Job build-and-push-image no ci.yml
 - [SV-327](https://stakevault.atlassian.net/browse/SV-327) - CHANGELOG e verificacao final
 - [SV-335](https://stakevault.atlassian.net/browse/SV-335) - Corrigir SHA pin (S7637) e guard de qualitygate.wait achados na verificacao
+- [SV-338](https://stakevault.atlassian.net/browse/SV-338) - mvnw sem bit de execucao quebrava o build real da imagem Docker
