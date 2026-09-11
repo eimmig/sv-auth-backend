@@ -77,3 +77,6 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-327](https://stakevault.atlassian.net/browse/SV-327) - CHANGELOG e verificacao final
 - [SV-335](https://stakevault.atlassian.net/browse/SV-335) - Corrigir SHA pin (S7637) e guard de qualitygate.wait achados na verificacao
 - [SV-338](https://stakevault.atlassian.net/browse/SV-338) - mvnw sem bit de execucao quebrava o build real da imagem Docker
+- [SV-382](https://stakevault.atlassian.net/browse/SV-382) - Orquestrar provisionamento de tenant em bets-service/stats-service (reverte 3 chamadas manuais)
+- [SV-383](https://stakevault.atlassian.net/browse/SV-383) - RestClientDownstreamTenantProvisioner + orquestracao no CreateTenantService
+- [SV-384](https://stakevault.atlassian.net/browse/SV-384) - CHANGELOG e verificacao final
