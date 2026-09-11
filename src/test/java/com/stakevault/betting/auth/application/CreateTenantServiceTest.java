@@ -13,16 +13,22 @@ import static org.mockito.Mockito.when;
 import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.dao.DataIntegrityViolationException;
+
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 
 import com.stakevault.betting.auth.config.TenantContextHolder;
 import com.stakevault.betting.auth.domain.model.CreatedTenantAdmin;
+import com.stakevault.betting.auth.domain.model.DownstreamProvisioningException;
 import com.stakevault.betting.auth.domain.model.InvalidTenantSlugException;
 import com.stakevault.betting.auth.domain.model.Role;
 import com.stakevault.betting.auth.domain.model.TenantAlreadyProvisionedException;
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
+import com.stakevault.betting.auth.domain.port.out.DownstreamTenantProvisioner;
 import com.stakevault.betting.auth.domain.port.out.PasswordHasher;
 import com.stakevault.betting.auth.domain.port.out.TemporaryPasswordGenerator;
 import com.stakevault.betting.auth.domain.port.out.UserRepository;
@@ -33,8 +39,9 @@ class CreateTenantServiceTest {
 	private final PasswordHasher passwordHasher = mock(PasswordHasher.class);
 	private final TemporaryPasswordGenerator passwordGenerator = mock(TemporaryPasswordGenerator.class);
 	private final UserRepository userRepository = mock(UserRepository.class);
+	private final DownstreamTenantProvisioner downstreamProvisioner = mock(DownstreamTenantProvisioner.class);
 	private final CreateTenantService service = new CreateTenantService(
-			provisionTenantSchema, passwordHasher, passwordGenerator, userRepository);
+			provisionTenantSchema, passwordHasher, passwordGenerator, userRepository, downstreamProvisioner);
 
 	@Test
 	void shouldCreateAdminUserWithGeneratedPasswordWhenSlugIsNew() {
@@ -52,6 +59,53 @@ class CreateTenantServiceTest {
 		assertThat(result.email()).isEqualTo("admin@acme");
 		assertThat(result.temporaryPassword()).isEqualTo("raw-temporary-password");
 		assertThat(TenantContextHolder.current()).isNull();
+	}
+
+	@Test
+	void shouldProvisionBetsServiceThenStatsServiceInOrderWhenSlugIsNew() {
+		when(provisionTenantSchema.exists("acme")).thenReturn(false);
+		when(passwordGenerator.generate()).thenReturn("raw-temporary-password");
+		when(passwordHasher.hash("raw-temporary-password")).thenReturn("hashed-password");
+		when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		CreatedTenantAdmin result = service.createTenant("acme", "Acme Corp");
+
+		InOrder order = inOrder(downstreamProvisioner);
+		order.verify(downstreamProvisioner).provisionBetsService("acme");
+		order.verify(downstreamProvisioner).provisionStatsService("acme");
+		assertThat(result.downstreamProvisioningFailures()).isEmpty();
+	}
+
+	@Test
+	void shouldStillSucceedAndCallStatsServiceWhenBetsServiceProvisioningFails() {
+		when(provisionTenantSchema.exists("acme")).thenReturn(false);
+		when(passwordGenerator.generate()).thenReturn("raw-temporary-password");
+		when(passwordHasher.hash("raw-temporary-password")).thenReturn("hashed-password");
+		when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		doThrow(new DownstreamProvisioningException("bets-service", new RuntimeException("connection refused")))
+				.when(downstreamProvisioner).provisionBetsService("acme");
+
+		CreatedTenantAdmin result = service.createTenant("acme", "Acme Corp");
+
+		verify(downstreamProvisioner).provisionStatsService("acme");
+		assertThat(result.downstreamProvisioningFailures()).containsExactly("bets-service");
+		assertThat(result.email()).isEqualTo("admin@acme");
+	}
+
+	@Test
+	void shouldReportBothServicesWhenBothProvisioningCallsFail() {
+		when(provisionTenantSchema.exists("acme")).thenReturn(false);
+		when(passwordGenerator.generate()).thenReturn("raw-temporary-password");
+		when(passwordHasher.hash("raw-temporary-password")).thenReturn("hashed-password");
+		when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		doThrow(new DownstreamProvisioningException("bets-service", new RuntimeException("down")))
+				.when(downstreamProvisioner).provisionBetsService("acme");
+		doThrow(new DownstreamProvisioningException("stats-service", new RuntimeException("down")))
+				.when(downstreamProvisioner).provisionStatsService("acme");
+
+		CreatedTenantAdmin result = service.createTenant("acme", "Acme Corp");
+
+		assertThat(result.downstreamProvisioningFailures()).containsExactly("bets-service", "stats-service");
 	}
 
 	@Test
@@ -87,7 +141,8 @@ class CreateTenantServiceTest {
 		assertThatThrownBy(() -> service.createTenant("1acme", "Acme Corp"))
 				.isInstanceOf(InvalidTenantSlugException.class);
 
-		verifyNoInteractions(provisionTenantSchema, passwordHasher, passwordGenerator, userRepository);
+		verifyNoInteractions(provisionTenantSchema, passwordHasher, passwordGenerator, userRepository,
+				downstreamProvisioner);
 	}
 
 	@Test
@@ -98,7 +153,7 @@ class CreateTenantServiceTest {
 				.isInstanceOf(TenantAlreadyProvisionedException.class);
 
 		verify(provisionTenantSchema, never()).ensureSchemaExists(any());
-		verifyNoInteractions(passwordHasher, passwordGenerator, userRepository);
+		verifyNoInteractions(passwordHasher, passwordGenerator, userRepository, downstreamProvisioner);
 	}
 
 	@Test
@@ -111,6 +166,7 @@ class CreateTenantServiceTest {
 		assertThatThrownBy(() -> service.createTenant("acme", "Acme Corp"))
 				.isInstanceOf(TenantAlreadyProvisionedException.class);
 		assertThat(TenantContextHolder.current()).isNull();
+		verifyNoInteractions(downstreamProvisioner);
 	}
 
 	private User argThatSavedUserMatches(Predicate<User> predicate) {

@@ -1219,6 +1219,60 @@
         }
       ],
       "evidence": "Fechada em 2026-09-10. Job build-and-push-image no ci.yml publicando de verdade em ghcr.io/eimmig/sv-auth-backend - confirmado via log real (containerimage.digest: sha256:afe345e...). 3 achados reais so descobertos verificando ponta a ponta contra o GitHub de verdade: actions de terceiro pinadas por SHA completo (SonarCloud S7637, feat-014.3), guard de sonar.qualitygate.wait ampliado de 'push para develop' pra qualquer push direto (feat-014.3), e mvnw versionado sem bit de execucao (100644 em vez de 100755 - so quebrava o build real da imagem Docker a partir de um git clone limpo, nunca o mvn verify local, feat-014.4). Delivery Reviewer: CONCERNS -> PASS depois de confirmado o push real. Workflow permissions do repositorio confirmado 'Read and write'. ./init.sh do servico e da raiz verdes. docs/CI-CD.md atualizado com os 3 achados."
+    },
+    {
+      "id": "feat-015",
+      "name": "Orquestrar provisionamento de tenant em bets-service/stats-service (reverte 3 chamadas manuais)",
+      "goal": "Trocar as 3 chamadas administrativas manuais do operador (auth-service, bets-service, stats-service) por 1 so - auth-service chama os outros 2 em codigo depois de criar o proprio tenant/admin.",
+      "scope": [
+        "RestClientDownstreamTenantProvisioner novo (adapter/out/http), chama POST /api/v1/admin/tenants em bets-service e stats-service com o mesmo X-Admin-Api-Key ja configurado neste servico",
+        "CreateTenantService chama os 2 depois da criacao local ter sucesso - sem rollback se um falhar, 409 tratado como sucesso (idempotente)",
+        "CreatedTenantAdmin/CreateTenantResponse ganham downstreamProvisioningFailures (lista de nomes de servico que falharam, vazia se os 2 deram certo)",
+        "BETS_SERVICE_URL/STATS_SERVICE_URL novas (env vars, mesmo nome ja usado por api-gateway)",
+        "Nao inclui remover as rotas standalone de bets-service/stats-service - continuam existindo, pro operador repetir manualmente se aparecer em downstreamProvisioningFailures"
+      ],
+      "description": "Decisao do usuario, 2026-09-11, testando o deploy real no k3s pela primeira vez: as 3 chamadas manuais (auth-service/DECISIONS-LOG item 3, 2026-08-02) eram repetitivas o suficiente pra valer a automacao. Reverte a decisao original (nenhum servico chama os outros em codigo) - riscos que motivaram aquela decisao (compensacao de falha parcial, dependencia circular entre epics) enderecados sem rollback destrutivo: resposta sempre 201 se a parte local funcionou, falhas downstream reportadas pro operador repetir a chamada standalone (idempotente).",
+      "dependencies": [
+        "feat-003"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-11 - alto risco por criterio proprio do Plan Reviewer (workflow distribuido, falha parcial), revisao feita antes de codificar: decisao de nao ter rollback/compensacao (destrutivo demais - dropar schema ja criado) em favor de reportar falha e deixar a rota standalone existente como via de retry manual, idempotente por design (409). Timeout explicito no RestClient (2s conexao/5s leitura, mesmo padrao ja usado em api-gateway ServiceKeyAuthenticationFilter) evita bloquear a resposta do operador indefinidamente se um downstream estiver fora do ar. Verificado com evidencia real antes de fechar: mvn -B verify verde (179 testes, incluindo teste de integracao ponta a ponta com 2 stubs HTTP reais simulando bets-service/stats-service, provando tanto o caminho de sucesso quanto falha parcial de um dos dois sem bloquear o outro). Achado real durante a escrita do proprio teste: os 2 stubs compartilhando o mesmo predicado de gatilho de falha faziam ambos falharem pro mesmo slug - corrigido com o predicado escopado por servidor, nao por conteudo da requisicao. Contratos atualizados no mesmo commit: docs/API-CONTRACTS.md, docs/DECISIONS-LOG.md (item 3, reversao registrada), docs/services/auth-service.md.",
+      "jira": "SV-382",
+      "subtasks": [
+        {
+          "id": "feat-015.1",
+          "name": "RestClientDownstreamTenantProvisioner + orquestracao no CreateTenantService",
+          "detail": "Sem rollback proposital - achado do plan review antes de codificar. 409 downstream = sucesso (idempotente).",
+          "checklist": [
+            "DownstreamTenantProvisioner (porta) + RestClientDownstreamTenantProvisioner (adapter, timeout 2s/5s)",
+            "CreateTenantService chama bets-service depois stats-service, captura falha sem interromper a outra chamada",
+            "CreatedTenantAdmin/CreateTenantResponse com downstreamProvisioningFailures",
+            "BETS_SERVICE_URL/STATS_SERVICE_URL em application.yml (dev/test/prod)",
+            "Teste unitario do adapter (2 stubs HTTP reais) + teste de integracao ponta a ponta provando sucesso e falha parcial"
+          ],
+          "validation": "mvn -B verify verde (179 testes); teste de integracao prova downstreamProvisioningFailures vazio no caminho feliz e populado quando um downstream falha.",
+          "owner": "agente",
+          "status": "done",
+          "jira": "SV-383"
+        },
+        {
+          "id": "feat-015.2",
+          "name": "CHANGELOG e verificacao final",
+          "detail": "Fechamento formal: CHANGELOG.md, init.sh, imagem republicada e verificacao real contra o k3s de producao (1 chamada admin provisionando os 3 servicos).",
+          "checklist": [
+            "Entrada em CHANGELOG.md (Unreleased)",
+            "./init.sh do servico e da raiz verdes",
+            "infra/k8s/auth-service.yaml ganha BETS_SERVICE_URL/STATS_SERVICE_URL",
+            "Imagem nova publicada (push em main) e pod auth-service reiniciado no k3s com a imagem nova",
+            "1 chamada admin real no k3s provisiona os 3 servicos (auth+bets+stats), confirmado sem 404 tenant-not-found no fluxo de negocio"
+          ],
+          "validation": "Fluxo real de negocio (login + listar catalogos) funcionando sem tenant-not-found apos 1 chamada admin so.",
+          "owner": "agente",
+          "status": "done",
+          "jira": "SV-384"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
