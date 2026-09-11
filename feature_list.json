@@ -1157,7 +1157,7 @@
       "dependencies": [
         "feat-011"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-10, Plan Reviewer (review-suite:ln-11-plan-reviewer) - READY WITH CONCERNS. Achados: MAJOR - packages: write no permissions do job so e concedido se o repositorio tiver 'Workflow permissions' = Read and write em Settings > Actions > General (default de repositorio novo costuma vir restrito a leitura, e nesse caso o job-level permissions e limitado silenciosamente, push falha com 403 em vez de erro de sintaxe) - verificar/configurar antes do primeiro push em main. MINOR (confirmado contra a documentacao oficial do docker/build-push-action) - nao obrigatorio mas recomendado adicionar docker/setup-buildx-action antes do build, incluido no plano corrigido. Escopo confirmado: PAT/imagePullSecrets do cluster de deploy fica fora desta feature.",
       "jira": "SV-325",
       "subtasks": [
@@ -1218,7 +1218,7 @@
           "jira": "SV-338"
         }
       ],
-      "evidence": ""
+      "evidence": "Fechada em 2026-09-10. Job build-and-push-image no ci.yml publicando de verdade em ghcr.io/eimmig/sv-auth-backend - confirmado via log real (containerimage.digest: sha256:afe345e...). 3 achados reais so descobertos verificando ponta a ponta contra o GitHub de verdade: actions de terceiro pinadas por SHA completo (SonarCloud S7637, feat-014.3), guard de sonar.qualitygate.wait ampliado de 'push para develop' pra qualquer push direto (feat-014.3), e mvnw versionado sem bit de execucao (100644 em vez de 100755 - so quebrava o build real da imagem Docker a partir de um git clone limpo, nunca o mvn verify local, feat-014.4). Delivery Reviewer: CONCERNS -> PASS depois de confirmado o push real. Workflow permissions do repositorio confirmado 'Read and write'. ./init.sh do servico e da raiz verdes. docs/CI-CD.md atualizado com os 3 achados."
     }
   ]
 }
