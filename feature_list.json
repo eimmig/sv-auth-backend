@@ -1268,7 +1268,7 @@
           ],
           "validation": "Fluxo real de negocio (login + listar catalogos) funcionando sem tenant-not-found apos 1 chamada admin so.",
           "owner": "agente",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-384"
         }
       ],
