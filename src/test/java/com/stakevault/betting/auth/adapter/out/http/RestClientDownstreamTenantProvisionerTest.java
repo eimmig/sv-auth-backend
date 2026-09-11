@@ -1,6 +1,7 @@
 package com.stakevault.betting.auth.adapter.out.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
@@ -10,6 +11,8 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sun.net.httpserver.HttpServer;
 
@@ -21,6 +24,7 @@ import com.stakevault.betting.auth.domain.model.DownstreamProvisioningException;
 class RestClientDownstreamTenantProvisionerTest {
 
 	private static final String ADMIN_KEY = "configured-admin-key";
+	private static final String ADMIN_TENANTS_PATH = "/api/v1/admin/tenants";
 	private static final List<String> RECEIVED_ADMIN_KEYS = new CopyOnWriteArrayList<>();
 	private static final List<String> RECEIVED_BODIES = new CopyOnWriteArrayList<>();
 
@@ -29,7 +33,7 @@ class RestClientDownstreamTenantProvisionerTest {
 
 	private final RestClientDownstreamTenantProvisioner provisioner = new RestClientDownstreamTenantProvisioner(
 			"http://localhost:" + BETS_SERVICE_STUB.getAddress().getPort(),
-			"http://localhost:" + STATS_SERVICE_STUB.getAddress().getPort(), ADMIN_KEY);
+			"http://localhost:" + STATS_SERVICE_STUB.getAddress().getPort(), ADMIN_KEY, ADMIN_TENANTS_PATH);
 
 	private static HttpServer startStub() {
 		try {
@@ -61,8 +65,11 @@ class RestClientDownstreamTenantProvisionerTest {
 		return buffer.toString(StandardCharsets.UTF_8);
 	}
 
+	private static final Pattern SLUG_PATTERN = Pattern.compile("\"slug\"\\s*:\\s*\"([^\"]+)\"");
+
 	private static String bodySlug(String jsonBody) {
-		return jsonBody.replaceAll(".*\"slug\"\\s*:\\s*\"([^\"]+)\".*", "$1");
+		Matcher matcher = SLUG_PATTERN.matcher(jsonBody);
+		return matcher.find() ? matcher.group(1) : "";
 	}
 
 	@AfterAll
@@ -95,8 +102,8 @@ class RestClientDownstreamTenantProvisionerTest {
 
 	@Test
 	void shouldTreat409AlreadyProvisionedAsSuccessNotFailure() {
-		provisioner.provisionBetsService("already-provisioned");
-		// Sem excecao lancada - idempotente por design (ver docs/API-CONTRACTS.md).
+		// Idempotente por design (ver docs/API-CONTRACTS.md) - 409 nunca deve lancar.
+		assertThatCode(() -> provisioner.provisionBetsService("already-provisioned")).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -110,7 +117,7 @@ class RestClientDownstreamTenantProvisionerTest {
 	@Test
 	void shouldWrapConnectionFailureAsDownstreamProvisioningException() {
 		var unreachableProvisioner = new RestClientDownstreamTenantProvisioner("http://localhost:1", "http://localhost:1",
-				ADMIN_KEY);
+				ADMIN_KEY, ADMIN_TENANTS_PATH);
 
 		assertThatThrownBy(() -> unreachableProvisioner.provisionBetsService("acme"))
 				.isInstanceOf(DownstreamProvisioningException.class)

@@ -107,8 +107,10 @@ class AdminTenantControllerIntegrationTest extends TenantSchemaIntegrationSuppor
 			assertThat(response.body()).contains("\"email\":\"admin@" + newSlug + "\"");
 			assertThat(response.body()).contains("\"temporaryPassword\"");
 			assertThat(response.body()).contains("\"downstreamProvisioningFailures\":[]");
-			assertThat(BETS_SERVICE_CALLS).anyMatch(body -> body.contains(newSlug));
-			assertThat(STATS_SERVICE_CALLS).anyMatch(body -> body.contains(newSlug));
+			boolean betsServiceCalled = BETS_SERVICE_CALLS.stream().anyMatch(body -> body.contains(newSlug));
+			boolean statsServiceCalled = STATS_SERVICE_CALLS.stream().anyMatch(body -> body.contains(newSlug));
+			assertThat(betsServiceCalled).isTrue();
+			assertThat(statsServiceCalled).isTrue();
 		} finally {
 			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"tenant_" + newSlug + "\" CASCADE");
 		}
@@ -125,7 +127,8 @@ class AdminTenantControllerIntegrationTest extends TenantSchemaIntegrationSuppor
 		try {
 			assertThat(response.statusCode()).isEqualTo(201);
 			assertThat(response.body()).contains("\"downstreamProvisioningFailures\":[\"stats-service\"]");
-			assertThat(BETS_SERVICE_CALLS).anyMatch(body -> body.contains(newSlug));
+			boolean betsServiceCalled = BETS_SERVICE_CALLS.stream().anyMatch(body -> body.contains(newSlug));
+			assertThat(betsServiceCalled).isTrue();
 		} finally {
 			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"tenant_" + newSlug + "\" CASCADE");
 		}

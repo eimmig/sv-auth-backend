@@ -27,23 +27,25 @@ public class RestClientDownstreamTenantProvisioner implements DownstreamTenantPr
 
 	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
 	private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
-	private static final String ADMIN_TENANTS_PATH = "/api/v1/admin/tenants";
 	private static final String ADMIN_API_KEY_HEADER = "X-Admin-Api-Key";
 
 	private final RestClient betsServiceClient;
 	private final RestClient statsServiceClient;
 	private final String adminApiKey;
+	private final String adminTenantsPath;
 
 	public RestClientDownstreamTenantProvisioner(
 			@Value("${tenant-provisioning.bets-service-url}") String betsServiceUrl,
 			@Value("${tenant-provisioning.stats-service-url}") String statsServiceUrl,
-			@Value("${admin.api-key}") String adminApiKey) {
+			@Value("${admin.api-key}") String adminApiKey,
+			@Value("${tenant-provisioning.admin-tenants-path:/api/v1/admin/tenants}") String adminTenantsPath) {
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 		requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
 		requestFactory.setReadTimeout(READ_TIMEOUT);
 		this.betsServiceClient = RestClient.builder().baseUrl(betsServiceUrl).requestFactory(requestFactory).build();
 		this.statsServiceClient = RestClient.builder().baseUrl(statsServiceUrl).requestFactory(requestFactory).build();
 		this.adminApiKey = adminApiKey;
+		this.adminTenantsPath = adminTenantsPath;
 	}
 
 	@Override
@@ -59,7 +61,7 @@ public class RestClientDownstreamTenantProvisioner implements DownstreamTenantPr
 	private void provision(RestClient client, String serviceName, String slug) {
 		try {
 			client.post()
-					.uri(ADMIN_TENANTS_PATH)
+					.uri(adminTenantsPath)
 					.header(ADMIN_API_KEY_HEADER, adminApiKey)
 					.contentType(MediaType.APPLICATION_JSON)
 					.body(Map.of("slug", slug))
