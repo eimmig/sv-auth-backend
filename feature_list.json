@@ -1204,6 +1204,18 @@
           "owner": "agente",
           "status": "done",
           "jira": "SV-335"
+        },
+        {
+          "id": "feat-014.4",
+          "name": "mvnw sem bit de execucao quebrava o build real da imagem Docker",
+          "detail": "Achado real, so surgiu no primeiro build de imagem de verdade em CI a partir de um git clone limpo (Dockerfile builda desde feat-011, mas nunca tinha rodado num pipeline que clona do zero como este job faz): mvnw estava versionado 100644 (sem +x) neste repositorio - api-gateway e stats-service ja tinham 100755 pro mesmo arquivo (mesmo hash de blob). RUN ./mvnw -B dependency:go-offline falhava com 'Permission denied' (exit 126) dentro do estagio de build da imagem. Mesma classe de problema ja documentada em docs/CI-CD.md pros scripts .github/scripts/*.sh (Windows reporta core.fileMode=false, bit precisa ser posto no indice manualmente).",
+          "checklist": [
+            "git update-index --chmod=+x mvnw"
+          ],
+          "validation": "build-and-push-image verde no push real em main, imagem publicada no GHCR.",
+          "owner": "agente",
+          "status": "done",
+          "jira": "SV-338"
         }
       ],
       "evidence": ""
