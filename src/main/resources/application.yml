@@ -45,6 +45,10 @@ spring:
 admin:
   api-key: ${ADMIN_API_KEY}
 
+tenant-provisioning:
+  bets-service-url: ${BETS_SERVICE_URL:http://localhost:8082}
+  stats-service-url: ${STATS_SERVICE_URL:http://localhost:8083}
+
 paseto:
   local-key: ${PASETO_LOCAL_KEY}
   access-token-ttl-minutes: 480
@@ -58,6 +62,13 @@ spring:
 
 admin:
   api-key: test-admin-api-key
+
+# Sobrescrito por @DynamicPropertySource nos testes que exercitam a orquestracao de verdade
+# (AdminTenantControllerIntegrationTest); valor aqui so evita falha de resolucao de propriedade
+# em testes que nao precisam disso - chamada cai em connection refused, capturada como falha.
+tenant-provisioning:
+  bets-service-url: http://localhost:0
+  stats-service-url: http://localhost:0
 
 paseto:
   local-key: 93f681c1304df4c64f73a0df5c58c7eb097927246ad5b850247a97ef14774bc7
@@ -75,6 +86,10 @@ spring:
 
 admin:
   api-key: ${ADMIN_API_KEY}
+
+tenant-provisioning:
+  bets-service-url: ${BETS_SERVICE_URL}
+  stats-service-url: ${STATS_SERVICE_URL}
 
 paseto:
   local-key: ${PASETO_LOCAL_KEY}
