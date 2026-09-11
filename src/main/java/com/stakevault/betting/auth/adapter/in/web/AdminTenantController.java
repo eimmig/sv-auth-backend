@@ -24,6 +24,7 @@ public class AdminTenantController {
 	public ResponseEntity<CreateTenantResponse> create(@RequestBody CreateTenantRequest request) {
 		CreatedTenantAdmin admin = createTenant.createTenant(request.slug(), request.tenantName());
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(new CreateTenantResponse(admin.userId(), admin.email(), admin.temporaryPassword()));
+				.body(new CreateTenantResponse(admin.userId(), admin.email(), admin.temporaryPassword(),
+						admin.downstreamProvisioningFailures()));
 	}
 }
