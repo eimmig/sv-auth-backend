@@ -7,9 +7,7 @@
 
 ## Objetivo atual
 
-`feat-001`..`feat-015` `done`. `feat-015` (orquestração de provisionamento de tenant em
-bets-service/stats-service) fechada nesta sessão — código já mergeado antes, faltava só a
-verificação real de produção. Ver `progress.md`.
+`feat-001`..`feat-016` `done`. Backlog deste serviço esgotado.
 
 ## Concluído nesta sessão (2026-09-15)
 
@@ -17,6 +15,15 @@ verificação real de produção. Ver `progress.md`.
       produção feita junto com `infra/feat-006` (mesma mudança cross-repo): env vars aplicadas no
       servidor Debian real, pod reiniciado, 1 chamada admin confirmando
       `downstreamProvisioningFailures: []`.
+- [x] **`feat-016` fechada** (CD automático — job `deploy` em `ci.yml`, `kubectl rollout restart
+      deployment/auth-service` contra `KUBE_CONFIG`/`ci-deployer` de `infra/feat-007`). Quarta
+      aplicação idêntica do padrão de `epic-028` já revisado nesta sessão (`bets-service
+      feat-018`/`stats-service feat-019`/`api-gateway feat-014`) — única diferença o nome do
+      `Deployment`. Story SV-432, subtasks SV-433/SV-434, PRs #63/#64/#65, CI+SonarCloud verdes.
+      `Delivery Reviewer`: PASS. Fechamento em 2 disparos de `--sync-status` (subtask done sozinha
+      → `Review`; feature done em edição separada → `Done`), padrão correto após o erro cometido
+      nas 2 primeiras features de `epic-028` (ver `services/bets-service`/`stats-service
+      progress.md`). Disparo real do job adiado (mesma decisão das 3 features anteriores).
 
 ## Bloqueios / Riscos
 
