@@ -80,3 +80,6 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-382](https://stakevault.atlassian.net/browse/SV-382) - Orquestrar provisionamento de tenant em bets-service/stats-service (reverte 3 chamadas manuais)
 - [SV-383](https://stakevault.atlassian.net/browse/SV-383) - RestClientDownstreamTenantProvisioner + orquestracao no CreateTenantService
 - [SV-384](https://stakevault.atlassian.net/browse/SV-384) - CHANGELOG e verificacao final
+- [SV-432](https://stakevault.atlassian.net/browse/SV-432) - CD: job de deploy automatico (kubectl rollout restart) no ci.yml
+- [SV-433](https://stakevault.atlassian.net/browse/SV-433) - Job deploy no ci.yml
+- [SV-434](https://stakevault.atlassian.net/browse/SV-434) - CHANGELOG e verificacao final
