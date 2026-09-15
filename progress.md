@@ -2,8 +2,8 @@
 
 ## Estado Atual (Current State)
 
-**Última atualização:** 2026-09-09
-**Feature ativa:** nenhuma (`feat-001..009` todas `done`, backlog atual esgotado)
+**Última atualização:** 2026-09-15
+**Feature ativa:** nenhuma (`feat-001..015` todas `done`, backlog atual esgotado)
 
 ## Status
 
@@ -297,3 +297,19 @@ execução real testados contra a infra de verdade (rede do `docker-compose`, `p
 `/actuator/health` UP em ~5.5s. Imagem usada de fato pelos manifests Kubernetes de
 `infra/feat-004`. 1 subtask (SV-277, story SV-276), 2 PRs (#49 subtask->feature, #50
 feature->develop), CI verde nos dois.
+
+## `feat-015` fechada — orquestrar provisionamento de tenant (2026-09-15)
+
+Código (`feat-015.1`) já entregue e mergeado antes desta sessão (PR `feature/SV-382`, 179 testes
+verdes). Faltava só `feat-015.2` (verificação real contra o k3s de produção), feita nesta sessão
+junto com `infra/feat-006` (mesma mudança cross-repo): `infra/k8s/auth-service.yaml` ganhou
+`BETS_SERVICE_URL`/`STATS_SERVICE_URL`, aplicado no servidor Debian real via SSH
+(`eduardo@192.168.2.123`), pod reiniciado, e 1 `POST /api/v1/admin/tenants` real confirmou
+`downstreamProvisioningFailures: []` — a orquestração funciona de ponta a ponta em produção. Ver
+`infra/progress.md` para o detalhe completo da sessão de verificação (acesso ao servidor,
+achados).
+
+`./init.sh` deste serviço rodou vermelho na primeira tentativa desta sessão (67 erros de
+`ApplicationContext`, todos em cascata a partir de "Previous attempts to find a Docker
+environment failed") — não é regressão de código, Docker Desktop não estava rodando nesta
+máquina de desenvolvimento. Subiu o Docker Desktop e rodou de novo: verde.

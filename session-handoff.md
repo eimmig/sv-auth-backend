@@ -3,21 +3,20 @@
 > Estado atual, não histórico. O diário cronológico é o `progress.md` — este arquivo é reescrito
 > a cada sessão para responder "o que a próxima sessão precisa saber agora".
 
-**Última atualização:** 2026-09-10
+**Última atualização:** 2026-09-15
 
 ## Objetivo atual
 
-`feat-001`..`feat-013` `done`. `feat-012` (claim `role` no token PASETO) e `feat-013` (correção
-de casing do mesmo claim) fechadas nesta sessão — achados de `bets-service epic-013`, ver
-`progress.md`.
+`feat-001`..`feat-015` `done`. `feat-015` (orquestração de provisionamento de tenant em
+bets-service/stats-service) fechada nesta sessão — código já mergeado antes, faltava só a
+verificação real de produção. Ver `progress.md`.
 
-## Concluído nesta sessão (2026-09-10)
+## Concluído nesta sessão (2026-09-15)
 
-- [x] `feat-012` fechada (story SV-311, PRs #51/#52). `AccessTokenIssuer.issue` ganha `Role`,
-      `PasetoClaims` ganha campo `role`. Libera `api-gateway` (feature irmã, extrair+injetar
-      `X-User-Role`) e `bets-service epic-013` (`PATCH /api/v1/settings`).
-- [x] `feat-013` fechada (story SV-315, PRs #53/#54) — correção real do casing do claim `role`
-      (lowercase, não `role.name()` cru), achado do Plan Reviewer de `bets-service epic-013`.
+- [x] `feat-015` fechada (story SV-382, subtasks SV-383/384). Verificação real contra o k3s de
+      produção feita junto com `infra/feat-006` (mesma mudança cross-repo): env vars aplicadas no
+      servidor Debian real, pod reiniciado, 1 chamada admin confirmando
+      `downstreamProvisioningFailures: []`.
 
 ## Bloqueios / Riscos
 
@@ -25,7 +24,7 @@ Nenhum.
 
 ## Próxima sessão — por onde começar
 
-1. Rodar `./init.sh` (deve sair `0`).
+1. Rodar `./init.sh` (deve sair `0`) — **Docker Desktop precisa estar rodando** antes (testes de
+   integração usam Testcontainers/Postgres real); se `init.sh` falhar com "Previous attempts to
+   find a Docker environment failed", é isso, não regressão de código.
 2. Nenhuma feature elegível neste harness até surgir novo achado cross-service.
-3. Fora deste serviço: `api-gateway` precisa da feature irmã (extrair `role` do token, injetar
-   `X-User-Role`) antes de `bets-service epic-013` poder confiar no header.

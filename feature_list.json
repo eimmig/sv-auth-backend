@@ -1235,7 +1235,7 @@
       "dependencies": [
         "feat-003"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "2026-09-11 - alto risco por criterio proprio do Plan Reviewer (workflow distribuido, falha parcial), revisao feita antes de codificar: decisao de nao ter rollback/compensacao (destrutivo demais - dropar schema ja criado) em favor de reportar falha e deixar a rota standalone existente como via de retry manual, idempotente por design (409). Timeout explicito no RestClient (2s conexao/5s leitura, mesmo padrao ja usado em api-gateway ServiceKeyAuthenticationFilter) evita bloquear a resposta do operador indefinidamente se um downstream estiver fora do ar. Verificado com evidencia real antes de fechar: mvn -B verify verde (179 testes, incluindo teste de integracao ponta a ponta com 2 stubs HTTP reais simulando bets-service/stats-service, provando tanto o caminho de sucesso quanto falha parcial de um dos dois sem bloquear o outro). Achado real durante a escrita do proprio teste: os 2 stubs compartilhando o mesmo predicado de gatilho de falha faziam ambos falharem pro mesmo slug - corrigido com o predicado escopado por servidor, nao por conteudo da requisicao. Contratos atualizados no mesmo commit: docs/API-CONTRACTS.md, docs/DECISIONS-LOG.md (item 3, reversao registrada), docs/services/auth-service.md.",
       "jira": "SV-382",
       "subtasks": [
@@ -1272,7 +1272,7 @@
           "jira": "SV-384"
         }
       ],
-      "evidence": ""
+      "evidence": "Fechada em 2026-09-15. Codigo (feat-015.1) entregue e mergeado antes desta sessao (PR feature/SV-382, 179 testes verdes, mvn -B verify). Faltava so a verificacao real de producao (feat-015.2) - executada nesta sessao junto com infra/feat-006 (mesma cross-repo, mesmo evento): infra/k8s/auth-service.yaml ja tinha BETS_SERVICE_URL/STATS_SERVICE_URL (b97dc3e), kubectl apply + rollout restart no k3s real (servidor Debian) confirmado, pod novo com as 2 env vars via kubectl exec, e 1 POST /api/v1/admin/tenants real (kubectl port-forward, tenant feat006-verify) respondeu downstreamProvisioningFailures: [] - confirma auth-service chamando bets-service e stats-service com sucesso dentro do cluster de producao, sem 404 tenant-not-found. Ver infra/feature_list.json feat-006 e infra/progress.md para o detalhe completo da sessao de verificacao (acesso SSH, achados). ./init.sh deste servico e da raiz verdes."
     }
   ]
 }
