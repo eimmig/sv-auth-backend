@@ -1294,11 +1294,11 @@
         {
           "id": "feat-016.2",
           "name": "CHANGELOG e verificacao final",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-434"
         }
       ],
-      "evidence": ""
+      "evidence": "Fechada em 2026-09-15 (story SV-432, subtasks SV-433/SV-434, PR #63 subtask->story verde). Quarta aplicacao identica do padrao ja revisado e fechado em bets-service feat-018/stats-service feat-019/api-gateway feat-014 na mesma sessao (mesmo Plan Reviewer, mesmas 2 correcoes MINOR ja aplicadas: sem azure/setup-kubectl, permissions: {} explicito - confirmado necessario pois este repositorio tambem tem default_workflow_permissions=write). Unica diferenca e o nome do Deployment (auth-service), confirmado contra infra/k8s/auth-service.yaml (sem namespace) e infra/k8s/ci-deployer-rbac.yaml (resourceNames ja incluia auth-service). KUBE_CONFIG confirmado presente no repositorio. Delivery Reviewer: PASS (revisao condensada, sem achado). ./init.sh verde. Guard comportou como esperado: deploy/build-and-push-image corretamente 'skipping' no evento de PR (run 35012966412). Disparo real do job adiado (mesma decisao das 3 features anteriores - promocao develop->main e decisao de release mais ampla, nao exclusiva desta feature; confirmacao real a registrar em docs/services/infra.md quando essa promocao acontecer). Fecha a parte de auth-service do epic-028 da raiz (2 dos 6 repositorios de aplicacao ainda pendentes: telegram-integration feat-010, web feat-030)."
     }
   ]
 }
