@@ -1273,6 +1273,19 @@
         }
       ],
       "evidence": "Fechada em 2026-09-15. Codigo (feat-015.1) entregue e mergeado antes desta sessao (PR feature/SV-382, 179 testes verdes, mvn -B verify). Faltava so a verificacao real de producao (feat-015.2) - executada nesta sessao junto com infra/feat-006 (mesma cross-repo, mesmo evento): infra/k8s/auth-service.yaml ja tinha BETS_SERVICE_URL/STATS_SERVICE_URL (b97dc3e), kubectl apply + rollout restart no k3s real (servidor Debian) confirmado, pod novo com as 2 env vars via kubectl exec, e 1 POST /api/v1/admin/tenants real (kubectl port-forward, tenant feat006-verify) respondeu downstreamProvisioningFailures: [] - confirma auth-service chamando bets-service e stats-service com sucesso dentro do cluster de producao, sem 404 tenant-not-found. Ver infra/feature_list.json feat-006 e infra/progress.md para o detalhe completo da sessao de verificacao (acesso SSH, achados). ./init.sh deste servico e da raiz verdes."
+    },
+    {
+      "id": "feat-016",
+      "name": "CD: job de deploy automatico (kubectl rollout restart) no ci.yml",
+      "description": "Fecha epic-028 da raiz (decisao do usuario, 2026-09-15) neste repositorio: job novo 'deploy' no ci.yml, needs: build-and-push-image (feat-014), if restrito a push em main, rodando kubectl rollout restart deployment/auth-service -n <namespace> contra o kubeconfig do secret KUBE_CONFIG (gerado por infra/feat-007 - ServiceAccount de CI com RBAC restrito, fora deste repositorio). Nao reaplica manifest - a imagem e referenciada por tag :latest no Deployment, o restart e o suficiente pra repuxar a imagem nova publicada pelo job anterior.",
+      "dependencies": [
+        "feat-014"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
     }
   ]
 }
