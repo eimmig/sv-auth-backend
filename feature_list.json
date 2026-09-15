@@ -1281,7 +1281,7 @@
       "dependencies": [
         "feat-014"
       ],
-      "status": "in-progress",
+      "status": "done",
       "plan_review": "Plan Reviewer (2026-09-15): READY. Quarta aplicacao do mesmo padrao mecanico ja validado em epic-028 nesta sessao (bets-service feat-018, stats-service feat-019, api-gateway feat-014). Confirmado contra este repositorio antes de codificar: infra/k8s/auth-service.yaml define o Deployment 'auth-service' sem namespace (default); RBAC de infra/k8s/ci-deployer-rbac.yaml ja inclui 'auth-service' em resourceNames; secret KUBE_CONFIG confirmado presente neste repositorio GitHub (gh secret list); default_workflow_permissions='write' (gh api), confirmando permissions: {} explicito necessario. As 2 correcoes MINOR ja aplicadas nas 3 instancias anteriores (sem azure/setup-kubectl, permissions: {} explicito) entram direto no plano aqui. Sem BLOCKER, sem achado novo especifico deste repositorio.",
       "jira": "SV-432",
       "subtasks": [
