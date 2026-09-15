@@ -2,8 +2,8 @@
 
 ## Estado Atual (Current State)
 
-**Última atualização:** 2026-09-09
-**Feature ativa:** nenhuma (`feat-001..009` todas `done`, backlog atual esgotado)
+**Última atualização:** 2026-09-15
+**Feature ativa:** nenhuma (`feat-001..016` todas `done`, backlog atual esgotado)
 
 ## Status
 
@@ -297,3 +297,42 @@ execução real testados contra a infra de verdade (rede do `docker-compose`, `p
 `/actuator/health` UP em ~5.5s. Imagem usada de fato pelos manifests Kubernetes de
 `infra/feat-004`. 1 subtask (SV-277, story SV-276), 2 PRs (#49 subtask->feature, #50
 feature->develop), CI verde nos dois.
+
+## `feat-016` fechada — CD automático, job `deploy` no `ci.yml` (2026-09-15, mesmo dia)
+
+Quarta aplicação idêntica do padrão de `epic-028` nesta sessão (depois de `bets-service
+feat-018`, `stats-service feat-019`, `api-gateway feat-014`) — mesmo `Plan Reviewer`, mesmas 2
+correções MINOR já aplicadas (sem `azure/setup-kubectl`, `permissions: {}` explícito). Única
+diferença real: nome do `Deployment` (`auth-service`), confirmado contra
+`infra/k8s/auth-service.yaml` (sem namespace) e `infra/k8s/ci-deployer-rbac.yaml` (`resourceNames`
+já incluía `auth-service`). `KUBE_CONFIG` confirmado presente no repositório.
+
+Story SV-432 (subtasks SV-433/SV-434), PRs #63/#64/#65, CI+SonarCloud verdes em todos. `Delivery
+Reviewer`: PASS (revisão condensada, quarta aplicação idêntica, sem achado). Disparo real do job
+adiado (mesma decisão das 3 features anteriores).
+
+**Fechamento em 2 disparos de `--sync-status` desta vez** — corrigindo o erro cometido nas 2
+primeiras features de `epic-028` (`bets-service feat-018`/`stats-service feat-019`, onde a última
+subtask e a feature foram marcadas `done` na mesma edição, pulando o estado `Review` no board):
+aqui `feat-016.2` foi marcada `done` sozinha primeiro (`--sync-status` → `Review`), e só depois do
+merge real `story -> develop`, numa edição separada, a feature virou `done` (`--sync-status` →
+`Review -> Done`).
+
+Fecha a parte de `auth-service` do `epic-028` da raiz — 2 dos 6 repositórios de aplicação ainda
+pendentes (`telegram-integration feat-010`, `web feat-030`).
+
+## `feat-015` fechada — orquestrar provisionamento de tenant (2026-09-15)
+
+Código (`feat-015.1`) já entregue e mergeado antes desta sessão (PR `feature/SV-382`, 179 testes
+verdes). Faltava só `feat-015.2` (verificação real contra o k3s de produção), feita nesta sessão
+junto com `infra/feat-006` (mesma mudança cross-repo): `infra/k8s/auth-service.yaml` ganhou
+`BETS_SERVICE_URL`/`STATS_SERVICE_URL`, aplicado no servidor Debian real via SSH
+(`eduardo@192.168.2.123`), pod reiniciado, e 1 `POST /api/v1/admin/tenants` real confirmou
+`downstreamProvisioningFailures: []` — a orquestração funciona de ponta a ponta em produção. Ver
+`infra/progress.md` para o detalhe completo da sessão de verificação (acesso ao servidor,
+achados).
+
+`./init.sh` deste serviço rodou vermelho na primeira tentativa desta sessão (67 erros de
+`ApplicationContext`, todos em cascata a partir de "Previous attempts to find a Docker
+environment failed") — não é regressão de código, Docker Desktop não estava rodando nesta
+máquina de desenvolvimento. Subiu o Docker Desktop e rodou de novo: verde.
