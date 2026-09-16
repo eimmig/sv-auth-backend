@@ -2,8 +2,8 @@
 
 ## Estado Atual (Current State)
 
-**Última atualização:** 2026-09-15
-**Feature ativa:** nenhuma (`feat-001..016` todas `done`, backlog atual esgotado)
+**Última atualização:** 2026-09-16
+**Feature ativa:** nenhuma (`feat-001..017` todas `done`, backlog atual esgotado)
 
 ## Status
 
@@ -297,6 +297,45 @@ execução real testados contra a infra de verdade (rede do `docker-compose`, `p
 `/actuator/health` UP em ~5.5s. Imagem usada de fato pelos manifests Kubernetes de
 `infra/feat-004`. 1 subtask (SV-277, story SV-276), 2 PRs (#49 subtask->feature, #50
 feature->develop), CI verde nos dois.
+
+## `feat-017` fechada — `PATCH /api/v1/users/{id}`, atualizar usuário do tenant (2026-09-16)
+
+Pedido do usuário para fechar um gap real: CRUD de usuários só tinha `create` (`feat-004`) e
+`list` (`feat-009`), faltava `update`. `Plan Reviewer` rodado antes de codificar: veredito
+`REVISE`, 2 achados MAJOR corrigidos no plano — (1) o plano original ia usar o `@Setter` amplo do
+Lombok de `UserJpaEntity` para aplicar o update, contrariando `docs/CONVENTIONS.md` (mesmo erro já
+corrigido uma vez em `stats-service feat-003.1`) — corrigido com `UserJpaEntity.applyUpdate(name,
+role)` dedicado, `@Setter` removido (era dead code); (2) o plano não tinha nenhuma trava contra um
+`admin` se auto-rebaixar (ou rebaixar o único `admin` do tenant) para `member` — como não existe
+rota de promoção `member`→`admin` em nenhuma feature do backlog, isso deixaria o tenant travado
+permanentemente sem nenhum caminho de API para se recuperar. Corrigido: `UpdateUserService` rejeita
+a transição `ADMIN`→`MEMBER` quando o alvo é o último admin (`LastAdminCannotBeDemotedException`,
+409), contando admins via `findAllOrderByName()` já existente (sem query nova).
+
+Só `name`/`role` editáveis — `email` fica de fora (chave de unicidade do tenant) e senha/
+`mustChangePassword` continuam fora do backlog (decisão já registrada em `feat-005`). Mesma
+autorização `role=admin` de `feat-004`/`feat-009`. `UpdateUserResponse` é DTO novo (convenção "1
+DTO por operação"), `404` se o `{id}` não existir no tenant resolvido (isolamento cross-tenant
+herdado do mecanismo de `search_path` já existente, sem query nova).
+
+Bug real encontrado na própria bateria de testes nova (não no código de produção): um teste
+chamava `seedUser(Role.MEMBER)` duas vezes — o helper gera e-mail como `role + "@" + tenantSlug`,
+então a segunda chamada colidia com a primeira (`uk_users_email`) e derrubava o `mvn verify`
+inteiro. Corrigido trocando o alvo por um UUID aleatório (a autorização é checada antes de
+qualquer lookup do alvo).
+
+`Delivery Reviewer`/`Test Suite Auditor`/`Persistence Auditor` rodados como self-review de passe
+único (risco baixo/médio, mesmo padrão já aceito em `feat-008`/`010`/`012`/`013`/`016`) — sem
+achado bloqueante em nenhum. `docs/API-CONTRACTS.md` **não** ganhou bullet novo (divergência do
+plano original) — aquela nota só cataloga mudanças cross-service, e esta feature reusa mecanismo
+já estabelecido (mesmo padrão de `feat-004`/`009`, que também nunca entraram lá); documentado só
+em `docs/services/auth-service.md`.
+
+Story SV-486 (subtasks SV-487/488/489 — `feat-017.1`+`feat-017.2` bundladas no mesmo branch/commit,
+interdependência entre persistência e HTTP descoberta na implementação, mesmo padrão de
+`feat-002.4/002.5`), PR #67 (`feature/SV-486` → `develop`), CI+SonarCloud+GitGuardian verdes,
+merged. `./init.sh` verde (196 testes, 0 falhas). Fechamento em 2 disparos de `--sync-status`
+(`Review` antes do merge, `Done` só depois, numa edição separada).
 
 ## `feat-016` fechada — CD automático, job `deploy` no `ci.yml` (2026-09-15, mesmo dia)
 
