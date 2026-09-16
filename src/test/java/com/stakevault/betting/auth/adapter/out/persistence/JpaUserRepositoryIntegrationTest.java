@@ -124,4 +124,31 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + otherSchema.value() + "\" CASCADE");
 		}
 	}
+
+	@Test
+	void shouldUpdateNameAndRoleWithoutInsertingANewRow() {
+		Instant createdAt = Instant.now().truncatedTo(DB_PRECISION);
+		User original = new User(UUID.randomUUID(), "Elis", "elis@acme.com", "hash", Role.MEMBER, false, createdAt);
+
+		try (var _ = TenantContextScope.open(schema)) {
+			userRepository.save(original);
+		}
+
+		User updated = new User(original.id(), "Elis Renamed", original.email(), original.passwordHash(), Role.ADMIN,
+				original.mustChangePassword(), original.createdAt());
+
+		User result;
+		Long rowCount;
+		try (var _ = TenantContextScope.open(schema)) {
+			result = userRepository.update(updated);
+			rowCount = jdbcTemplate.queryForObject(
+					"SELECT COUNT(*) FROM \"" + schema.value() + "\".users WHERE id = ?", Long.class, original.id());
+		}
+
+		assertThat(result.name()).isEqualTo("Elis Renamed");
+		assertThat(result.role()).isEqualTo(Role.ADMIN);
+		assertThat(result.email()).isEqualTo(original.email());
+		assertThat(result.createdAt()).isEqualTo(original.createdAt());
+		assertThat(rowCount).isEqualTo(1L);
+	}
 }
