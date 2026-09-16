@@ -83,3 +83,7 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-432](https://stakevault.atlassian.net/browse/SV-432) - CD: job de deploy automatico (kubectl rollout restart) no ci.yml
 - [SV-433](https://stakevault.atlassian.net/browse/SV-433) - Job deploy no ci.yml
 - [SV-434](https://stakevault.atlassian.net/browse/SV-434) - CHANGELOG e verificacao final
+- [SV-486](https://stakevault.atlassian.net/browse/SV-486) - PATCH /api/v1/users/{id} - atualizar usuario do tenant
+- [SV-487](https://stakevault.atlassian.net/browse/SV-487) - Domain + application + persistencia (UpdateUserUseCase, guarda de ultimo admin, JpaUserRepository.update)
+- [SV-488](https://stakevault.atlassian.net/browse/SV-488) - UsersController (PATCH /api/v1/users/{id}) + DTOs + testes de integracao + docs
+- [SV-489](https://stakevault.atlassian.net/browse/SV-489) - CHANGELOG e verificacao final

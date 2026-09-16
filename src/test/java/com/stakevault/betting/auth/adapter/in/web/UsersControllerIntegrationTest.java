@@ -65,6 +65,17 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 	}
 
+	private HttpResponse<String> patch(UUID targetId, String body, String... headers) throws Exception {
+		HttpRequest.Builder builder = HttpRequest
+				.newBuilder(URI.create("http://localhost:" + port + "/api/v1/users/" + targetId))
+				.header("Content-Type", "application/json")
+				.method("PATCH", HttpRequest.BodyPublishers.ofString(body));
+		for (int i = 0; i < headers.length; i += 2) {
+			builder.header(headers[i], headers[i + 1]);
+		}
+		return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+	}
+
 	@Test
 	void shouldCreateMemberUserWhenCallerIsAdmin() throws Exception {
 		User admin = seedUser(Role.ADMIN);
@@ -260,5 +271,119 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		} finally {
 			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + otherSchema.value() + "\" CASCADE");
 		}
+	}
+
+	@Test
+	void shouldUpdateUserWhenCallerIsAdmin() throws Exception {
+		User admin = seedUser(Role.ADMIN);
+		User member = seedUser(Role.MEMBER);
+
+		HttpResponse<String> response = patch(member.id(), "{\"name\":\"Renamed Member\",\"role\":\"ADMIN\"}",
+				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(200);
+		assertThat(response.body()).contains("\"name\":\"Renamed Member\"");
+		assertThat(response.body()).contains("\"role\":\"ADMIN\"");
+		assertThat(response.body()).doesNotContain("passwordHash").doesNotContain("\"hash\"");
+	}
+
+	@Test
+	void shouldReturn401OnUpdateWhenCallerHeaderIsMissing() throws Exception {
+		User member = seedUser(Role.MEMBER);
+
+		HttpResponse<String> response = patch(member.id(), "{\"name\":\"Renamed\",\"role\":\"MEMBER\"}", "X-Tenant-Id",
+				tenantSlug);
+
+		assertThat(response.statusCode()).isEqualTo(401);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/missing-caller-context\"");
+	}
+
+	@Test
+	void shouldReturn400OnUpdateWhenTenantHeaderIsMissing() throws Exception {
+		HttpResponse<String> response = patch(UUID.randomUUID(), "{\"name\":\"Renamed\",\"role\":\"MEMBER\"}",
+				"X-User-Id", UUID.randomUUID().toString());
+
+		assertThat(response.statusCode()).isEqualTo(400);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/missing-tenant-context\"");
+	}
+
+	@Test
+	void shouldReturn403OnUpdateWhenCallerIsNotAdmin() throws Exception {
+		User member = seedUser(Role.MEMBER);
+
+		HttpResponse<String> response = patch(UUID.randomUUID(), "{\"name\":\"Renamed\",\"role\":\"MEMBER\"}",
+				"X-Tenant-Id", tenantSlug, "X-User-Id", member.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(403);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/admin-role-required\"");
+	}
+
+	@Test
+	void shouldReturn403OnUpdateWhenCallerIsAnAdminOfADifferentTenant() throws Exception {
+		String otherSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+		TenantSchemaName otherSchema = TenantSchemaName.fromSlug(otherSlug);
+		provisionTenantSchema.ensureSchemaExists(otherSlug);
+		User member = seedUser(Role.MEMBER);
+
+		try {
+			User adminOfOtherTenant = new User(UUID.randomUUID(), "Other Admin", "admin@" + otherSlug, "hash",
+					Role.ADMIN, false, Instant.now().truncatedTo(DB_PRECISION));
+			try (var _ = TenantContextScope.open(otherSchema)) {
+				userRepository.save(adminOfOtherTenant);
+			}
+
+			HttpResponse<String> response = patch(member.id(), "{\"name\":\"Renamed\",\"role\":\"MEMBER\"}",
+					"X-Tenant-Id", tenantSlug, "X-User-Id", adminOfOtherTenant.id().toString());
+
+			assertThat(response.statusCode()).isEqualTo(403);
+			assertThat(response.body()).contains("\"type\":\"https://docs/errors/admin-role-required\"");
+		} finally {
+			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + otherSchema.value() + "\" CASCADE");
+		}
+	}
+
+	@Test
+	void shouldReturn404WhenTargetUserDoesNotExist() throws Exception {
+		User admin = seedUser(Role.ADMIN);
+
+		HttpResponse<String> response = patch(UUID.randomUUID(), "{\"name\":\"Renamed\",\"role\":\"MEMBER\"}",
+				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(404);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/user-not-found\"");
+	}
+
+	@Test
+	void shouldReturn409WhenDemotingTheLastAdmin() throws Exception {
+		User admin = seedUser(Role.ADMIN);
+
+		HttpResponse<String> response = patch(admin.id(), "{\"name\":\"" + admin.name() + "\",\"role\":\"MEMBER\"}",
+				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(409);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/last-admin-cannot-be-demoted\"");
+	}
+
+	@Test
+	void shouldReturn400OnUpdateWhenPayloadIsInvalid() throws Exception {
+		User admin = seedUser(Role.ADMIN);
+		User member = seedUser(Role.MEMBER);
+
+		HttpResponse<String> response = patch(member.id(), "{\"name\":\"\",\"role\":null}", "X-Tenant-Id", tenantSlug,
+				"X-User-Id", admin.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(400);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/validation-failed\"");
+	}
+
+	@Test
+	void shouldLocalizeUpdateErrorTitleAndDetailPerAcceptLanguage() throws Exception {
+		User admin = seedUser(Role.ADMIN);
+
+		HttpResponse<String> response = patch(admin.id(), "{\"name\":\"" + admin.name() + "\",\"role\":\"MEMBER\"}",
+				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString(), "Accept-Language", "es");
+
+		assertThat(response.statusCode()).isEqualTo(409);
+		assertThat(response.body()).contains("El último administrador no puede ser degradado");
 	}
 }
