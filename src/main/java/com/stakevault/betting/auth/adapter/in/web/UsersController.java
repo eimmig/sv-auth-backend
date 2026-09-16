@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -16,6 +18,7 @@ import com.stakevault.betting.auth.domain.model.MissingCallerContextException;
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.in.CreateUserUseCase;
 import com.stakevault.betting.auth.domain.port.in.ListUsersUseCase;
+import com.stakevault.betting.auth.domain.port.in.UpdateUserUseCase;
 
 import jakarta.validation.Valid;
 
@@ -27,10 +30,12 @@ public class UsersController {
 
 	private final CreateUserUseCase createUser;
 	private final ListUsersUseCase listUsers;
+	private final UpdateUserUseCase updateUser;
 
-	public UsersController(CreateUserUseCase createUser, ListUsersUseCase listUsers) {
+	public UsersController(CreateUserUseCase createUser, ListUsersUseCase listUsers, UpdateUserUseCase updateUser) {
 		this.createUser = createUser;
 		this.listUsers = listUsers;
+		this.updateUser = updateUser;
 	}
 
 	@PostMapping
@@ -52,6 +57,17 @@ public class UsersController {
 						user.mustChangePassword(), user.createdAt()))
 				.toList();
 		return ResponseEntity.ok(users);
+	}
+
+	@PatchMapping("/{id}")
+	public ResponseEntity<UpdateUserResponse> update(
+			@RequestHeader(value = CALLER_HEADER, required = false) String callerIdHeader,
+			@PathVariable UUID id,
+			@Valid @RequestBody UpdateUserRequest request) {
+		UUID callerId = parseCallerId(callerIdHeader);
+		User updated = updateUser.updateUser(callerId, id, request.name(), request.role());
+		return ResponseEntity.ok(new UpdateUserResponse(updated.id(), updated.name(), updated.email(),
+				updated.role(), updated.mustChangePassword(), updated.createdAt()));
 	}
 
 	private UUID parseCallerId(String callerIdHeader) {
