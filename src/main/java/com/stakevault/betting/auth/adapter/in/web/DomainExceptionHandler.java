@@ -17,6 +17,7 @@ import com.stakevault.betting.auth.domain.model.CallerNotFoundException;
 import com.stakevault.betting.auth.domain.model.EmailAlreadyRegisteredException;
 import com.stakevault.betting.auth.domain.model.InvalidCredentialsException;
 import com.stakevault.betting.auth.domain.model.InvalidTenantSlugException;
+import com.stakevault.betting.auth.domain.model.LastAdminCannotBeDemotedException;
 import com.stakevault.betting.auth.domain.model.LocalizedDomainException;
 import com.stakevault.betting.auth.domain.model.MissingCallerContextException;
 import com.stakevault.betting.auth.domain.model.MissingTenantContextException;
@@ -25,6 +26,7 @@ import com.stakevault.betting.auth.domain.model.TelegramAccountNotFoundException
 import com.stakevault.betting.auth.domain.model.TelegramLinkCodeExpiredException;
 import com.stakevault.betting.auth.domain.model.TelegramLinkCodeNotFoundException;
 import com.stakevault.betting.auth.domain.model.TenantAlreadyProvisionedException;
+import com.stakevault.betting.auth.domain.model.UserNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -43,7 +45,8 @@ public class DomainExceptionHandler {
 			AdminRoleRequiredException.class, EmailAlreadyRegisteredException.class,
 			InvalidCredentialsException.class, CallerNotFoundException.class,
 			TelegramLinkCodeNotFoundException.class, TelegramLinkCodeExpiredException.class,
-			TelegramAccountAlreadyLinkedException.class, TelegramAccountNotFoundException.class })
+			TelegramAccountAlreadyLinkedException.class, TelegramAccountNotFoundException.class,
+			UserNotFoundException.class, LastAdminCannotBeDemotedException.class })
 	public ProblemDetail handle(LocalizedDomainException exception, Locale locale, HttpServletRequest request) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
 				HttpStatus.valueOf(exception.httpStatusCode()),

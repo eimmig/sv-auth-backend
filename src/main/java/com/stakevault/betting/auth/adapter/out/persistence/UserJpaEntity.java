@@ -15,12 +15,10 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "users")
 @Getter
-@Setter
 @NoArgsConstructor
 public class UserJpaEntity implements Persistable<UUID> {
 
@@ -59,6 +57,11 @@ public class UserJpaEntity implements Persistable<UUID> {
 	@Override
 	public boolean isNew() {
 		return isNew;
+	}
+
+	public void applyUpdate(String name, Role role) {
+		this.name = name;
+		this.role = role;
 	}
 
 	@PostLoad

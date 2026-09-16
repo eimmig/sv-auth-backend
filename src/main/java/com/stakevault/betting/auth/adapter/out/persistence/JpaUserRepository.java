@@ -26,6 +26,14 @@ public class JpaUserRepository implements UserRepository {
 	}
 
 	@Override
+	public User update(User user) {
+		UserJpaEntity entity = jpaRepository.findById(user.id())
+				.orElseThrow(() -> new IllegalStateException("user not found for update: " + user.id()));
+		entity.applyUpdate(user.name(), user.role());
+		return toDomain(jpaRepository.save(entity));
+	}
+
+	@Override
 	public Optional<User> findById(UUID id) {
 		return jpaRepository.findById(id).map(JpaUserRepository::toDomain);
 	}
