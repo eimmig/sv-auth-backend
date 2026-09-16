@@ -1299,6 +1299,70 @@
         }
       ],
       "evidence": "Fechada em 2026-09-15 (story SV-432, subtasks SV-433/SV-434, PR #63 subtask->story verde). Quarta aplicacao identica do padrao ja revisado e fechado em bets-service feat-018/stats-service feat-019/api-gateway feat-014 na mesma sessao (mesmo Plan Reviewer, mesmas 2 correcoes MINOR ja aplicadas: sem azure/setup-kubectl, permissions: {} explicito - confirmado necessario pois este repositorio tambem tem default_workflow_permissions=write). Unica diferenca e o nome do Deployment (auth-service), confirmado contra infra/k8s/auth-service.yaml (sem namespace) e infra/k8s/ci-deployer-rbac.yaml (resourceNames ja incluia auth-service). KUBE_CONFIG confirmado presente no repositorio. Delivery Reviewer: PASS (revisao condensada, sem achado). ./init.sh verde. Guard comportou como esperado: deploy/build-and-push-image corretamente 'skipping' no evento de PR (run 35012966412). Disparo real do job adiado (mesma decisao das 3 features anteriores - promocao develop->main e decisao de release mais ampla, nao exclusiva desta feature; confirmacao real a registrar em docs/services/infra.md quando essa promocao acontecer). Fecha a parte de auth-service do epic-028 da raiz (2 dos 6 repositorios de aplicacao ainda pendentes: telegram-integration feat-010, web feat-030)."
+    },
+    {
+      "id": "feat-017",
+      "name": "PATCH /api/v1/users/{id} - atualizar usuario do tenant",
+      "description": "Gap no CRUD de usuarios do tenant: feat-004 cobre create e feat-009 cobre list, mas nao ha operacao de update (nome/role/outros campos a confirmar no Plan Reviewer antes de codificar). Endpoint restrito a role=admin do tenant do chamador, mesma checagem de autorizacao ja usada em feat-004/feat-009 - escopo exato (campos editaveis, se admin pode alterar o proprio role, resposta) fica para o Plan Reviewer antes de qualquer codigo, conforme Startup Workflow.",
+      "dependencies": [
+        "feat-009"
+      ],
+      "status": "in-progress",
+      "plan_review": "2026-09-16, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 achados MAJOR corrigidos no plano antes da implementacao (nenhum exigia decisao do usuario). (MAJOR) o plano original mutava UserJpaEntity via @Setter amplo do Lombok (ja presente na classe desde feat-002) para aplicar o update - contradiz docs/CONVENTIONS.md secao 'Atualizar uma linha ja persistida (nao criar)', que ja documenta esse exato erro cometido e corrigido uma vez em stats-service feat-003.1 ('a primeira tentativa desta feature usou @Setter do Lombok na classe inteira antes de reler esta nota e corrigir'); grep confirmou que nenhum caller usa os setters de UserJpaEntity hoje (dead code) - corrigido para remover @Setter da classe e adicionar um metodo dedicado (UserJpaEntity.applyUpdate(String name, Role role)), mesmo padrao de FactBetJpaEntity.applyFrom. (MAJOR) o plano nao tinha nenhuma trava contra um admin se auto-rebaixar (ou rebaixar o ultimo admin) para member: como nao ha autocadastro nem rota de promocao de member->admin em nenhuma feature do backlog (a unica forma de existir um admin e feat-003, na criacao do tenant), um tenant que perde o ultimo admin fica sem nenhum caminho de API para se recuperar (nem a rota de provisionamento pode rodar de novo - TenantAlreadyProvisionedException) - lockout permanente sem intervencao manual no banco. Corrigido: UpdateUserService rejeita a transicao ADMIN->MEMBER quando o alvo e o ultimo admin do tenant (conta admins via userRepository.findAllOrderByName() ja existente, filtrado em memoria - mesmo racional de 'sem paginacao, tenant e pequeno' ja aceito em feat-009, sem query nova); nova excecao LastAdminCannotBeDemotedException (409). Residual aceito (nao MAJOR): janela TOCTOU entre a contagem de admins e o save() permite, em tese, duas chamadas concorrentes rebaixarem dois admins diferentes 'ao mesmo tempo' achando que o outro continua admin - aceito como risco residual (nao e transicao de estado com garantia de negocio critica tipo saldo/aposta, e o projeto nao tem trafego concorrente real; documentado em vez de implementar o guard atomico condicional que docs/CONVENTIONS.md reserva para esse caso). Escopo confirmado: so name/role editaveis (email e imutavel - chave de unicidade do tenant, mudar abriria outra classe de conflito fora do pedido; senha/mustChangePassword ficam fora - troca de senha continua sem endpoint no backlog, decisao ja registrada em feat-005). PATCH (nao PUT) segue o unico precedente do projeto (bets-service PATCH /api/v1/settings, ver docs/API-CONTRACTS.md). Verificado contra o repositorio real antes de aceitar o plano: UserRepository.save() so serve para criar (Persistable.isNew() sempre true fora de carregamento via Hibernate, confirmado lendo UserJpaEntity/JpaUserRepository) - update() e metodo novo, nao reaproveita save(); DomainExceptionHandler mapeia excecoes por lista de classes num unico @ExceptionHandler (LocalizedDomainException) - so precisa entrar na lista, sem handler novo; convencao '1 DTO de resposta por operacao' (docs/CONVENTIONS.md, achado do Plan Reviewer em feat-009) exige UpdateUserResponse dedicado, nao reusar CreateUserResponse/UserSummaryResponse. Rodada de desafio independente executada como passe proprio, sem subagentes - risco baixo/medio (autorizacao, sem dinheiro/dado destrutivo irreversivel fora do lockout ja endereçado), independencia reduzida declarada.",
+      "jira": "SV-486",
+      "subtasks": [
+        {
+          "id": "feat-017.1",
+          "name": "Domain + application + persistencia (UpdateUserUseCase, guarda de ultimo admin, JpaUserRepository.update)",
+          "status": "in-progress",
+          "jira": "SV-487",
+          "detail": "Camadas de dominio ate persistencia, sem HTTP ainda - mesmo corte de feat-009.1. Inclui a correcao do achado MAJOR do Plan Reviewer sobre @Setter amplo (UserJpaEntity.applyUpdate) e a guarda de ultimo admin (segundo achado MAJOR).",
+          "checklist": [
+            "domain/port/in/UpdateUserUseCase.updateUser(UUID callerId, UUID targetUserId, String name, Role role): User.",
+            "domain/model/UserNotFoundException (404, messageKey error.user-not-found) e LastAdminCannotBeDemotedException (409, messageKey error.last-admin-cannot-be-demoted) novas, implementam LocalizedDomainException.",
+            "domain/port/out/UserRepository ganha update(User user): User - metodo novo, nao reaproveita save().",
+            "UserJpaEntity perde @Setter amplo (dead code hoje - grep confirmou zero uso) e ganha applyUpdate(String name, Role role) (mesmo padrao de FactBetJpaEntity.applyFrom, docs/CONVENTIONS.md).",
+            "JpaUserRepository.update(user): jpaRepository.findById(user.id()) (isNew()==false, @PostLoad ja disparou) + entity.applyUpdate(...) + jpaRepository.save(entity) -> merge/UPDATE, nao insert.",
+            "application/UpdateUserService: TenantContextHolder.current()==null -> MissingTenantContextException; userRepository.findById(callerId) ausente OU role!=ADMIN -> AdminRoleRequiredException; userRepository.findById(targetUserId) ausente -> UserNotFoundException; se target.role()==ADMIN e novo role==MEMBER, conta admins via findAllOrderByName() filtrado em memoria - se for o unico, LastAdminCannotBeDemotedException; caso contrario monta User atualizado (mesmo id/email/passwordHash/mustChangePassword/createdAt do alvo) e chama userRepository.update(...).",
+            "Novas chaves nos 3 messages_{pt_BR,en_US,es}.properties (validado por .github/scripts/validate-i18n-keys.py)."
+          ],
+          "validation": "Teste unitario (fakes de UserRepository) cobre sucesso (name/role atualizados), tenant ausente, caller ausente, caller nao-admin, alvo inexistente, e rebaixar o ultimo admin rejeitado - mesmo estilo de ListUsersServiceTest/CreateUserServiceTest.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-017.2",
+          "name": "UsersController (PATCH /api/v1/users/{id}) + DTOs + testes de integracao + docs",
+          "status": "not-started",
+          "jira": "SV-488",
+          "detail": "Mesmo parsing de X-User-Id/X-Tenant-Id ja existente (metodo privado parseCallerId reaproveitado). UpdateUserRequest/UpdateUserResponse sao DTOs novos (convencao '1 DTO por operacao', achado do Plan Reviewer em feat-009), nao reusam CreateUserRequest/CreateUserResponse/UserSummaryResponse.",
+          "checklist": [
+            "adapter/in/web/UpdateUserRequest (name @NotBlank, role @NotNull) e UpdateUserResponse (mesmos 5 campos de CreateUserResponse/UserSummaryResponse, nunca passwordHash).",
+            "UsersController ganha @PatchMapping(\"/{id}\") retornando 200 UpdateUserResponse.",
+            "DomainExceptionHandler: UserNotFoundException e LastAdminCannotBeDemotedException adicionadas a lista de classes do @ExceptionHandler existente (LocalizedDomainException).",
+            "Teste de integracao (mesma classe UsersControllerIntegrationTest, TenantSchemaIntegrationSupport): 200 sucesso (name/role atualizados, persistidos - refetch ou GET confirma); 401 caller ausente/invalido; 400 tenant ausente; 403 caller nao-admin; 403 admin de outro tenant (isolamento cross-tenant, mesmo padrao de POST/GET); 404 alvo inexistente; 409 rebaixar o ultimo admin; 400 payload invalido; 1 caso i18n (Accept-Language mudando title/detail, ex. do 409 ou 404).",
+            "JpaUserRepositoryIntegrationTest ganha teste de persistencia provando UPDATE de verdade (nao insert duplicado - conta linhas ou confirma id inalterado) via Testcontainers.",
+            "docs/services/auth-service.md (novo paragrafo de contrato, mesmo estilo de feat-004/009) e docs/API-CONTRACTS.md (bullet novo na secao deste servico, mesmo estilo do bullet PATCH /api/v1/settings do bets-service) atualizados no mesmo commit."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-017.3",
+          "name": "CHANGELOG e verificacao final",
+          "status": "not-started",
+          "jira": "SV-489",
+          "detail": "Fecha a feature com o gate real do harness. Ultima subtask - carrega o item fixo de revisao do vault (docs/) alem do checklist padrao.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer e Test Suite Auditor rodados antes de done (Persistence Auditor: avaliar se a janela TOCTOU da guarda de ultimo admin e o merge via findById+applyUpdate+save precisam de mais alguma prova alem do teste de persistencia ja incluido em feat-017.2).",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) nao precisa mudar (epic-002 ja done, esta feature nao fecha epic).",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
