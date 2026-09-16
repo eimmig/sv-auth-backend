@@ -1314,7 +1314,7 @@
         {
           "id": "feat-017.1",
           "name": "Domain + application + persistencia (UpdateUserUseCase, guarda de ultimo admin, JpaUserRepository.update)",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-487",
           "detail": "Camadas de dominio ate persistencia, sem HTTP ainda - mesmo corte de feat-009.1. Inclui a correcao do achado MAJOR do Plan Reviewer sobre @Setter amplo (UserJpaEntity.applyUpdate) e a guarda de ultimo admin (segundo achado MAJOR).",
           "checklist": [
@@ -1332,7 +1332,7 @@
         {
           "id": "feat-017.2",
           "name": "UsersController (PATCH /api/v1/users/{id}) + DTOs + testes de integracao + docs",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-488",
           "detail": "Mesmo parsing de X-User-Id/X-Tenant-Id ja existente (metodo privado parseCallerId reaproveitado). UpdateUserRequest/UpdateUserResponse sao DTOs novos (convencao '1 DTO por operacao', achado do Plan Reviewer em feat-009), nao reusam CreateUserRequest/CreateUserResponse/UserSummaryResponse.",
           "checklist": [
@@ -1349,7 +1349,7 @@
         {
           "id": "feat-017.3",
           "name": "CHANGELOG e verificacao final",
-          "status": "not-started",
+          "status": "in-progress",
           "jira": "SV-489",
           "detail": "Fecha a feature com o gate real do harness. Ultima subtask - carrega o item fixo de revisao do vault (docs/) alem do checklist padrao.",
           "checklist": [
