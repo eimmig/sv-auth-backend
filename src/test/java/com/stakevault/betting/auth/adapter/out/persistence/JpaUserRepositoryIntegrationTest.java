@@ -151,4 +151,29 @@ class JpaUserRepositoryIntegrationTest extends TenantSchemaIntegrationSupport {
 		assertThat(result.createdAt()).isEqualTo(original.createdAt());
 		assertThat(rowCount).isEqualTo(1L);
 	}
+
+	@Test
+	void shouldUpdatePasswordHashAndMustChangePasswordWithoutInsertingANewRow() {
+		Instant createdAt = Instant.now().truncatedTo(DB_PRECISION);
+		User original = new User(UUID.randomUUID(), "Fabio", "fabio@acme.com", "old-hash", Role.MEMBER, true, createdAt);
+
+		try (var _ = TenantContextScope.open(schema)) {
+			userRepository.save(original);
+		}
+
+		User updated = new User(original.id(), original.name(), original.email(), "new-hash", original.role(), false,
+				original.createdAt());
+
+		User result;
+		Long rowCount;
+		try (var _ = TenantContextScope.open(schema)) {
+			result = userRepository.update(updated);
+			rowCount = jdbcTemplate.queryForObject(
+					"SELECT COUNT(*) FROM \"" + schema.value() + "\".users WHERE id = ?", Long.class, original.id());
+		}
+
+		assertThat(result.passwordHash()).isEqualTo("new-hash");
+		assertThat(result.mustChangePassword()).isFalse();
+		assertThat(rowCount).isEqualTo(1L);
+	}
 }

@@ -61,6 +61,17 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 	}
 
+	private HttpResponse<String> postChangePassword(String body, String... headers) throws Exception {
+		HttpRequest.Builder builder = HttpRequest
+				.newBuilder(URI.create("http://localhost:" + port + "/api/v1/auth/change-password"))
+				.header("Content-Type", "application/json")
+				.POST(HttpRequest.BodyPublishers.ofString(body));
+		for (int i = 0; i < headers.length; i += 2) {
+			builder.header(headers[i], headers[i + 1]);
+		}
+		return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+	}
+
 	@Test
 	void shouldReturnTokenAndMustChangePasswordOnValidLogin() throws Exception {
 		User user = seedUser(true);
@@ -176,5 +187,81 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 
 		assertThat(response.statusCode()).isEqualTo(401);
 		assertThat(response.body()).contains("Credenciales inválidas");
+	}
+
+	@Test
+	void shouldChangePasswordAndAllowLoginWithNewPasswordOnly() throws Exception {
+		User user = seedUser(true);
+
+		HttpResponse<String> changeResponse = postChangePassword(
+				"{\"currentPassword\":\"" + RAW_PASSWORD + "\",\"newPassword\":\"new-correct-horse-battery\"}",
+				"X-Tenant-Id", tenantSlug, "X-User-Id", user.id().toString());
+
+		assertThat(changeResponse.statusCode()).isEqualTo(204);
+		assertThat(changeResponse.body()).isEmpty();
+
+		HttpResponse<String> loginWithOldPassword = post(
+				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+		assertThat(loginWithOldPassword.statusCode()).isEqualTo(401);
+
+		HttpResponse<String> loginWithNewPassword = post("{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug
+				+ "\",\"password\":\"new-correct-horse-battery\"}");
+		assertThat(loginWithNewPassword.statusCode()).isEqualTo(200);
+		assertThat(loginWithNewPassword.body()).contains("\"mustChangePassword\":false");
+	}
+
+	@Test
+	void shouldReturn401OnChangePasswordWhenCallerHeaderIsMissing() throws Exception {
+		HttpResponse<String> response = postChangePassword(
+				"{\"currentPassword\":\"" + RAW_PASSWORD + "\",\"newPassword\":\"new-password\"}", "X-Tenant-Id", tenantSlug);
+
+		assertThat(response.statusCode()).isEqualTo(401);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/missing-caller-context\"");
+	}
+
+	@Test
+	void shouldReturn400OnChangePasswordWhenTenantHeaderIsMissing() throws Exception {
+		User user = seedUser(false);
+
+		HttpResponse<String> response = postChangePassword(
+				"{\"currentPassword\":\"" + RAW_PASSWORD + "\",\"newPassword\":\"new-password\"}", "X-User-Id",
+				user.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(400);
+	}
+
+	@Test
+	void shouldReturn401OnChangePasswordWhenCurrentPasswordIsWrong() throws Exception {
+		User user = seedUser(false);
+
+		HttpResponse<String> response = postChangePassword(
+				"{\"currentPassword\":\"wrong-password\",\"newPassword\":\"new-password\"}", "X-Tenant-Id", tenantSlug,
+				"X-User-Id", user.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(401);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/current-password-mismatch\"");
+	}
+
+	@Test
+	void shouldReturn400OnChangePasswordWhenPayloadIsInvalid() throws Exception {
+		User user = seedUser(false);
+
+		HttpResponse<String> response = postChangePassword("{\"currentPassword\":\"\",\"newPassword\":\"\"}", "X-Tenant-Id",
+				tenantSlug, "X-User-Id", user.id().toString());
+
+		assertThat(response.statusCode()).isEqualTo(400);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/validation-failed\"");
+	}
+
+	@Test
+	void shouldLocalizeCurrentPasswordMismatchTitleAndDetailPerAcceptLanguage() throws Exception {
+		User user = seedUser(false);
+
+		HttpResponse<String> response = postChangePassword(
+				"{\"currentPassword\":\"wrong-password\",\"newPassword\":\"new-password\"}", "X-Tenant-Id", tenantSlug,
+				"X-User-Id", user.id().toString(), "Accept-Language", "es");
+
+		assertThat(response.statusCode()).isEqualTo(401);
+		assertThat(response.body()).contains("Contraseña actual incorrecta");
 	}
 }

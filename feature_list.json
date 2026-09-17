@@ -1430,7 +1430,7 @@
         {
           "id": "feat-018.2",
           "name": "AuthController (POST /api/v1/auth/change-password) + DTO + testes de integracao + docs",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-512",
           "detail": "Mesmo parsing de X-User-Id ja existente em UsersController/TelegramLinksController (parseCallerId privado, duplicado por convencao ja aceita no projeto). ChangePasswordRequest e DTO novo.",
           "checklist": [
