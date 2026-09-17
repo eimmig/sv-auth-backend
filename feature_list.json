@@ -1415,7 +1415,7 @@
         {
           "id": "feat-018.1",
           "name": "Domain + application + i18n (ChangePasswordUseCase, ChangePasswordService, CurrentPasswordMismatchException)",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-511",
           "detail": "Camadas de dominio ate a regra de negocio, sem HTTP ainda - mesmo corte de feat-002.x/017.1. Inclui a correcao do achado MAJOR do Plan Reviewer (excecao dedicada em vez de reusar InvalidCredentialsException).",
           "checklist": [
