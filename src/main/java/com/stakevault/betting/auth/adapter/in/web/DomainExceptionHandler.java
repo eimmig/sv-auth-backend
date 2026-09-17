@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stakevault.betting.auth.domain.model.AdminRoleRequiredException;
 import com.stakevault.betting.auth.domain.model.CallerNotFoundException;
+import com.stakevault.betting.auth.domain.model.CurrentPasswordMismatchException;
 import com.stakevault.betting.auth.domain.model.EmailAlreadyRegisteredException;
 import com.stakevault.betting.auth.domain.model.InvalidCredentialsException;
 import com.stakevault.betting.auth.domain.model.InvalidTenantSlugException;
@@ -46,7 +47,8 @@ public class DomainExceptionHandler {
 			InvalidCredentialsException.class, CallerNotFoundException.class,
 			TelegramLinkCodeNotFoundException.class, TelegramLinkCodeExpiredException.class,
 			TelegramAccountAlreadyLinkedException.class, TelegramAccountNotFoundException.class,
-			UserNotFoundException.class, LastAdminCannotBeDemotedException.class })
+			UserNotFoundException.class, LastAdminCannotBeDemotedException.class,
+			CurrentPasswordMismatchException.class })
 	public ProblemDetail handle(LocalizedDomainException exception, Locale locale, HttpServletRequest request) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
 				HttpStatus.valueOf(exception.httpStatusCode()),

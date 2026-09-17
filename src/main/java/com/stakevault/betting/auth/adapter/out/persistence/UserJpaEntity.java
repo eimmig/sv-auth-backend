@@ -59,9 +59,11 @@ public class UserJpaEntity implements Persistable<UUID> {
 		return isNew;
 	}
 
-	public void applyUpdate(String name, Role role) {
+	public void applyUpdate(String name, Role role, String passwordHash, boolean mustChangePassword) {
 		this.name = name;
 		this.role = role;
+		this.passwordHash = passwordHash;
+		this.mustChangePassword = mustChangePassword;
 	}
 
 	@PostLoad
