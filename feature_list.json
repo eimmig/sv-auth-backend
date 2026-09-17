@@ -1408,10 +1408,58 @@
       "dependencies": [
         "feat-005"
       ],
-      "status": "not-started",
-      "plan_review": "",
-      "jira": "",
-      "subtasks": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-17, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 1 achado MAJOR corrigido no plano antes da implementacao (nenhum exigia decisao do usuario alem da ja tomada via AskUserQuestion no inicio da sessao: mustChangePassword continua SEM bloqueio real de outras rotas, o endpoint novo so precisa existir e zerar a flag ao trocar com sucesso - fluxo de esqueci minha senha fica fora de escopo). (MAJOR) o plano original reusava InvalidCredentialsException (401, ja existente, usada no login) para senha atual incorreta - lido o texto real localizado nos 3 locales (messages_pt_BR/en_US/es.properties), error.invalid-credentials.detail diz o tenant, e-mail ou senha informados estao incorretos (pt-BR), equivalente em en-US/es - mensagem enganosa para o fluxo de troca de senha, que nao envolve tenant nem email. Corrigido: nova excecao CurrentPasswordMismatchException (401, messageKey error.current-password-mismatch, mesmo racional de erro generico sem enumerar detalhe do login) com 3 chaves novas i18n (title/detail) nos 3 locales. CallerNotFoundException (401, ja existente) permanece reusada sem mudanca - texto usuario identificado por X-User-Id nao existe neste tenant e generico o suficiente para o caso de borda (token valido, usuario removido). Verificado contra o repositorio real antes de aceitar o plano: UserRepository.update() (feat-017) reaproveitavel sem mudanca - findById+applyUpdate+save, nao save() puro; PasetoAuthenticationFilter (api-gateway) so isenta o path exato de gateway.login-path (/api/v1/auth/login) - /api/v1/auth/change-password exige Bearer token automaticamente, sem mudanca de codigo no gateway; RouteConfig.authServiceRoute ja roteia /api/v1/auth/** por wildcard, sem rota nova necessaria; PasetoAccessTokenIssuer nao embute mustChangePassword nas claims do token - resposta 204 No Content confirmada correta, sem necessidade de reemitir token. Escopo confirmado: so troca sabendo a senha atual (usuario logado) - endpoint recebe currentPassword+newPassword, valida a atual contra passwordHash antes de trocar, zera mustChangePassword ao trocar com sucesso; sem limite de tamanho novo em newPassword (mesmo padrao ja aceito em CreateUserRequest.password, que so tem @NotBlank - gap pre-existente de BCryptPasswordHasher.hash() lancando IllegalArgumentException nao capturada acima de 72 bytes fica fora do escopo desta feature, nao introduzido nem agravado por ela). Padrao de parseCallerId duplicado por controller (UsersController/TelegramLinksController) confirmado como convencao ja aceita no projeto, reaproveitado em AuthController sem introduzir utilitario novo. Rodada de desafio independente executada como passe proprio, sem subagentes - risco medio (autenticacao, sem dinheiro/dado destrutivo irreversivel), independencia reduzida declarada.",
+      "jira": "SV-510",
+      "subtasks": [
+        {
+          "id": "feat-018.1",
+          "name": "Domain + application + i18n (ChangePasswordUseCase, ChangePasswordService, CurrentPasswordMismatchException)",
+          "status": "not-started",
+          "jira": "SV-511",
+          "detail": "Camadas de dominio ate a regra de negocio, sem HTTP ainda - mesmo corte de feat-002.x/017.1. Inclui a correcao do achado MAJOR do Plan Reviewer (excecao dedicada em vez de reusar InvalidCredentialsException).",
+          "checklist": [
+            "domain/port/in/ChangePasswordUseCase.changePassword(UUID callerId, String currentPassword, String newPassword): void.",
+            "domain/model/CurrentPasswordMismatchException nova (401, messageKey error.current-password-mismatch), implementa LocalizedDomainException.",
+            "application/ChangePasswordService: TenantContextHolder.current()==null -> MissingTenantContextException; userRepository.findById(callerId).orElseThrow(CallerNotFoundException::new); passwordHasher.matches(currentPassword, caller.passwordHash())==false -> CurrentPasswordMismatchException; newHash=passwordHasher.hash(newPassword); User atualizado com passwordHash novo e mustChangePassword=false (demais campos preservados); userRepository.update(atualizado).",
+            "3 chaves novas (error.current-password-mismatch.title/detail) em messages_pt_BR/en_US/es.properties, validadas por .github/scripts/validate-i18n-keys.py."
+          ],
+          "validation": "Teste unitario (fakes de UserRepository/PasswordHasher) cobre sucesso (hash muda, mustChangePassword zerado, update() chamado com o objeto correto), tenant ausente, caller nao encontrado, senha atual incorreta.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-018.2",
+          "name": "AuthController (POST /api/v1/auth/change-password) + DTO + testes de integracao + docs",
+          "status": "not-started",
+          "jira": "SV-512",
+          "detail": "Mesmo parsing de X-User-Id ja existente em UsersController/TelegramLinksController (parseCallerId privado, duplicado por convencao ja aceita no projeto). ChangePasswordRequest e DTO novo.",
+          "checklist": [
+            "adapter/in/web/ChangePasswordRequest (currentPassword @NotBlank, newPassword @NotBlank).",
+            "AuthController ganha CALLER_HEADER=X-User-Id + parseCallerId privado + @PostMapping(/change-password) retornando ResponseEntity<Void> 204 No Content.",
+            "DomainExceptionHandler: CurrentPasswordMismatchException adicionada a lista do @ExceptionHandler existente (LocalizedDomainException) - CallerNotFoundException/MissingTenantContextException ja estavam la.",
+            "Teste de integracao (AuthControllerIntegrationTest nova, TenantSchemaIntegrationSupport): 204 sucesso (persistido - login subsequente com a senha nova funciona, login com a antiga falha); 401 caller ausente/invalido; 400 tenant ausente; 401 senha atual incorreta; 400 payload invalido (campos vazios); 1 caso i18n (Accept-Language mudando title/detail do 401 de senha incorreta).",
+            "docs/services/auth-service.md ganha paragrafo de contrato pra POST /api/v1/auth/change-password (mesmo estilo do paragrafo de PATCH /api/v1/users/{id} de feat-017) - NAO adicionar em docs/API-CONTRACTS.md (mesmo precedente de feat-017: aquela nota so cataloga mudancas cross-service).",
+            "docs/DECISIONS-LOG.md ganha entrada curta fechando o item aberto de 2026-09-04 (mustChangePassword nao bloqueia login), registrando a decisao do usuario via AskUserQuestion nesta sessao (nao bloquear outras rotas)."
+          ],
+          "validation": "mvn verify verde (JaCoCo 80% incluso).",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-018.3",
+          "name": "CHANGELOG e verificacao final",
+          "status": "not-started",
+          "jira": "SV-513",
+          "detail": "Fecha a feature com o gate real do harness. Ultima subtask - carrega o item fixo de revisao do vault (docs/) alem do checklist padrao.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (automatica, via tools/jira_story.py na criacao da issue).",
+            "./init.sh (mvn verify) verde com Docker ativo (Testcontainers).",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados antes de done.",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit."
+          ],
+          "validation": "./init.sh sai 0; feature_list.json (deste servico) atualizado com evidence; ../../feature_list.json (raiz) atualizado (fecha epic-029).",
+          "owner": "agente"
+        }
+      ],
       "evidence": ""
     }
   ]

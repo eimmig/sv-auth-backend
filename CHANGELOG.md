@@ -87,3 +87,7 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-487](https://stakevault.atlassian.net/browse/SV-487) - Domain + application + persistencia (UpdateUserUseCase, guarda de ultimo admin, JpaUserRepository.update)
 - [SV-488](https://stakevault.atlassian.net/browse/SV-488) - UsersController (PATCH /api/v1/users/{id}) + DTOs + testes de integracao + docs
 - [SV-489](https://stakevault.atlassian.net/browse/SV-489) - CHANGELOG e verificacao final
+- [SV-510](https://stakevault.atlassian.net/browse/SV-510) - Endpoint de troca de senha (usuario logado)
+- [SV-511](https://stakevault.atlassian.net/browse/SV-511) - Domain + application + i18n (ChangePasswordUseCase, ChangePasswordService, CurrentPasswordMismatchException)
+- [SV-512](https://stakevault.atlassian.net/browse/SV-512) - AuthController (POST /api/v1/auth/change-password) + DTO + testes de integracao + docs
+- [SV-513](https://stakevault.atlassian.net/browse/SV-513) - CHANGELOG e verificacao final
