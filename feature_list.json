@@ -1400,6 +1400,19 @@
           }
         ]
       }
+    },
+    {
+      "id": "feat-018",
+      "name": "Endpoint de troca de senha (usuario logado)",
+      "description": "Fecha epic-029 (raiz). Achado do usuario em uso real (2026-09-17): nao existe endpoint de troca de senha - gap ja documentado desde 2026-09-04 (docs/DECISIONS-LOG.md 'mustChangePassword nao bloqueia login', item aberto explicito). Escopo a confirmar no plan review: endpoint autenticado (usuario ja logado via token PASETO, X-User-Id/X-Tenant-Id injetados pelo gateway) recebendo senha atual + nova, validando a atual contra o passwordHash antes de trocar; zera mustChangePassword ao trocar com sucesso (docs/services/auth-service.md ja cita esse mecanismo como pendente de revisitar - isNew()/JPA). Fluxo de 'esqueci minha senha' (reset via email/token, sem sessao ativa) e escopo maior e separado - NAO incluido aqui a menos que decidido em contrario no plan review. Rota provavel: POST /api/v1/auth/change-password (mesmo prefixo /api/v1/auth/** ja roteado por api-gateway via wildcard - confirmar no plan review que PasetoAuthenticationFilter, que isenta especificamente /api/v1/auth/login de exigir token, nao isenta esta rota nova por engano). Erro RFC 7807 (senha atual incorreta) sem enumerar detalhe que ajude brute-force, mesmo racional ja usado no login (feat-005, erro generico pras 4 causas de falha).",
+      "dependencies": [
+        "feat-005"
+      ],
+      "status": "not-started",
+      "plan_review": "",
+      "jira": "",
+      "subtasks": [],
+      "evidence": ""
     }
   ]
 }
