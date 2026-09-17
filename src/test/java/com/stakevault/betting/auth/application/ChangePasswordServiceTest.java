@@ -1,10 +1,8 @@
 package com.stakevault.betting.auth.application;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,8 +47,8 @@ class ChangePasswordServiceTest {
 
 			service.changePassword(CALLER_ID, "current", "new-password");
 
-			verify(userRepository).update(eq(new User(CALLER_ID, "Admin", "admin@acme", "new-hash", Role.ADMIN, false,
-					existing.createdAt())));
+			verify(userRepository).update(new User(CALLER_ID, "Admin", "admin@acme", "new-hash", Role.ADMIN, false,
+					existing.createdAt()));
 		}
 	}
 
