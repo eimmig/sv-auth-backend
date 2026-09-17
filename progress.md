@@ -2,8 +2,8 @@
 
 ## Estado Atual (Current State)
 
-**Última atualização:** 2026-09-16
-**Feature ativa:** nenhuma (`feat-001..017` todas `done`, backlog atual esgotado)
+**Última atualização:** 2026-09-17
+**Feature ativa:** nenhuma (`feat-001..018` todas `done`, backlog atual esgotado)
 
 ## Status
 
@@ -297,6 +297,44 @@ execução real testados contra a infra de verdade (rede do `docker-compose`, `p
 `/actuator/health` UP em ~5.5s. Imagem usada de fato pelos manifests Kubernetes de
 `infra/feat-004`. 1 subtask (SV-277, story SV-276), 2 PRs (#49 subtask->feature, #50
 feature->develop), CI verde nos dois.
+
+## `feat-018` fechada — `POST /api/v1/auth/change-password` (2026-09-17)
+
+Achado do usuário em uso real: não existia endpoint de troca de senha, gap aberto desde
+`feat-005` (2026-09-04, `mustChangePassword` não bloqueia login, item aberto no
+`DECISIONS-LOG`). `AskUserQuestion` antes do `Plan Reviewer`: `mustChangePassword` continua sem
+bloqueio real de outras rotas — fecha aquele item aberto (entrada nova no `DECISIONS-LOG`,
+2026-09-17). `Plan Reviewer`: `REVISE`, 1 achado MAJOR corrigido no plano — o plano original
+reusava `InvalidCredentialsException` (401, do login) para "senha atual incorreta", mas o texto
+localizado dessa exceção menciona tenant/e-mail, enganoso pro fluxo de troca de senha; corrigido
+com `CurrentPasswordMismatchException` dedicada (mesma mensagem genérica sem enumerar causa, só
+com texto próprio nos 3 locales).
+
+Endpoint: `POST /api/v1/auth/change-password` (`currentPassword`+`newPassword`) → `204` sem
+corpo (token PASETO não carrega `mustChangePassword`, não precisa reemitir). Exige
+`X-User-Id`/`X-Tenant-Id` — confirmado que `PasetoAuthenticationFilter` (`api-gateway`) só isenta
+o path exato de login, não este.
+
+Bug real de produção pego pelo próprio teste de integração (não por revisão de código): o teste
+`shouldChangePasswordAndAllowLoginWithNewPasswordOnly` (login com a senha antiga depois da troca)
+voltava `200` em vez de `401` — `UserJpaEntity.applyUpdate(name, role)`, escrito em `feat-017` só
+para `PATCH /api/v1/users/{id}` (só `name`/`role` editáveis), fazia `UserRepository.update()`
+descartar silenciosamente `passwordHash`/`mustChangePassword` sem lançar erro nenhum (`204` de
+"sucesso", nada persistido). Corrigido alargando `applyUpdate` para os 4 campos mutáveis do
+agregado `User` — `feat-017` não regride (`UpdateUserService` já reenviava os 2 campos extras
+inalterados do registro lido, só não os repassava adiante). Gotcha documentado em
+`docs/CONVENTIONS.md` para os outros 2 serviços Java schema-per-tenant que usam o mesmo padrão
+`findById`+mutar+`save`.
+
+`Delivery Reviewer`/`Test Suite Auditor`/`Persistence Auditor` rodados como self-review de passe
+único (risco médio — autenticação, sem dinheiro/dado destrutivo irreversível) — sem achado
+bloqueante em nenhum. Gate `story→develop` reprovou o SonarCloud na primeira tentativa (2 MINOR
+reais: import não usado, `eq(...)` inútil num único argumento de `verify`) — corrigidos no mesmo
+PR, segunda rodada de CI verde.
+
+Story SV-510 (subtasks SV-511/512/513), PRs #69/#70/#71 (subtask→story) + #72 (story→develop),
+CI+SonarCloud+GitGuardian verdes. `./init.sh` verde. Fechamento em 2 disparos de `--sync-status`
+(`Review` antes do merge final, `Done` só depois, edição separada). Fecha `epic-029` da raiz.
 
 ## `feat-017` fechada — `PATCH /api/v1/users/{id}`, atualizar usuário do tenant (2026-09-16)
 
