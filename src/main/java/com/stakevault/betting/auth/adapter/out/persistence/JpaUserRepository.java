@@ -29,7 +29,7 @@ public class JpaUserRepository implements UserRepository {
 	public User update(User user) {
 		UserJpaEntity entity = jpaRepository.findById(user.id())
 				.orElseThrow(() -> new IllegalStateException("user not found for update: " + user.id()));
-		entity.applyUpdate(user.name(), user.role());
+		entity.applyUpdate(user.name(), user.role(), user.passwordHash(), user.mustChangePassword());
 		return toDomain(jpaRepository.save(entity));
 	}
 
