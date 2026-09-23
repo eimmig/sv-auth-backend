@@ -1517,7 +1517,7 @@
         {
           "id": "feat-019.2",
           "name": "CHANGELOG, verificacao final e revisao do vault",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-551",
           "detail": "Fecha a parte de auth-service do epic-032 da raiz.",
           "checklist": [
@@ -1530,7 +1530,7 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": "2 subtasks (SV-550/551, story SV-549) done, PR #73 (SV-550) subtask->story com CI verde. Rename StakeVault->Arka em pom.xml linha 15 ('<description>') - unico ponto de prosa/metadado com marca fora do GroupId Maven com.stakevault.betting (identificador tecnico deferido, docs/DECISIONS-LOG.md raiz 2026-09-23). Plan Reviewer (passe proprio, cobrindo os 4 servicos Java de uma vez): READY, sem achado - grep dedicado confirmou ausencia de spring.application.name/info.app/springdoc/swagger customizado nos 4 servicos. Delivery Reviewer (passe proprio sobre o diff completo, 3 arquivos, 37 linhas): PASS, sem achado. Residuo aceito nesta subtask, autorizado pelo usuario: ./init.sh completo (mvn verify, que inclui o repackage do spring-boot-maven-plugin) nao pode rodar nesta sessao porque 8 processos java.exe orfaos de um load-test em andamento do usuario (auth/bets/stats/api-gateway, 2 cada) mantinham os jars antigos de target/ abertos, e o Windows nao deixa o Maven renomear um jar em uso - usuario confirmou via AskUserQuestion que sao processos de outro teste dele e pediu pra pular o build em vez de derrubar-los. Verificacao alternativa rodada: 'mvn -q -DskipTests=false test' (para antes da fase package/repackage, onde o lock acontece) - EXIT=0, todos os testes passando, sem nenhuma mudanca de comportamento (diff e so uma linha de prosa em pom.xml, sem risco de regressao de teste). ./init.sh completo (com repackage) fica pendente pra quando os processos daquele load-test forem encerrados - nao bloqueia fechar esta feature dado o tamanho/risco do diff e a autorizacao explicita do usuario. Fecha a parte de auth-service do epic-032 da raiz."
     }
   ]
 }
