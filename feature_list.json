@@ -1550,7 +1550,7 @@
         {
           "id": "feat-020.2",
           "name": "CHANGELOG, verificacao final e revisao do vault (documentar o mecanismo em docs/pipeline-ci-cd.md, raiz)",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-563",
           "detail": "Fecha o 1o harness do epic-033 - estabelece o padrao pra replicar nos outros 6 repositorios.",
           "checklist": [
@@ -1565,7 +1565,7 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": "2 subtasks (SV-562/563, story SV-561) done, PRs #76/#77 (subtask->story) + #78 (story->develop->main, promocao real) - CI+SonarCloud verdes. Job 'release' identico ao desenhado/revisado (2 subagentes independentes) nesta feature, primeiro harness do epic-033. Verificacao real end-to-end confirmada: push real em main (2026-09-23T23:10Z) - tag v0.1.0 criada, GitHub Release 'Latest' publicado, commit chore(release) empurrado pra main via RELEASE_TOKEN, sem loop de CI. Job 'deploy' (nao relacionado, pre-existente) falhou como esperado - KUBE_CONFIG nao alcanca o cluster a partir de runners hospedados (residual ja documentado, promocao pausada por decisao do usuario ate ele resolver o caminho de rede). docs/pipeline-ci-cd.md (raiz) ganhou secao documentando o mecanismo completo (RELEASE_TOKEN, [skip ci], bootstrap de tag v0.0.0, achado de duplicacao em bets-service) pros outros 6 repositorios reaproveitarem. Fecha o 1o harness do epic-033 da raiz."
     }
   ]
 }
