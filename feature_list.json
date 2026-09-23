@@ -1498,6 +1498,39 @@
           }
         ]
       }
+    },
+    {
+      "id": "feat-019",
+      "name": "Reformulacao de marca: StakeVault -> Arka (pom.xml description)",
+      "description": "Continuacao do epic-032 da raiz (rebranding StakeVault -> Arka) neste harness - 4o harness na ordem sugerida (depois do vault raiz, apps/web e telegram-integration, todos ja done), primeiro dos 4 servicos Java. grep -ril 'stakevault' (case-insensitive, excluindo .git/target/.idea) achou a marca espalhada em toda a arvore src/main/java/com/stakevault/betting/** e src/test/java/com/stakevault/betting/** (150+ arquivos) - isso e o GroupId Maven com.stakevault.betting, usado como pacote Java raiz, identificador tecnico real ja registrado como fora de escopo em docs/DECISIONS-LOG.md (raiz, 2026-09-23): renomear pacote Java exige mover todo arquivo de diretorio + reescrever todo import, risco desproporcional a uma troca de nome/marca. .env (nao versionado, git ls-files confirma untracked) tem RABBITMQ_USER=stakevault - mesma classe de identificador tecnico, fora de escopo. CHANGELOG.md/feature_list.json so citam a marca em links reais do Jira (stakevault.atlassian.net) e evidence historica - ja decidido fora de escopo (mesmo principio usado em telegram-integration feat-011). Escopo real, unico lugar de prosa/metadado sem relacao com o pacote Java: pom.xml linha 15, '<description>Cadastro e autenticacao (StakeVault)</description>' - artifactId ja e 'auth-service', sem marca. Confirmado (grep dedicado) que nao existe spring.application.name customizado, banner de Actuator/info nem titulo de OpenAPI/Swagger expondo a marca a um operador real - pom.xml description e o unico ponto.",
+      "dependencies": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-23, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado antes de codificar - passe proprio (escopo trivial/mecanico, sem subagentes; mesmo plano base reaproveitado nos outros 3 servicos Java, ver bets-service/stats-service/api-gateway). Veredito: READY, sem achado. Grounding: grep -ril 'stakevault' nos 4 servicos Java + grep dedicado por spring.application.name/info.app/springdoc/swagger nos 4 (zero ocorrencia em qualquer um) - confirma que pom.xml description e o unico ponto de marca visivel a um operador real, fora do GroupId/pacote Java (identificador tecnico ja deferido).",
+      "jira": "SV-549",
+      "subtasks": [
+        {
+          "id": "feat-019.1",
+          "name": "pom.xml: description 'StakeVault' -> 'Arka'",
+          "status": "done",
+          "jira": "SV-550"
+        },
+        {
+          "id": "feat-019.2",
+          "name": "CHANGELOG, verificacao final e revisao do vault",
+          "status": "not-started",
+          "jira": "SV-551",
+          "detail": "Fecha a parte de auth-service do epic-032 da raiz.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (Unreleased)",
+            "./init.sh do servico e da raiz verdes",
+            "Delivery Reviewer rodado sobre o diff real desta feature",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit"
+          ],
+          "validation": "init.sh verde, Delivery Reviewer sem achado real pendente, evidence preenchida.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }

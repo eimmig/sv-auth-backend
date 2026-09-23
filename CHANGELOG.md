@@ -91,3 +91,6 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-511](https://stakevault.atlassian.net/browse/SV-511) - Domain + application + i18n (ChangePasswordUseCase, ChangePasswordService, CurrentPasswordMismatchException)
 - [SV-512](https://stakevault.atlassian.net/browse/SV-512) - AuthController (POST /api/v1/auth/change-password) + DTO + testes de integracao + docs
 - [SV-513](https://stakevault.atlassian.net/browse/SV-513) - CHANGELOG e verificacao final
+- [SV-549](https://stakevault.atlassian.net/browse/SV-549) - Reformulacao de marca: StakeVault -> Arka (pom.xml description)
+- [SV-550](https://stakevault.atlassian.net/browse/SV-550) - pom.xml: description 'StakeVault' -> 'Arka'
+- [SV-551](https://stakevault.atlassian.net/browse/SV-551) - CHANGELOG, verificacao final e revisao do vault
