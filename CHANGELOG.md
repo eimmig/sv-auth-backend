@@ -7,6 +7,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-23
+
 - [SV-9](https://stakevault.atlassian.net/browse/SV-9) - Alinhar as chaves de projeto ao padrão do SonarCloud
 - [SV-10](https://stakevault.atlassian.net/browse/SV-10) - Setup do projeto
 - [SV-11](https://stakevault.atlassian.net/browse/SV-11) - Bootstrap do pom.xml e esqueleto hexagonal
