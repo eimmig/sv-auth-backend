@@ -413,3 +413,20 @@ achados).
 `ApplicationContext`, todos em cascata a partir de "Previous attempts to find a Docker
 environment failed") — não é regressão de código, Docker Desktop não estava rodando nesta
 máquina de desenvolvimento. Subiu o Docker Desktop e rodou de novo: verde.
+
+## `feat-019` fechada — reformulação de marca StakeVault -> Arka (2026-09-23)
+
+Continuação do `epic-032` da raiz - 4º harness na ordem sugerida (depois do vault raiz, `apps/web`
+e `telegram-integration`), primeiro dos 4 serviços Java. `grep -ril "stakevault"` achou a marca
+espalhada em toda a árvore `com/stakevault/betting/**` - o GroupId Maven, identificador técnico
+real já registrado como fora de escopo (`docs/DECISIONS-LOG.md` raiz, 2026-09-23). Único ponto de
+prosa/metadado real: `pom.xml` linha 15 (`<description>`). Plan Reviewer (passe próprio, cobrindo
+os 4 serviços Java de uma vez): READY. Delivery Reviewer: PASS. 2 subtasks (SV-550/551, story
+SV-549), PRs #73-75, CI+SonarCloud verdes.
+
+**Achado de ambiente, não desta mudança**: 8 processos `java.exe` órfãos de outro teste do usuário
+(auth/bets/stats/api-gateway, 2 cada) travavam os jars antigos em `target/`, impedindo o
+`repackage` do `mvn verify` localmente no Windows. Usuário autorizou pular o build local em vez de
+derrubar os processos (`AskUserQuestion`) - rodado `mvn test` (para antes do `package`) como
+verificação alternativa, EXIT=0. O gate real (CI no GitHub Actions, Linux, sem o lock) rodou `mvn
+verify` completo com sucesso, fechando o gap.

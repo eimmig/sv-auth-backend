@@ -91,3 +91,9 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-511](https://stakevault.atlassian.net/browse/SV-511) - Domain + application + i18n (ChangePasswordUseCase, ChangePasswordService, CurrentPasswordMismatchException)
 - [SV-512](https://stakevault.atlassian.net/browse/SV-512) - AuthController (POST /api/v1/auth/change-password) + DTO + testes de integracao + docs
 - [SV-513](https://stakevault.atlassian.net/browse/SV-513) - CHANGELOG e verificacao final
+- [SV-549](https://stakevault.atlassian.net/browse/SV-549) - Reformulacao de marca: StakeVault -> Arka (pom.xml description)
+- [SV-550](https://stakevault.atlassian.net/browse/SV-550) - pom.xml: description 'StakeVault' -> 'Arka'
+- [SV-551](https://stakevault.atlassian.net/browse/SV-551) - CHANGELOG, verificacao final e revisao do vault
+- [SV-561](https://stakevault.atlassian.net/browse/SV-561) - CI: gerar versao (semver + tag + Release + bump de pom.xml + corte de CHANGELOG) ao merge em main
+- [SV-562](https://stakevault.atlassian.net/browse/SV-562) - Job 'release' no ci.yml + .github/scripts/cut-changelog.py
+- [SV-563](https://stakevault.atlassian.net/browse/SV-563) - CHANGELOG, verificacao final e revisao do vault (documentar o mecanismo em docs/pipeline-ci-cd.md, raiz)
