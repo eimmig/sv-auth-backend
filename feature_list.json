@@ -1531,6 +1531,41 @@
         }
       ],
       "evidence": "2 subtasks (SV-550/551, story SV-549) done, PR #73 (SV-550) subtask->story com CI verde. Rename StakeVault->Arka em pom.xml linha 15 ('<description>') - unico ponto de prosa/metadado com marca fora do GroupId Maven com.stakevault.betting (identificador tecnico deferido, docs/DECISIONS-LOG.md raiz 2026-09-23). Plan Reviewer (passe proprio, cobrindo os 4 servicos Java de uma vez): READY, sem achado - grep dedicado confirmou ausencia de spring.application.name/info.app/springdoc/swagger customizado nos 4 servicos. Delivery Reviewer (passe proprio sobre o diff completo, 3 arquivos, 37 linhas): PASS, sem achado. Residuo aceito nesta subtask, autorizado pelo usuario: ./init.sh completo (mvn verify, que inclui o repackage do spring-boot-maven-plugin) nao pode rodar nesta sessao porque 8 processos java.exe orfaos de um load-test em andamento do usuario (auth/bets/stats/api-gateway, 2 cada) mantinham os jars antigos de target/ abertos, e o Windows nao deixa o Maven renomear um jar em uso - usuario confirmou via AskUserQuestion que sao processos de outro teste dele e pediu pra pular o build em vez de derrubar-los. Verificacao alternativa rodada: 'mvn -q -DskipTests=false test' (para antes da fase package/repackage, onde o lock acontece) - EXIT=0, todos os testes passando, sem nenhuma mudanca de comportamento (diff e so uma linha de prosa em pom.xml, sem risco de regressao de teste). ./init.sh completo (com repackage) fica pendente pra quando os processos daquele load-test forem encerrados - nao bloqueia fechar esta feature dado o tamanho/risco do diff e a autorizacao explicita do usuario. Fecha a parte de auth-service do epic-032 da raiz."
+    },
+    {
+      "id": "feat-020",
+      "name": "CI: gerar versao (semver + tag + Release + bump de pom.xml + corte de CHANGELOG) ao merge em main",
+      "description": "Primeiro harness do epic-033 da raiz ('CI: gerar versao automaticamente ao dar merge para master, nos 7 repositorios') - estabelece o mecanismo reaproveitado depois nos outros 6 repositorios. A cada push em main: calcula a proxima versao semantica a partir de Conventional Commits desde a ultima tag (ietf-tools/semver-action), atualiza <version> do pom.xml (org.codehaus.mojo:versions-maven-plugin:set), corta CHANGELOG.md (renomeia '## [Unreleased]' pra '## [X.Y.Z] - data', abre um '## [Unreleased]' novo vazio), commita+empurra de volta pra main, cria tag Git + GitHub Release (ncipollo/release-action). Decisao do usuario via AskUserQuestion (nao redecidir): escopo e 'fazer os 2' (tag/Release E bump de manifest/changelog), nao so tag solta. Mecanismo pra escrever de volta em main apesar da protecao de branch (required status check 'pipeline', GITHUB_TOKEN padrao roda como github-actions[bot] que nao e admin e seria rejeitado - confirmado via docs oficiais do GitHub): usuario gerou um PAT classic (scope repo) do proprio dono/admin, distribuido como secret RELEASE_TOKEN nos 7 repositorios via gh secret set (nao um novo por harness - ja feito uma vez pra todos).",
+      "dependencies": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-23, Plan Reviewer (review-suite:ln-11-plan-reviewer) - passe proprio com pesquisa real (nao suposicao) + 2 subagentes independentes (execution-simulation, adversarial/security), risco medio-alto (toca CI de producao dos 7 repos + credencial de bypass). Veredito: REVISE, 2 achados corrigidos antes de codificar. BLOCKER: ncipollo/release-action sem 'commit:' explicito aponta pro commit ANTES do bump (default github.sha) - tag/release ficaria com a versao errada; corrigido capturando 'git rev-parse HEAD' apos o push proprio e passando via 'commit:'. MAJOR (seguranca): 'persist-credentials: true' (default do actions/checkout) deixaria o PAT RELEASE_TOKEN gravado em disco (git credential helper) durante o job inteiro, exposto a qualquer resolucao de dependencia Maven no meio - corrigido com 'persist-credentials: false' no checkout (nem precisa do PAT ali, GITHUB_TOKEN padrao ja le tags/cria release, que nao sao protegidos por branch protection) e o PAT usado so na URL do 'git push' final (vida curta de um unico comando). 2 achados MINOR corrigidos: guarda de 'nada pra commitar' (git diff --cached --quiet), validacao barata de XML do pom.xml pos-bump (xml.dom.minidom.parse, sem invocar Maven de novo pra nao precisar de deps ja resolvidas), interpolacao de variavel via env: em vez de direto na string do run: (hardening padrao do GitHub, risco pratico baixo aqui - sem contribuidor externo - mas custo zero). Residual aceito, nao corrigido: corrida entre 2 merges quase simultaneos em main - falha visivel (push non-fast-forward), nao silenciosa; volume de merges deste projeto solo nao justifica lock/retry (KISS, mesmo racional ja usado pra rejeitar ArgoCD/repositorio-de-tooling-compartilhado). Pesquisa real: ietf-tools/semver-action (ativo, v1.11.0 2025-10-26, SHA c90370b resolvido), ncipollo/release-action (ativo, v1.21.0 2026-03-14, SHA 339a818 resolvido), versions-maven-plugin 2.18.0 (latest Maven Central), uv version/npm version confirmados via docs oficiais, comportamento de bypass de branch protection e de GITHUB_TOKEN-nao-dispara-workflow confirmados via docs.github.com (nao suposicao).",
+      "jira": "SV-561",
+      "subtasks": [
+        {
+          "id": "feat-020.1",
+          "name": "Job 'release' no ci.yml + .github/scripts/cut-changelog.py",
+          "status": "done",
+          "jira": "SV-562"
+        },
+        {
+          "id": "feat-020.2",
+          "name": "CHANGELOG, verificacao final e revisao do vault (documentar o mecanismo em docs/pipeline-ci-cd.md, raiz)",
+          "status": "not-started",
+          "jira": "SV-563",
+          "detail": "Fecha o 1o harness do epic-033 - estabelece o padrao pra replicar nos outros 6 repositorios.",
+          "checklist": [
+            "Entrada em CHANGELOG.md (Unreleased)",
+            "./init.sh do servico e da raiz verdes",
+            "Delivery Reviewer rodado sobre o diff real desta feature",
+            "Verificacao real: push de teste em main confirma job 'release' rodando (tag/Release criados, pom.xml/CHANGELOG.md bumped corretamente, sem loop de CI)",
+            "docs/pipeline-ci-cd.md (raiz) ganha secao documentando o mecanismo (semver-action + versions-maven-plugin + RELEASE_TOKEN + guard [skip ci]) pros outros 6 repositorios reaproveitarem sem redescobrir",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit"
+          ],
+          "validation": "Push real em main confirmado no GitHub Actions (job release verde, tag/Release visiveis no repositorio), init.sh verde, Delivery Reviewer sem achado real pendente, evidence preenchida.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
