@@ -3,6 +3,8 @@ package com.stakevault.betting.auth.adapter.out.http;
 import java.time.Duration;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -16,6 +18,8 @@ import com.stakevault.betting.auth.domain.port.out.DownstreamTenantProvisioner;
 
 @Component
 public class RestClientDownstreamTenantProvisioner implements DownstreamTenantProvisioner {
+
+	private static final Logger log = LoggerFactory.getLogger(RestClientDownstreamTenantProvisioner.class);
 
 	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
 	private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
@@ -61,6 +65,7 @@ public class RestClientDownstreamTenantProvisioner implements DownstreamTenantPr
 					.toBodilessEntity();
 		}
 		catch (HttpClientErrorException.Conflict _) {
+			log.debug("tenant {} already provisioned in {}", slug, serviceName);
 		}
 		catch (RestClientException e) {
 			throw new DownstreamProvisioningException(serviceName, e);
