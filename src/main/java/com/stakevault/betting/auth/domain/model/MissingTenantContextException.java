@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class MissingTenantContextException extends RuntimeException implements LocalizedDomainException {
+public class MissingTenantContextException extends LocalizedRuntimeException {
 
 	public MissingTenantContextException() {
 		super("missing X-Tenant-Id");

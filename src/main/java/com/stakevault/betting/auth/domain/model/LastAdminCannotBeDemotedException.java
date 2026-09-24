@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class LastAdminCannotBeDemotedException extends RuntimeException implements LocalizedDomainException {
+public class LastAdminCannotBeDemotedException extends LocalizedRuntimeException {
 
 	public LastAdminCannotBeDemotedException() {
 		super("cannot demote the last remaining admin of the tenant");

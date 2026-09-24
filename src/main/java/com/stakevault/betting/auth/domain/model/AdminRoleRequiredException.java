@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class AdminRoleRequiredException extends RuntimeException implements LocalizedDomainException {
+public class AdminRoleRequiredException extends LocalizedRuntimeException {
 
 	public AdminRoleRequiredException() {
 		super("caller is not an admin of the resolved tenant");

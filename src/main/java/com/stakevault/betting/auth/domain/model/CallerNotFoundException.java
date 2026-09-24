@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class CallerNotFoundException extends RuntimeException implements LocalizedDomainException {
+public class CallerNotFoundException extends LocalizedRuntimeException {
 
 	public CallerNotFoundException() {
 		super("caller does not exist in the current tenant");

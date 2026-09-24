@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class TelegramLinkCodeNotFoundException extends RuntimeException implements LocalizedDomainException {
+public class TelegramLinkCodeNotFoundException extends LocalizedRuntimeException {
 
 	public TelegramLinkCodeNotFoundException() {
 		super("telegram link code not found");
