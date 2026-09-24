@@ -3,6 +3,8 @@ package com.stakevault.betting.auth.adapter.out.http;
 import java.time.Duration;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -14,16 +16,10 @@ import org.springframework.web.client.RestClientException;
 import com.stakevault.betting.auth.domain.model.DownstreamProvisioningException;
 import com.stakevault.betting.auth.domain.port.out.DownstreamTenantProvisioner;
 
-/**
- * Chama a mesma rota administrativa (POST /api/v1/admin/tenants, X-Admin-Api-Key) que
- * bets-service/stats-service já expõem para o operador - aqui só automatiza as 2 chamadas
- * manuais que seguem a de auth-service (ver docs/DECISIONS-LOG.md item 3 e docs/API-CONTRACTS.md
- * "Chamadas administrativas do operador da plataforma"). Cada serviço continua com sua rota
- * standalone intacta - se uma chamada falhar aqui, o operador pode repeti-la direto naquele
- * serviço (idempotente, 409 se já provisionado).
- */
 @Component
 public class RestClientDownstreamTenantProvisioner implements DownstreamTenantProvisioner {
+
+	private static final Logger log = LoggerFactory.getLogger(RestClientDownstreamTenantProvisioner.class);
 
 	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
 	private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
@@ -69,7 +65,7 @@ public class RestClientDownstreamTenantProvisioner implements DownstreamTenantPr
 					.toBodilessEntity();
 		}
 		catch (HttpClientErrorException.Conflict _) {
-			// Ja provisionado (409) - idempotente, nao e falha.
+			log.debug("tenant {} already provisioned in {}", slug, serviceName);
 		}
 		catch (RestClientException e) {
 			throw new DownstreamProvisioningException(serviceName, e);

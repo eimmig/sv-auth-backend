@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class TelegramLinkCodeExpiredException extends RuntimeException implements LocalizedDomainException {
+public class TelegramLinkCodeExpiredException extends LocalizedRuntimeException {
 
 	public TelegramLinkCodeExpiredException() {
 		super("telegram link code expired");

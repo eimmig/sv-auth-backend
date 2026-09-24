@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class CurrentPasswordMismatchException extends RuntimeException implements LocalizedDomainException {
+public class CurrentPasswordMismatchException extends LocalizedRuntimeException {
 
 	public CurrentPasswordMismatchException() {
 		super("current password does not match");

@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class UserNotFoundException extends RuntimeException implements LocalizedDomainException {
+public class UserNotFoundException extends LocalizedRuntimeException {
 
 	public UserNotFoundException() {
 		super("user does not exist in the resolved tenant");

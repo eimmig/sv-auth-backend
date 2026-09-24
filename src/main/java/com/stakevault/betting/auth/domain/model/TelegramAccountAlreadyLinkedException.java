@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class TelegramAccountAlreadyLinkedException extends RuntimeException implements LocalizedDomainException {
+public class TelegramAccountAlreadyLinkedException extends LocalizedRuntimeException {
 
 	public TelegramAccountAlreadyLinkedException() {
 		super("telegram account already linked");

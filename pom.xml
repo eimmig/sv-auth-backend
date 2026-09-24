@@ -123,10 +123,6 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 			<plugin>
-				<!-- Gate de 80% de cobertura de linha vinculado a fase verify - ver
-				     docs/TESTING.md. Ponto de entrada (*Application) excluido: e um
-				     unico delegate para SpringApplication.run, sem ramo logico proprio
-				     para testar, e @SpringBootTest sobe o contexto sem passar por main(). -->
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.15</version>

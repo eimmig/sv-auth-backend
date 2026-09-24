@@ -32,17 +32,8 @@ class AdminTenantControllerIntegrationTest extends TenantSchemaIntegrationSuppor
 
 	private final HttpClient httpClient = HttpClient.newHttpClient();
 
-	// Prova de verdade da orquestracao (auth-service chama bets-service/stats-service, ver
-	// docs/DECISIONS-LOG.md item 3 - revertido pra orquestracao real a pedido do usuario,
-	// 2026-09-11): 2 stubs HTTP reais respondendo a mesma rota administrativa que os servicos
-	// de destino expoem de verdade, registrados via @DynamicPropertySource antes do contexto
-	// Spring subir - nao mocka o adapter, exercita RestClientDownstreamTenantProvisioner real.
 	private static final CopyOnWriteArrayList<String> BETS_SERVICE_CALLS = new CopyOnWriteArrayList<>();
 	private static final CopyOnWriteArrayList<String> STATS_SERVICE_CALLS = new CopyOnWriteArrayList<>();
-	// So o stub do stats-service simula queda (503) - o gatilho e o mesmo slug em ambas as
-	// chamadas, entao o comportamento precisa ser por SERVIDOR, nao por conteudo do corpo
-	// (achado real escrevendo este teste: os 2 stubs compartilhando o mesmo predicado de
-	// gatilho faziam o bets-service tambem "cair" pro mesmo slug).
 	private static final HttpServer BETS_SERVICE_STUB = startStub(BETS_SERVICE_CALLS, false);
 	private static final HttpServer STATS_SERVICE_STUB = startStub(STATS_SERVICE_CALLS, true);
 
@@ -60,8 +51,6 @@ class AdminTenantControllerIntegrationTest extends TenantSchemaIntegrationSuppor
 			server.createContext("/api/v1/admin/tenants", exchange -> {
 				String body = new String(exchange.getRequestBody().readAllBytes());
 				receivedSlugs.add(body);
-				// Slug "stats-outage" simula ESTE servidor fora do ar - so aplica no stub
-				// configurado com simulatesOutage=true (ver comentario no campo STATS_SERVICE_STUB).
 				int status = (simulatesOutage && body.contains("stats-outage")) ? 503 : 201;
 				exchange.sendResponseHeaders(status, 0);
 				exchange.getResponseBody().close();
