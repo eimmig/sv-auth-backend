@@ -1,6 +1,6 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class InvalidCredentialsException extends RuntimeException implements LocalizedDomainException {
+public class InvalidCredentialsException extends LocalizedRuntimeException {
 
 	public InvalidCredentialsException() {
 		super("invalid tenant slug, email or password");
