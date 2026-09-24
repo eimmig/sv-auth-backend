@@ -8,6 +8,12 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 ## [Unreleased]
 
 - Remover todos os comentários restantes do código, testes e configuração (convenção de zero comentário, `docs/convencoes.md`)
+- [SV-585](https://stakevault.atlassian.net/browse/SV-585) - Extrair LocalizedRuntimeException (2o harness do epic-034 da raiz)
+- [SV-586](https://stakevault.atlassian.net/browse/SV-586) - Extrair LocalizedRuntimeException, migrar SlugRelatedDomainException e as 14 excecoes diretas
+- [SV-587](https://stakevault.atlassian.net/browse/SV-587) - CHANGELOG e verificacao final
+
+## [0.1.0] - 2026-09-23
+
 - [SV-9](https://stakevault.atlassian.net/browse/SV-9) - Alinhar as chaves de projeto ao padrão do SonarCloud
 - [SV-10](https://stakevault.atlassian.net/browse/SV-10) - Setup do projeto
 - [SV-11](https://stakevault.atlassian.net/browse/SV-11) - Bootstrap do pom.xml e esqueleto hexagonal
@@ -98,6 +104,3 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-561](https://stakevault.atlassian.net/browse/SV-561) - CI: gerar versao (semver + tag + Release + bump de pom.xml + corte de CHANGELOG) ao merge em main
 - [SV-562](https://stakevault.atlassian.net/browse/SV-562) - Job 'release' no ci.yml + .github/scripts/cut-changelog.py
 - [SV-563](https://stakevault.atlassian.net/browse/SV-563) - CHANGELOG, verificacao final e revisao do vault (documentar o mecanismo em docs/pipeline-ci-cd.md, raiz)
-- [SV-585](https://stakevault.atlassian.net/browse/SV-585) - Extrair LocalizedRuntimeException (2o harness do epic-034 da raiz)
-- [SV-586](https://stakevault.atlassian.net/browse/SV-586) - Extrair LocalizedRuntimeException, migrar SlugRelatedDomainException e as 14 excecoes diretas
-- [SV-587](https://stakevault.atlassian.net/browse/SV-587) - CHANGELOG e verificacao final
