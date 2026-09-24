@@ -102,7 +102,6 @@ class RestClientDownstreamTenantProvisionerTest {
 
 	@Test
 	void shouldTreat409AlreadyProvisionedAsSuccessNotFailure() {
-		// Idempotente por design (ver docs/API-CONTRACTS.md) - 409 nunca deve lancar.
 		assertThatCode(() -> provisioner.provisionBetsService("already-provisioned")).doesNotThrowAnyException();
 	}
 

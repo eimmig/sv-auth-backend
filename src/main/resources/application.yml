@@ -4,7 +4,6 @@ server:
 spring:
   application:
     name: auth-service
-  # Migracao lazy por schema (feat-001.3 le X-Tenant-Id), nao lista fixa no boot.
   flyway:
     enabled: false
   jpa:
@@ -58,14 +57,10 @@ spring:
   config:
     activate:
       on-profile: test
-  # Datasource vem do Testcontainers (@ServiceConnection) em runtime.
 
 admin:
   api-key: test-admin-api-key
 
-# Sobrescrito por @DynamicPropertySource nos testes que exercitam a orquestracao de verdade
-# (AdminTenantControllerIntegrationTest); valor aqui so evita falha de resolucao de propriedade
-# em testes que nao precisam disso - chamada cai em connection refused, capturada como falha.
 tenant-provisioning:
   bets-service-url: http://localhost:0
   stats-service-url: http://localhost:0

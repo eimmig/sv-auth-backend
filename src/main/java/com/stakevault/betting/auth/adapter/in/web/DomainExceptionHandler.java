@@ -40,7 +40,6 @@ public class DomainExceptionHandler {
 		this.messageSource = messageSource;
 	}
 
-	// InvalidAdminApiKeyException fires from AdminApiKeyFilter, before DispatcherServlet - not listed here on purpose.
 	@ExceptionHandler({ TenantAlreadyProvisionedException.class, InvalidTenantSlugException.class,
 			MissingCallerContextException.class, MissingTenantContextException.class,
 			AdminRoleRequiredException.class, EmailAlreadyRegisteredException.class,
