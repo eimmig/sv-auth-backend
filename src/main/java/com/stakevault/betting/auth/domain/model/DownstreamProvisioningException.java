@@ -1,6 +1,5 @@
 package com.stakevault.betting.auth.domain.model;
 
-/** Falha ao provisionar o tenant num serviço downstream (bets-service/stats-service). */
 public class DownstreamProvisioningException extends RuntimeException {
 
 	private final String serviceName;
