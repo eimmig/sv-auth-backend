@@ -7,6 +7,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-24
+
 - Remover todos os comentários restantes do código, testes e configuração (convenção de zero comentário, `docs/convencoes.md`)
 - [SV-585](https://stakevault.atlassian.net/browse/SV-585) - Extrair LocalizedRuntimeException (2o harness do epic-034 da raiz)
 - [SV-586](https://stakevault.atlassian.net/browse/SV-586) - Extrair LocalizedRuntimeException, migrar SlugRelatedDomainException e as 14 excecoes diretas
