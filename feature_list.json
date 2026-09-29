@@ -1640,7 +1640,7 @@
         {
           "id": "feat-022.2",
           "name": "Habilitar validacao SonarCloud em eventos push (nao bloqueante) + fechamento",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-663",
           "detail": "Fecha o gap real que deixou os 2 issues passarem: hoje o ci.yml pula por completo a validacao de zero issues em push (so valida PRs). Achado durante a implementacao (nao previsto no plan review original): a API do SonarCloud no plano gratuito recusa com 403 qualquer branch != main (confirmado ao vivo, GET /issues/search?branch=develop) - documentado em docs/pipeline-ci-cd.md 'Terceira/Setima armadilha' como correcao deliberada, nao descuido. Corrigido para rodar so em push pra main (onde a API funciona - branch main tem leak period estabelecido), continua pulado em push pra develop; continue-on-error pra nao derrubar deploy/release por achado nao relacionado.",
           "checklist": [
