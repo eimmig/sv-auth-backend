@@ -1610,6 +1610,51 @@
         }
       ],
       "evidence": "Fechado em 2026-09-24 por feat-021.1/feat-021.2 (2 subtasks, story SV-585). PR #79 (SV-586, subtask->story) - LocalizedRuntimeException (package-private, seguindo o precedente ja estabelecido por SlugRelatedDomainException neste pacote) extraida; SlugRelatedDomainException migrada pra estende-la (removeu seu proprio messageArgs() manual); as 13 excecoes zero-arg + EmailAlreadyRegisteredException migradas pra estende-la diretamente; TenantSchemaNotFoundException/DownstreamProvisioningException nao tocadas (nao implementam LocalizedDomainException). Comportamento observavel confirmado identico linha a linha no diff (messageKey/httpStatusCode/messageArgs/getCause/slug()); zero arquivo de teste tocado - os 4 testes de excecao ja existentes (InvalidAdminApiKeyExceptionTest/InvalidTenantSlugExceptionTest/TenantAlreadyProvisionedExceptionTest/LocalizedDomainExceptionTest) passaram sem modificacao. PR #80 (story->develop, gate completo) - CI+SonarCloud verdes. Delivery Reviewer/Test Suite Auditor/Persistence Auditor (self-conduzidos): PASS nos 3, sem achado. Padrao de visibilidade por-servico (package-private aqui vs public em bets-service) e o achado de auditar quais excecoes realmente implementam LocalizedDomainException documentados em docs/convencoes.md (raiz). **Achado de processo real (registrado, nao escondido)**: tentei fechar este status:done/evidence via PR separado (chore/SV-585-close-evidence, #81) apos o merge de PR #80 - reprovado pelo gate de CHANGELOG.md do CI (so tocava feature_list.json, sem mudanca de produto pra registrar em Unreleased, gate estruturalmente nao satisfazivel por um PR so-harness). PR fechado sem merge, commit final empurrado direto pra develop (bypass do branch protection) - mesmo padrao ja aceito/documentado em bets-service feat-022. **Licao pra proxima sessao**: escrever status:done + evidence NA branch da story, dentro do PR da ultima subtask, ANTES de abrir o PR story->develop - nao depois. Fecha a parte de auth-service do epic-034 da raiz."
+    },
+    {
+      "id": "feat-022",
+      "name": "Corrigir profundidade de heranca (java:S110) e fechar gap do gate SonarCloud em push",
+      "goal": "Fechar os 2 apontamentos reais e abertos do SonarCloud (java:S110) em auth-service, e corrigir o gap de CI que deixou passar (validacao de zero issues nunca roda em push, so em pull_request).",
+      "scope": "Remocao da classe SlugRelatedDomainException (achata a heranca de InvalidTenantSlugException/TenantAlreadyProvisionedException); ci.yml passa a validar SonarCloud tambem em push pra main (nao develop - API do SonarCloud recusa branch != main), sem bloquear deploy/release (continue-on-error).",
+      "description": "Achado real do usuario (2026-09-29): SonarCloud (API consultada diretamente, nao suposicao) mostra 2 issues MAJOR abertos, java:S110 (profundidade de heranca > 5 autorizados) em InvalidTenantSlugException.java e TenantAlreadyProvisionedException.java - introduzidos por epic-034 (feat-021) quando SlugRelatedDomainException passou a estender a LocalizedRuntimeException nova, empurrando as 2 subclasses concretas para 6 ancestrais. Nao pegos pelo gate real (PR #80, story->develop) porque o diff daquele PR mudou so a classe-mae (SlugRelatedDomainException.java) - as 2 subclasses concretas nao tiveram linha tocada, e a analise de Pull Request do SonarCloud escopa 'novo codigo' por linha alterada (blame), nao por efeito cascata de heranca. So aparece na analise de branch completa (confirmado via API: issues/search com inNewCodePeriod=true no branch mostra os 2). Causa raiz adicional, tambem real: o ci.yml deste repositorio pula por completo a validacao de zero issues (.github/scripts/validate-sonar-issues.py) em eventos push - so valida o diff de cada PR isoladamente, nunca o estado real da branch apos merge. Escopo: (1) achatar a hierarquia removendo SlugRelatedDomainException (unico uso: essas 2 classes - campo slug + getter duplicados diretamente, ~5 linhas cada, abaixo do piso tipico de deteccao de CPD); (2) habilitar sonar.qualitygate.wait + validate-sonar-issues.py tambem em push pra develop/main, com continue-on-error:true nesses 2 steps para nao bloquear silenciosamente deploy/release (que dependem de pipeline via needs: - sem continue-on-error o achado ficaria visivel mas quebraria producao por debito nao relacionado). Mesmo gap de push-scope existe nos outros 5 repositorios de aplicacao (mesmo ci.yml, mesma origem) - fica para features separadas por harness, reaproveitando o plan review condensado (mesmo padrao de epic-034), fora do escopo desta feature. Fecha a parte auth-service do epic-038 da raiz.",
+      "dependencies": [],
+      "status": "in-progress",
+      "plan_review": "2026-09-29, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano antes de qualquer codigo. Veredito: REVISE, 2 MAJOR corrigidos no plano: (1) o plano original afirmava decisao deliberada de 'visibilidade sem bloqueio' pra validacao em push, mas do jeito especificado o job pipeline falharia de verdade em push pra main, e build-and-push-image/deploy/release tem needs:pipeline - bloquearia deploy/release na pratica, o oposto do declarado; corrigido com continue-on-error:true nos 2 steps novos (SonarCloud e Validar zero issues), so em push. (2) religar so o step de validacao sem religar o WAIT_FLAG (hoje desligado em push) criaria condicao de corrida - mvn sonar:sonar roda assincrono sem esperar processar do lado do servidor, o script consultaria dado desatualizado; corrigido para os dois mudarem juntos. Achado MINOR aceito, nao bloqueante: duplicar slug+getter em 2 arquivos (~5 linhas cada) tem risco residual de CPD, mas abaixo do piso tipico de deteccao (bets-service feat-021 que disparou CPD real tinha 19 arquivos, nao 2) - validar no gate real do PR em vez de assumir. Confirmado tambem que o commit de release automatico (epic-033, mensagem com [skip ci]) nao dispara o workflow - preocupacao de execucao redundante do plano original nao se confirma.",
+      "jira": "SV-661",
+      "subtasks": [
+        {
+          "id": "feat-022.1",
+          "name": "Achatar hierarquia de InvalidTenantSlugException/TenantAlreadyProvisionedException",
+          "status": "done",
+          "jira": "SV-662",
+          "detail": "Remove a classe intermediaria SlugRelatedDomainException (unico uso: essas 2 classes) para reduzir a cadeia de heranca de 6 para 5 ancestrais, fechando os 2 java:S110 reais do SonarCloud.",
+          "checklist": [
+            "Deletar SlugRelatedDomainException.java.",
+            "InvalidTenantSlugException passa a extends LocalizedRuntimeException direto, com campo privado slug + getter slug() + o mesmo repasse 'slug == null ? \"\" : slug' pro super(message, cause, ...) - preservar a assimetria ja testada (slug() pode ser null, messageArgs() nunca).",
+            "TenantAlreadyProvisionedException, mesma mudanca.",
+            "Nenhuma mudanca esperada em InvalidTenantSlugExceptionTest.java nem TenantAlreadyProvisionedExceptionTest.java - rodar mesmo assim pra confirmar."
+          ],
+          "validation": "mvn verify local verde; os 2 arquivos de teste existentes passam sem modificacao; grep -r SlugRelatedDomainException sem resultado.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-022.2",
+          "name": "Habilitar validacao SonarCloud em eventos push (nao bloqueante) + fechamento",
+          "status": "done",
+          "jira": "SV-663",
+          "detail": "Fecha o gap real que deixou os 2 issues passarem: hoje o ci.yml pula por completo a validacao de zero issues em push (so valida PRs). Achado durante a implementacao (nao previsto no plan review original): a API do SonarCloud no plano gratuito recusa com 403 qualquer branch != main (confirmado ao vivo, GET /issues/search?branch=develop) - documentado em docs/pipeline-ci-cd.md 'Terceira/Setima armadilha' como correcao deliberada, nao descuido. Corrigido para rodar so em push pra main (onde a API funciona - branch main tem leak period estabelecido), continua pulado em push pra develop; continue-on-error pra nao derrubar deploy/release por achado nao relacionado.",
+          "checklist": [
+            "ci.yml: WAIT_FLAG so zera quando push E ref_name==develop (nao mais todo push) - sonar.qualitygate.wait roda em push pra main.",
+            "ci.yml: step 'Validar zero issues no SonarCloud' pula so quando push E ref_name==develop - roda em pull_request e em push pra main.",
+            "continue-on-error: true nos 2 steps quando github.event_name == 'push' (preserva o comportamento ja existente em PR, que deve continuar bloqueando de verdade).",
+            "CHANGELOG.md: entrada em [Unreleased] descrevendo a correcao de heranca + o fechamento do gap de CI.",
+            "Vault (docs/): registrar em docs/pipeline-ci-cd.md a limitacao real do escopo de PR do SonarCloud pra regras estruturais (heranca/tipo em arquivo nao tocado pelo diff) e a correcao push-pra-main - mecanismo reaproveitavel pelos outros 5 repositorios, que devem replicar so a parte 'push pra main', nunca tentar habilitar push pra develop."
+          ],
+          "validation": "PR subtask->story com CI verde; PR story->develop (gate completo) mostra SonarCloud Code Analysis pass com 0 issues nas 2 classes; push resultante pra develop confirma que o novo passo continua pulado (sem erro 403); validacao final de verdade do mecanismo só acontece no proximo develop->main deste repositorio.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
