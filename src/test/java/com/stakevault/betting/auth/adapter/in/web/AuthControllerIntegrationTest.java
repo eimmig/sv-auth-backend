@@ -16,7 +16,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.stakevault.betting.auth.config.TenantContextScope;
 import com.stakevault.betting.auth.domain.model.Role;
-import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.in.ProvisionTenantSchemaUseCase;
 import com.stakevault.betting.auth.domain.port.out.PasswordHasher;
@@ -77,7 +76,7 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		User user = seedUser(true);
 
 		HttpResponse<String> response = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+				"{\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
 
 		assertThat(response.statusCode()).isEqualTo(200);
 		assertThat(response.body()).contains("\"token\":\"v4.local.");
@@ -91,7 +90,7 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		String unknownSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
 		HttpResponse<String> response = post(
-				"{\"slug\":\"" + unknownSlug + "\",\"email\":\"ana@" + unknownSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+				"{\"email\":\"ana@" + unknownSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
 
 		assertThat(response.statusCode()).isEqualTo(401);
 		assertThat(response.body()).contains("\"type\":\"https://docs/errors/invalid-credentials\"");
@@ -102,7 +101,7 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		seedUser(false);
 
 		HttpResponse<String> response = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"nobody@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+				"{\"email\":\"nobody@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
 
 		assertThat(response.statusCode()).isEqualTo(401);
 		assertThat(response.body()).contains("\"type\":\"https://docs/errors/invalid-credentials\"");
@@ -113,7 +112,7 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		seedUser(false);
 
 		HttpResponse<String> response = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"wrong-password\"}");
+				"{\"email\":\"ana@" + tenantSlug + "\",\"password\":\"wrong-password\"}");
 
 		assertThat(response.statusCode()).isEqualTo(401);
 		assertThat(response.body()).contains("\"type\":\"https://docs/errors/invalid-credentials\"");
@@ -124,56 +123,28 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		seedUser(false);
 		String unknownSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
-		HttpResponse<String> invalidSlug = post(
-				"{\"slug\":\"1invalid\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+		HttpResponse<String> invalidDomain = post(
+				"{\"email\":\"ana@1invalid\",\"password\":\"" + RAW_PASSWORD + "\"}");
 		HttpResponse<String> unknownTenant = post(
-				"{\"slug\":\"" + unknownSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+				"{\"email\":\"ana@" + unknownSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
 		HttpResponse<String> unknownEmail = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"nobody@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+				"{\"email\":\"nobody@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
 		HttpResponse<String> wrongPassword = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"wrong\"}");
+				"{\"email\":\"ana@" + tenantSlug + "\",\"password\":\"wrong\"}");
 
-		assertThat(invalidSlug.statusCode()).isEqualTo(401);
+		assertThat(invalidDomain.statusCode()).isEqualTo(401);
 		assertThat(unknownTenant.statusCode()).isEqualTo(401);
 		assertThat(unknownEmail.statusCode()).isEqualTo(401);
 		assertThat(wrongPassword.statusCode()).isEqualTo(401);
-		assertThat(invalidSlug.body().replaceAll("\"instance\":\"[^\"]*\"", ""))
+		assertThat(invalidDomain.body().replaceAll("\"instance\":\"[^\"]*\"", ""))
 				.isEqualTo(unknownTenant.body().replaceAll("\"instance\":\"[^\"]*\"", ""))
 				.isEqualTo(unknownEmail.body().replaceAll("\"instance\":\"[^\"]*\"", ""))
 				.isEqualTo(wrongPassword.body().replaceAll("\"instance\":\"[^\"]*\"", ""));
 	}
 
 	@Test
-	void shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail() throws Exception {
-		String otherSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-		TenantSchemaName otherSchema = TenantSchemaName.fromSlug(otherSlug);
-		provisionTenantSchema.ensureSchemaExists(otherSlug);
-
-		try {
-			String sharedEmail = "shared@example.com";
-			User inCurrentTenant = new User(UUID.randomUUID(), "Ana", sharedEmail, passwordHasher.hash(RAW_PASSWORD),
-					Role.MEMBER, false, Instant.now().truncatedTo(DB_PRECISION));
-			User inOtherTenant = new User(UUID.randomUUID(), "Ana", sharedEmail, passwordHasher.hash("other-tenant-password"),
-					Role.MEMBER, false, Instant.now().truncatedTo(DB_PRECISION));
-			try (var _ = TenantContextScope.open(schema)) {
-				userRepository.save(inCurrentTenant);
-			}
-			try (var _ = TenantContextScope.open(otherSchema)) {
-				userRepository.save(inOtherTenant);
-			}
-
-			HttpResponse<String> response = post(
-					"{\"slug\":\"" + tenantSlug + "\",\"email\":\"" + sharedEmail + "\",\"password\":\"other-tenant-password\"}");
-
-			assertThat(response.statusCode()).isEqualTo(401);
-		} finally {
-			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + otherSchema.value() + "\" CASCADE");
-		}
-	}
-
-	@Test
 	void shouldReturn400WhenPayloadIsInvalid() throws Exception {
-		HttpResponse<String> response = post("{\"slug\":\"\",\"email\":\"\",\"password\":\"\"}");
+		HttpResponse<String> response = post("{\"email\":\"\",\"password\":\"\"}");
 
 		assertThat(response.statusCode()).isEqualTo(400);
 		assertThat(response.body()).contains("\"type\":\"https://docs/errors/validation-failed\"");
@@ -182,7 +153,7 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 	@Test
 	void shouldLocalizeErrorTitleAndDetailPerAcceptLanguage() throws Exception {
 		HttpResponse<String> response = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"nobody@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}",
+				"{\"email\":\"nobody@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}",
 				"Accept-Language", "es");
 
 		assertThat(response.statusCode()).isEqualTo(401);
@@ -201,11 +172,11 @@ class AuthControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		assertThat(changeResponse.body()).isEmpty();
 
 		HttpResponse<String> loginWithOldPassword = post(
-				"{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
+				"{\"email\":\"ana@" + tenantSlug + "\",\"password\":\"" + RAW_PASSWORD + "\"}");
 		assertThat(loginWithOldPassword.statusCode()).isEqualTo(401);
 
-		HttpResponse<String> loginWithNewPassword = post("{\"slug\":\"" + tenantSlug + "\",\"email\":\"ana@" + tenantSlug
-				+ "\",\"password\":\"new-correct-horse-battery\"}");
+		HttpResponse<String> loginWithNewPassword = post(
+				"{\"email\":\"ana@" + tenantSlug + "\",\"password\":\"new-correct-horse-battery\"}");
 		assertThat(loginWithNewPassword.statusCode()).isEqualTo(200);
 		assertThat(loginWithNewPassword.body()).contains("\"mustChangePassword\":false");
 	}

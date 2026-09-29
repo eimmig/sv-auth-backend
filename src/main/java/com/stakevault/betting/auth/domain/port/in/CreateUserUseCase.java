@@ -6,5 +6,5 @@ import com.stakevault.betting.auth.domain.model.User;
 
 public interface CreateUserUseCase {
 
-	User createUser(UUID callerId, String name, String email, String rawPassword);
+	User createUser(UUID callerId, String name, String username, String rawPassword);
 }

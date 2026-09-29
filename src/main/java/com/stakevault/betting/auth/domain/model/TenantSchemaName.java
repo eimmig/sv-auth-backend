@@ -23,4 +23,8 @@ public record TenantSchemaName(String value) {
 	public String slug() {
 		return value.substring(TENANT_PREFIX.length());
 	}
+
+	public String emailFor(String localPart) {
+		return localPart + "@" + slug();
+	}
 }

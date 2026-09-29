@@ -81,7 +81,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		User admin = seedUser(Role.ADMIN);
 
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"member@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"member\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString());
 
 		assertThat(response.statusCode()).isEqualTo(201);
@@ -93,7 +93,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 	@Test
 	void shouldReturn401WhenCallerHeaderIsMissing() throws Exception {
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"member@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"member\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug);
 
 		assertThat(response.statusCode()).isEqualTo(401);
@@ -103,7 +103,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 	@Test
 	void shouldReturn401WhenCallerHeaderIsNotAValidUuid() throws Exception {
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"member@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"member\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", "not-a-uuid");
 
 		assertThat(response.statusCode()).isEqualTo(401);
@@ -112,7 +112,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 	@Test
 	void shouldReturn400WhenTenantHeaderIsMissing() throws Exception {
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"member@example.com\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"member\",\"password\":\"raw-password\"}",
 				"X-User-Id", UUID.randomUUID().toString());
 
 		assertThat(response.statusCode()).isEqualTo(400);
@@ -124,7 +124,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		User member = seedUser(Role.MEMBER);
 
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"other@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"other\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", member.id().toString());
 
 		assertThat(response.statusCode()).isEqualTo(403);
@@ -134,7 +134,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 	@Test
 	void shouldReturn403WhenCallerDoesNotExistInTenant() throws Exception {
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"other@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"other\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", UUID.randomUUID().toString());
 
 		assertThat(response.statusCode()).isEqualTo(403);
@@ -154,7 +154,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 			}
 
 			HttpResponse<String> response = post(
-					"{\"name\":\"New Member\",\"email\":\"member@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+					"{\"name\":\"New Member\",\"username\":\"member\",\"password\":\"raw-password\"}",
 					"X-Tenant-Id", tenantSlug, "X-User-Id", adminOfOtherTenant.id().toString());
 
 			assertThat(response.statusCode()).isEqualTo(403);
@@ -168,9 +168,10 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 	void shouldReturn409WhenEmailAlreadyRegisteredInTenant() throws Exception {
 		User admin = seedUser(Role.ADMIN);
 		User existing = seedUser(Role.MEMBER);
+		String existingUsername = existing.email().substring(0, existing.email().indexOf('@'));
 
 		HttpResponse<String> response = post(
-				"{\"name\":\"Duplicate\",\"email\":\"" + existing.email() + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"Duplicate\",\"username\":\"" + existingUsername + "\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString());
 
 		assertThat(response.statusCode()).isEqualTo(409);
@@ -182,7 +183,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		User admin = seedUser(Role.ADMIN);
 
 		HttpResponse<String> response = post(
-				"{\"name\":\"\",\"email\":\"not-an-email\",\"password\":\"raw-password\"}",
+				"{\"name\":\"\",\"username\":\"not a username\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", admin.id().toString());
 
 		assertThat(response.statusCode()).isEqualTo(400);
@@ -194,7 +195,7 @@ class UsersControllerIntegrationTest extends TenantSchemaIntegrationSupport {
 		User member = seedUser(Role.MEMBER);
 
 		HttpResponse<String> response = post(
-				"{\"name\":\"New Member\",\"email\":\"other@" + tenantSlug + "\",\"password\":\"raw-password\"}",
+				"{\"name\":\"New Member\",\"username\":\"other\",\"password\":\"raw-password\"}",
 				"X-Tenant-Id", tenantSlug, "X-User-Id", member.id().toString(), "Accept-Language", "es");
 
 		assertThat(response.statusCode()).isEqualTo(403);
