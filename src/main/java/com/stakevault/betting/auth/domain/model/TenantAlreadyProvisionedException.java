@@ -1,9 +1,16 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class TenantAlreadyProvisionedException extends SlugRelatedDomainException {
+public class TenantAlreadyProvisionedException extends LocalizedRuntimeException {
+
+	private final String slug;
 
 	public TenantAlreadyProvisionedException(String slug) {
-		super("tenant already provisioned: " + slug, slug, null);
+		super("tenant already provisioned: " + slug, (Throwable) null, slug == null ? "" : slug);
+		this.slug = slug;
+	}
+
+	public String slug() {
+		return slug;
 	}
 
 	@Override
