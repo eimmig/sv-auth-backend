@@ -11,6 +11,9 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-585](https://stakevault.atlassian.net/browse/SV-585) - Extrair LocalizedRuntimeException (2o harness do epic-034 da raiz)
 - [SV-586](https://stakevault.atlassian.net/browse/SV-586) - Extrair LocalizedRuntimeException, migrar SlugRelatedDomainException e as 14 excecoes diretas
 - [SV-587](https://stakevault.atlassian.net/browse/SV-587) - CHANGELOG e verificacao final
+- [SV-661](https://stakevault.atlassian.net/browse/SV-661) - Corrigir profundidade de heranca (java:S110) e fechar gap do gate SonarCloud em push
+- [SV-662](https://stakevault.atlassian.net/browse/SV-662) - Achatar hierarquia de InvalidTenantSlugException/TenantAlreadyProvisionedException
+- [SV-663](https://stakevault.atlassian.net/browse/SV-663) - Habilitar validacao SonarCloud em eventos push (nao bloqueante) + fechamento
 
 ## [0.1.0] - 2026-09-23
 
