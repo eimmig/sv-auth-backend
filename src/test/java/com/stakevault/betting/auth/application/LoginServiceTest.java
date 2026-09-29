@@ -14,6 +14,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.stakevault.betting.auth.domain.model.InvalidCredentialsException;
 import com.stakevault.betting.auth.domain.model.LoginResult;
@@ -52,25 +54,10 @@ class LoginServiceTest {
 		verify(provisionTenantSchema).migrateIfPending("acme");
 	}
 
-	@Test
-	void shouldRejectEmailWithoutAtSignWithoutTouchingAnyPort() {
-		assertThatThrownBy(() -> service.login("ana-acme", "raw-password"))
-				.isInstanceOf(InvalidCredentialsException.class);
-
-		verifyNoInteractions(provisionTenantSchema, userRepository, passwordHasher, accessTokenIssuer);
-	}
-
-	@Test
-	void shouldRejectEmailEndingInAtSignWithoutTouchingAnyPort() {
-		assertThatThrownBy(() -> service.login("ana@", "raw-password"))
-				.isInstanceOf(InvalidCredentialsException.class);
-
-		verifyNoInteractions(provisionTenantSchema, userRepository, passwordHasher, accessTokenIssuer);
-	}
-
-	@Test
-	void shouldRejectInvalidDomainWithoutTouchingAnyPort() {
-		assertThatThrownBy(() -> service.login("ana@1acme", "raw-password"))
+	@ParameterizedTest
+	@ValueSource(strings = { "ana-acme", "ana@", "ana@1acme" })
+	void shouldRejectMalformedOrDomainlessEmailWithoutTouchingAnyPort(String email) {
+		assertThatThrownBy(() -> service.login(email, "raw-password"))
 				.isInstanceOf(InvalidCredentialsException.class);
 
 		verifyNoInteractions(provisionTenantSchema, userRepository, passwordHasher, accessTokenIssuer);
