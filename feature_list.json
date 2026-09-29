@@ -1707,7 +1707,7 @@
         {
           "id": "feat-023.3",
           "name": "CHANGELOG, vault e verificacao final",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-699",
           "detail": "Fechamento da feature: docs atualizadas nos 2 lugares certos (nota de reinterpretacao 2026-08-02 fica desatualizada com a mudanca), evidencia, init.sh, skills de revisao.",
           "checklist": [
@@ -1723,7 +1723,7 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": "Fechada em 2026-09-29. Story SV-696 (subtasks SV-697/698/699), PR #88 (subtask->story) + story->develop a seguir. Mudanca cross-service de contrato (POST /api/v1/users troca email por username; POST /api/v1/auth/login perde o campo slug), sistema ainda nao em producao, mudanca aceita. Nasce de apps/web epic-039/feat-062 - investigacao confirmou que a ambiguidade que o achado original deixava em aberto era real (so o admin auto-provisionado seguia o padrao admin@slug; usuario comum aceitava email livre, confirmado por teste de integracao real criando o mesmo email em 2 tenants). TenantSchemaName.emailFor() centraliza a construcao do email, reaproveitado tambem por CreateTenantService (que ja fazia 'admin@'+slug manualmente). LoginService deriva o tenant do dominio do proprio email recebido. Removido o teste que provava o cenario agora impossivel (mesmo email em tenants diferentes) - registrado como remocao deliberada, nao esquecimento. ./init.sh verde (mvn verify completo, Docker ativo, JaCoCo 80%): TenantSchemaNameTest (11), CreateUserServiceTest (5), CreateTenantServiceTest (9), LoginServiceTest (8), UsersControllerIntegrationTest (24), AuthControllerIntegrationTest (13) - todos verdes. Delivery Reviewer (self-conduzido: grep confirmou nenhuma referencia residual ao contrato antigo em src/main, mudancas de UX/contrato explicitamente autorizadas pelo usuario) e Persistence Auditor (self-conduzido: sem mudanca de schema/migracao, coluna email inalterada, uk_users_email preservada, sem query nova) rodados: PASS nos 2, sem achado. Vault: docs/DECISIONS-LOG.md (nova entrada revertendo parcialmente a decisao 5 de 2026-08-02, explicando por que isso NAO e a mesma coisa que a alternativa ja rejeitada naquela sessao), docs/services/auth-service.md (secoes Autenticacao e Criacao de usuario), docs/requisitos.md (nota de reinterpretacao RF01/RF02), docs/contratos-de-api.md (X-Tenant-Id) - todos atualizados. epic-040 da raiz e o pre-requisito de apps/web feat-062, a implementar em seguida."
     }
   ]
 }
