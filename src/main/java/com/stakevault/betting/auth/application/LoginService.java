@@ -30,7 +30,13 @@ public class LoginService implements LoginUseCase {
 	}
 
 	@Override
-	public LoginResult login(String tenantSlug, String email, String rawPassword) {
+	public LoginResult login(String email, String rawPassword) {
+		int at = email.indexOf('@');
+		if (at < 0 || at == email.length() - 1) {
+			throw new InvalidCredentialsException();
+		}
+		String tenantSlug = email.substring(at + 1);
+
 		TenantSchemaName schema;
 		try {
 			schema = TenantSchemaName.fromSlug(tenantSlug);

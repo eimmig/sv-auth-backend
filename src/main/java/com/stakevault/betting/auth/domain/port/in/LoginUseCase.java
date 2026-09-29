@@ -4,5 +4,5 @@ import com.stakevault.betting.auth.domain.model.LoginResult;
 
 public interface LoginUseCase {
 
-	LoginResult login(String tenantSlug, String email, String rawPassword);
+	LoginResult login(String email, String rawPassword);
 }
