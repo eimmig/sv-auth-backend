@@ -30,6 +30,7 @@ public class CreateTenantService implements CreateTenantUseCase {
 
 	private static final Logger log = LoggerFactory.getLogger(CreateTenantService.class);
 	private static final String DEFAULT_ADMIN_NAME = "Administrator";
+	private static final String ADMIN_LOCAL_PART = "admin";
 
 	private final ProvisionTenantSchemaUseCase provisionTenantSchema;
 	private final PasswordHasher passwordHasher;
@@ -64,7 +65,7 @@ public class CreateTenantService implements CreateTenantUseCase {
 		String rawPassword = passwordGenerator.generate();
 		String passwordHash = passwordHasher.hash(rawPassword);
 		String adminName = (tenantName == null || tenantName.isBlank()) ? DEFAULT_ADMIN_NAME : tenantName;
-		String email = "admin@" + slug;
+		String email = schema.emailFor(ADMIN_LOCAL_PART);
 
 		User admin;
 		try (var _ = TenantContextScope.open(schema)) {

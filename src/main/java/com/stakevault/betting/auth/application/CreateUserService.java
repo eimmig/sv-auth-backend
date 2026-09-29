@@ -11,6 +11,7 @@ import com.stakevault.betting.auth.domain.model.AdminRoleRequiredException;
 import com.stakevault.betting.auth.domain.model.EmailAlreadyRegisteredException;
 import com.stakevault.betting.auth.domain.model.MissingTenantContextException;
 import com.stakevault.betting.auth.domain.model.Role;
+import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.model.User;
 import com.stakevault.betting.auth.domain.port.in.CreateUserUseCase;
 import com.stakevault.betting.auth.domain.port.out.PasswordHasher;
@@ -28,8 +29,9 @@ public class CreateUserService implements CreateUserUseCase {
 	}
 
 	@Override
-	public User createUser(UUID callerId, String name, String email, String rawPassword) {
-		if (TenantContextHolder.current() == null) {
+	public User createUser(UUID callerId, String name, String username, String rawPassword) {
+		TenantSchemaName currentSchema = TenantContextHolder.current();
+		if (currentSchema == null) {
 			throw new MissingTenantContextException();
 		}
 
@@ -40,6 +42,7 @@ public class CreateUserService implements CreateUserUseCase {
 			throw new AdminRoleRequiredException();
 		}
 
+		String email = currentSchema.emailFor(username);
 		User newUser = new User(UUID.randomUUID(), name, email, passwordHasher.hash(rawPassword), Role.MEMBER, false,
 				Instant.now());
 		try {

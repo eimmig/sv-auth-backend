@@ -1655,6 +1655,75 @@
         }
       ],
       "evidence": "Fechada em 2026-09-29. feat-022.1 (SV-662, PR #85): SlugRelatedDomainException removida (unico uso: InvalidTenantSlugException/TenantAlreadyProvisionedException), heranca de 6 para 5 ancestrais, sem mudanca de comportamento observavel (confirmado linha a linha no diff contra os 2 testes existentes, que passaram sem modificacao). feat-022.2 (SV-663, PR #86): ci.yml passa a rodar sonar.qualitygate.wait + validate-sonar-issues.py tambem em push pra main (nao develop - achado real durante a implementacao: API do SonarCloud no plano gratuito recusa branch != main com 403, confirmado ao vivo contra a API - documentado em docs/pipeline-ci-cd.md 'Oitava armadilha' junto com a causa raiz dos 2 issues terem passado pelo gate de PR: analise de Pull Request do SonarCloud escopa novo codigo por linha alterada/blame, nao pega efeito cascata de heranca em arquivo nao tocado pelo diff). continue-on-error:true nos 2 steps em push, pra nao derrubar build-and-push-image/deploy/release. PR #87 (story->develop, gate completo): CI+SonarCloud verdes, confirmado via API real GET /issues/search?pullRequest=87 -> 0 issues. Delivery Reviewer: PASS. Test Suite Auditor: PASS (1 achado P3 pre-existente, fora de escopo). Local mvn verify nao roda completo nesta maquina (Testcontainers sem Docker, limitacao ja documentada desde feat-001) - gate real foi a CI do GitHub (Docker disponivel), verde nos 3 PRs (#85/#86/#87). Replicar o ajuste de ci.yml (so a parte push-pra-main) nos outros 5 repositorios de aplicacao fica para features separadas por harness (fecha a parte auth-service do epic-038 da raiz)."
+    },
+    {
+      "id": "feat-023",
+      "name": "E-mail do usuario passa a ser sempre username@slug-do-tenant (por construcao)",
+      "goal": "Todo usuario criado (nao so o admin auto-provisionado) tem e-mail cujo dominio e garantidamente o slug do proprio tenant, eliminando a ambiguidade que hoje obriga o login a pedir o slug como campo separado.",
+      "scope": "CreateUserRequest/CreateUserService/UsersController (POST /api/v1/users: campo email vira username, servidor monta o e-mail completo) + LoginRequest/LoginService/AuthController (POST /api/v1/auth/login: campo slug removido, servidor deriva o tenant do dominio do e-mail recebido). TenantSchemaName ganha um metodo helper reaproveitado tambem por CreateTenantService (que ja construia 'admin@' + slug manualmente). Sem mudanca na entidade User nem no schema de banco (email continua sendo uma unica coluna string).",
+      "description": "Decisao do usuario em 2026-09-29, durante a investigacao de apps/web feat-062 ('simplificar login pra 2 campos'). O contrato de login exige slug hoje porque e-mail so e unico DENTRO do schema de cada tenant (docs/DECISIONS-LOG.md decisao 5, 2026-08-02) - um e-mail arbitrario pode em tese existir em mais de um tenant, entao o slug era necessario pra saber em qual schema procurar. O usuario perguntou se dava pra extrair o slug do dominio do email (tudo depois do @) - investigacao confirmou que HOJE isso NAO e garantido: so o admin auto-provisionado de cada tenant segue esse padrao (CreateTenantService.java, 'admin@' + slug, hardcoded), qualquer usuario comum criado via POST /api/v1/users aceita e-mail livre/arbitrario (@Email so valida formato, sem nenhuma checagem contra o slug) - confirmado com um teste de integracao real (AuthControllerIntegrationTest, 'shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail') que cria 2 usuarios com o MESMO e-mail em 2 tenants diferentes, cenario que so existe hoje por causa desse gap. Decisao do usuario (sistema ainda nao esta em producao, mudanca de contrato permitida): generalizar o padrao ja usado pro admin pra TODO usuario - criacao de usuario passa a pedir so um 'username' (parte local), o backend monta o e-mail completo (username + '@' + slug do tenant do chamador) - a partir dai, por construcao, dominio do e-mail == slug do tenant SEMPRE, pra qualquer usuario. Isso fecha em definitivo a ambiguidade que a descricao original de apps/web feat-062 deixava em aberto ('investigar se a ambiguidade e real no dominio antes de assumir mudanca so no frontend') - a resposta e: era real, e essa feature a elimina por construcao, nao so trata o caso. Com a garantia estabelecida, login deixa de precisar do campo slug separado: passa a aceitar so email+senha, derivando o tenant do dominio do proprio e-mail recebido. Pre-requisito de apps/web feat-062 (login 2 campos so pode ser implementado no frontend depois que este contrato mudar aqui).",
+      "dependencies": [
+        "feat-004",
+        "feat-005"
+      ],
+      "status": "in-progress",
+      "plan_review": "Investigacao completa feita por um subagente Explore antes de codificar (equivalente ao Plan Reviewer para esta mudanca cross-service, risco medio-alto por mudar 2 contratos HTTP publicos): leu CreateUserService/CreateUserRequest/UsersController, LoginService/LoginRequest/AuthController, User (domain, sem validacao de formato de email, sem campo de username separado), TenantSchemaName (ja expoe .slug(), regex de slug ^[a-z][a-z0-9-]{1,55}$ - define o alfabeto valido do 'dominio'), CreateTenantService (confirma o precedente 'admin@'+slug ja existente), TenantSchemaFilter/TenantContextHolder/TenantContextScope (login NAO passa por esse filtro - resolve schema manualmente dentro do proprio LoginService, mecanismo paralelo e independente, preservado), docs/contratos-de-api.md, docs/services/auth-service.md, docs/requisitos.md (RF01/RF02: mudanca nao viola nada formal do TCC1, so a nota de reinterpretacao de 2026-08-02 precisa ser atualizada), e os 2 arquivos de teste de integracao completos (UsersControllerIntegrationTest, AuthControllerIntegrationTest). Verdict: READY. Achados que moldam o plano: (1) CreateUserService nao recebe o slug hoje, so confere TenantContextHolder.current()!=null - precisa capturar o TenantSchemaName numa variavel pra montar o email, sem mudar a assinatura do use case alem do parametro email->username. (2) LoginService resolve schema manualmente (nao usa o filter) - o ponto de mudanca e so o inicio do metodo, derivar tenantSlug de email.substring(indexOf('@')+1) em vez de receber como parametro, resto do fluxo (burnHashingCost, checagem de existencia, etc.) fica identico. (3) LoginResponse NUNCA devolveu tenantSlug (o frontend hoje reusa o proprio campo que o usuario digitou) - decisao: nao adicionar tenantSlug na resposta, o frontend deriva do proprio email digitado (email.split('@')[1]), meor blast radius. (4) O teste 'shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail' fica estruturalmente IMPOSSIVEL de reproduzir depois desta mudanca (2 tenants nunca mais podem ter o mesmo email, ja que slugs sao globalmente unicos) - remocao deliberada, registrada aqui e no commit, nao esquecimento. (5) TenantSchemaName ganha um metodo emailFor(username) reaproveitado tanto por CreateUserService quanto por CreateTenantService (que hoje monta a string manualmente) - dedup de um padrao que ja apareceria duplicado em 2 lugares desde o commit inicial desta feature, mesma licao do SonarCloud new_duplicated_lines_density que pegou apps/web feat-065 nesta mesma sessao. (6) Validacao de username: @Pattern(regexp=\"^[a-zA-Z0-9._-]{1,64}$\") no DTO (400 se invalido, mesmo nivel que @Email tinha) - impede literalmente que o username contenha '@' (nao seria possivel montar um email ambiguo mesmo que o cliente tentasse). Sem risco de violar RF01/RF02 formais do TCC1 (tabela original fala so em 'email', a exigencia de 3 campos e nota de reinterpretacao deste harness de 2026-08-02, atualizavel).",
+      "jira": "SV-696",
+      "subtasks": [
+        {
+          "id": "feat-023.1",
+          "name": "TenantSchemaName.emailFor() + criacao de usuario por username",
+          "status": "done",
+          "jira": "SV-697",
+          "detail": "CreateUserRequest troca @Email email por @Pattern username; CreateUserService monta o email completo via TenantSchemaName.emailFor(username), reaproveitado por CreateTenantService no lugar da concatenacao manual 'admin@'+slug.",
+          "checklist": [
+            "TenantSchemaName: novo metodo emailFor(String localPart) retornando localPart + \"@\" + slug().",
+            "CreateTenantService: 'admin@' + slug vira schema.emailFor(DEFAULT_ADMIN_LOCAL_PART) (extrair a constante 'admin' se ainda nao existir separada de DEFAULT_ADMIN_NAME).",
+            "CreateUserRequest: campo email (@NotBlank @Email) vira username (@NotBlank @Pattern(regexp=\"^[a-zA-Z0-9._-]{1,64}$\")).",
+            "CreateUserUseCase/CreateUserService: parametro email vira username; captura TenantSchemaName currentSchema = TenantContextHolder.current() antes do null-check; email montado via currentSchema.emailFor(username).",
+            "UsersController.create: request.email() vira request.username().",
+            "CreateUserServiceTest (unitario): assinatura atualizada; teste novo confirmando que o email salvo bate com username+\"@\"+slug do tenant corrente.",
+            "UsersControllerIntegrationTest: seedUser() e os bodies JSON de create() trocam email por username (sem @tenantSlug); teste de payload invalido cobre username malformado (ex.: contendo '@') em vez de email malformado; asserts de response continuam batendo email completo."
+          ],
+          "validation": "mvn verify local verde (Docker ativo); criar usuario com username simples salva email=username@<slug do chamador>; username contendo '@' ou vazio retorna 400.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-023.2",
+          "name": "Login deriva o tenant do dominio do e-mail (sem campo slug)",
+          "status": "done",
+          "jira": "SV-698",
+          "detail": "LoginRequest perde o campo slug; LoginService deriva tenantSlug do proprio email recebido antes de resolver o schema, resto do fluxo (existencia do tenant, burn de hashing, senha) fica identico.",
+          "checklist": [
+            "LoginRequest: remove o campo slug, fica so email+password.",
+            "LoginUseCase/LoginService.login: assinatura vira login(String email, String rawPassword); deriva tenantSlug via indexOf('@') - email sem '@' ou com '@' no fim vira InvalidCredentialsException direto (mesmo tratamento generico ja usado pra slug/tenant/email/senha invalidos, sem vazar qual parte falhou).",
+            "AuthController.login: login.login(request.email(), request.password()).",
+            "LoginServiceTest (unitario): assinatura atualizada; caso novo pra email sem '@'.",
+            "AuthControllerIntegrationTest: seedUser/bodies JSON sem slug; REMOVER shouldReturnTokenAndMustChangePasswordOnValidLogin (ajustar body) e shouldReturn401WhenLoggingIntoOneTenantWithAnotherTenantsPasswordForTheSameEmail (cenario impossivel de reproduzir depois desta mudanca, ver plan_review) - registrar a remocao explicitamente no commit; shouldReturnSameBodyForAllFourInvalidCredentialsCases reescrito pro novo conjunto de casos invalidos (email sem dominio valido, tenant inexistente, email inexistente, senha errada)."
+          ],
+          "validation": "mvn verify local verde; login com email+senha corretos retorna token sem exigir slug; email sem '@' retorna o mesmo 401 generico dos demais casos invalidos.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-023.3",
+          "name": "CHANGELOG, vault e verificacao final",
+          "status": "not-started",
+          "jira": "SV-699",
+          "detail": "Fechamento da feature: docs atualizadas nos 2 lugares certos (nota de reinterpretacao 2026-08-02 fica desatualizada com a mudanca), evidencia, init.sh, skills de revisao.",
+          "checklist": [
+            "docs/DECISIONS-LOG.md: nova entrada registrando a reversao parcial da decisao 5 (2026-08-02) - login volta a 2 campos porque a premissa mudou (email deixa de ser livre, passa a ser sempre username@slug por construcao), nao porque o isolamento por schema foi enfraquecido.",
+            "docs/services/auth-service.md: secao 'Autenticacao' (body de POST /api/v1/auth/login sem slug) e secao de criacao de usuario (body de POST /api/v1/users com username) atualizadas; o paragrafo final que explica 'login precisa de um terceiro campo' reescrito.",
+            "docs/requisitos.md: nota de reinterpretacao de RF01/RF02 (2026-08-02) atualizada.",
+            "docs/contratos-de-api.md: trecho de 'Confianca entre servicos' que descreve X-Tenant-Id como vindo 'do slug informado' corrigido.",
+            "CHANGELOG.md: entrada em [Unreleased] descrevendo os 2 contratos alterados + a remocao deliberada do teste de mesmo-email-em-tenants-diferentes.",
+            "./init.sh verde (mvn verify completo, Docker ativo)",
+            "Delivery Reviewer + Test Suite Auditor + Persistence Auditor rodados (mudanca de contrato HTTP publico + dominio - risco medio-alto)"
+          ],
+          "validation": "feature_list.json com status done e evidence preenchida; grep -rn 'terceiro campo\\|slug.*login' docs/ nao acha texto desatualizado.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }

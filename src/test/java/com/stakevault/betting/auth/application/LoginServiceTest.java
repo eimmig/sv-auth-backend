@@ -46,15 +46,31 @@ class LoginServiceTest {
 		when(passwordHasher.matches("raw-password", "hashed-password")).thenReturn(true);
 		when(accessTokenIssuer.issue(user.id(), "acme", Role.MEMBER)).thenReturn("v4.local.token");
 
-		LoginResult result = service.login("acme", "ana@acme", "raw-password");
+		LoginResult result = service.login("ana@acme", "raw-password");
 
 		assertThat(result).isEqualTo(new LoginResult("v4.local.token", true, user.id(), Role.MEMBER));
 		verify(provisionTenantSchema).migrateIfPending("acme");
 	}
 
 	@Test
-	void shouldRejectInvalidSlugWithoutTouchingAnyPort() {
-		assertThatThrownBy(() -> service.login("1acme", "ana@acme", "raw-password"))
+	void shouldRejectEmailWithoutAtSignWithoutTouchingAnyPort() {
+		assertThatThrownBy(() -> service.login("ana-acme", "raw-password"))
+				.isInstanceOf(InvalidCredentialsException.class);
+
+		verifyNoInteractions(provisionTenantSchema, userRepository, passwordHasher, accessTokenIssuer);
+	}
+
+	@Test
+	void shouldRejectEmailEndingInAtSignWithoutTouchingAnyPort() {
+		assertThatThrownBy(() -> service.login("ana@", "raw-password"))
+				.isInstanceOf(InvalidCredentialsException.class);
+
+		verifyNoInteractions(provisionTenantSchema, userRepository, passwordHasher, accessTokenIssuer);
+	}
+
+	@Test
+	void shouldRejectInvalidDomainWithoutTouchingAnyPort() {
+		assertThatThrownBy(() -> service.login("ana@1acme", "raw-password"))
 				.isInstanceOf(InvalidCredentialsException.class);
 
 		verifyNoInteractions(provisionTenantSchema, userRepository, passwordHasher, accessTokenIssuer);
@@ -64,7 +80,7 @@ class LoginServiceTest {
 	void shouldRejectWhenTenantDoesNotExistButStillHashToKeepTimingConsistent() {
 		when(provisionTenantSchema.exists("acme")).thenReturn(false);
 
-		assertThatThrownBy(() -> service.login("acme", "ana@acme", "raw-password"))
+		assertThatThrownBy(() -> service.login("ana@acme", "raw-password"))
 				.isInstanceOf(InvalidCredentialsException.class);
 
 		verify(passwordHasher).hash("raw-password");
@@ -78,7 +94,7 @@ class LoginServiceTest {
 		when(passwordHasher.hash(any())).thenThrow(new IllegalArgumentException("password exceeds 72 bytes"));
 		String tooLongPassword = "a".repeat(100);
 
-		assertThatThrownBy(() -> service.login("acme", "ana@acme", tooLongPassword))
+		assertThatThrownBy(() -> service.login("ana@acme", tooLongPassword))
 				.isInstanceOf(InvalidCredentialsException.class);
 	}
 
@@ -87,7 +103,7 @@ class LoginServiceTest {
 		when(provisionTenantSchema.exists("acme")).thenReturn(true);
 		when(userRepository.findByEmail("nobody@acme")).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.login("acme", "nobody@acme", "raw-password"))
+		assertThatThrownBy(() -> service.login("nobody@acme", "raw-password"))
 				.isInstanceOf(InvalidCredentialsException.class);
 
 		verify(passwordHasher).hash("raw-password");
@@ -101,7 +117,7 @@ class LoginServiceTest {
 		when(userRepository.findByEmail("ana@acme")).thenReturn(Optional.of(user));
 		when(passwordHasher.matches("wrong-password", "hashed-password")).thenReturn(false);
 
-		assertThatThrownBy(() -> service.login("acme", "ana@acme", "wrong-password"))
+		assertThatThrownBy(() -> service.login("ana@acme", "wrong-password"))
 				.isInstanceOf(InvalidCredentialsException.class);
 
 		verifyNoInteractions(accessTokenIssuer);

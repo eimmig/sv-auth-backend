@@ -14,6 +14,10 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-661](https://stakevault.atlassian.net/browse/SV-661) - Corrigir profundidade de heranca (java:S110) e fechar gap do gate SonarCloud em push
 - [SV-662](https://stakevault.atlassian.net/browse/SV-662) - Achatar hierarquia de InvalidTenantSlugException/TenantAlreadyProvisionedException
 - [SV-663](https://stakevault.atlassian.net/browse/SV-663) - Habilitar validacao SonarCloud em eventos push (nao bloqueante) + fechamento
+- [SV-696](https://stakevault.atlassian.net/browse/SV-696) - E-mail do usuario passa a ser sempre username@slug-do-tenant (por construcao)
+- [SV-697](https://stakevault.atlassian.net/browse/SV-697) - TenantSchemaName.emailFor() + criacao de usuario por username
+- [SV-698](https://stakevault.atlassian.net/browse/SV-698) - Login deriva o tenant do dominio do e-mail (sem campo slug)
+- [SV-699](https://stakevault.atlassian.net/browse/SV-699) - CHANGELOG, vault e verificacao final
 
 ## [0.1.0] - 2026-09-23
 
