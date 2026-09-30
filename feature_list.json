@@ -1732,14 +1732,14 @@
       "scope": "TestcontainersConfiguration.java do auth-service (postgres:17-alpine -> postgres:18-alpine).",
       "description": "Alinha com infra feat-010 (PostgreSQL 18.x do Quadro 2 do TCC 1).",
       "dependencies": [],
-      "status": "not-started",
+      "status": "done",
       "plan_review": "2026-09-30, Plan Reviewer (review-suite:ln-11-plan-reviewer) rodado contra o plano de infra (imagens PG18/Redis 8 + HPAs). Veredito: REVISE (Parte B) / READY WITH CONCERNS (Parte A). Achados absorvidos nas subtasks: (1) MAJOR - stats-service nao e seguro com mais de um consumidor (processSettled cria a linha do fato sem BetCreated e processCreated depois pula, deixando betType null e dateId errado; DimensionResolver faz existsById+save sem ON CONFLICT) - vira stats-service feat-027, pre-requisito do HPA de stats (infra feat-011). (2) MINOR - PG18 muda PGDATA para /var/lib/postgresql/18/docker e VOLUME para /var/lib/postgresql (docker inspect postgres:18-alpine); mountPath precisa mudar, senao os dados caem na camada do container e somem no restart sem erro; dados PG17 existentes ficam orfaos (aceito, ambiente de teste). (3) MINOR - remover replicas dos 4 Deployments com HPA (CI so faz rollout restart, so o apply manual reaplicaria replicas:1). (4) MINOR - alvo de CPU 70% (nao 60%: 60m de request e ultrapassado so pelo pico de partida da JVM), scaleDown com stabilizationWindowSeconds 300; capacidade do no k3s desconhecida, risco residual. (5) MINOR - alinhar Testcontainers (postgres:17-alpine/redis:7-alpine) nos 3 servicos Java. Limitacao: rodada independente em contextos isolados nao executada (autoavaliacao), impacto baixo.",
       "jira": "SV-724",
       "subtasks": [
         {
           "id": "feat-024.1",
           "name": "Trocar a imagem do Testcontainers e rodar mvn verify",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-725",
           "detail": "Uma linha, mas precisa provar que Flyway/hibernate/multitenancy funcionam no PG18.",
           "checklist": [
@@ -1752,7 +1752,7 @@
         {
           "id": "feat-024.2",
           "name": "CHANGELOG e verificacao final",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-726",
           "detail": "Fecha a feature.",
           "checklist": [
@@ -1764,7 +1764,24 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": {
+        "resumo": "Fechada em 2026-09-30. TestcontainersConfiguration do auth-service passou de postgres:17-alpine para postgres:18-alpine, alinhando os testes de integracao com o PostgreSQL 18.x do Quadro 2 do TCC 1 e com infra feat-010.",
+        "secoes": [
+          {
+            "titulo": "Como foi verificado",
+            "itens": [
+              "mvn verify completo em PG18: 209 testes, 0 falhas, gate de cobertura ok (Flyway, multitenancy e migracao lazy incluidos).",
+              "CI do GitHub verde nos PRs de subtask (SV-725, SV-726) e de story."
+            ]
+          },
+          {
+            "titulo": "O que divergiu do plano",
+            "itens": [
+              "Delivery Reviewer, Test Suite Auditor e Persistence Auditor nao foram rodados: a feature nao tem nenhuma linha de producao, so a tag de imagem de teste (o gate real e a suite de 209 testes em PG18). Registrado aqui para o usuario decidir se quer a auditoria formal mesmo assim."
+            ]
+          }
+        ]
+      }
     }
   ]
 }
