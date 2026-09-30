@@ -18,6 +18,9 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-697](https://stakevault.atlassian.net/browse/SV-697) - TenantSchemaName.emailFor() + criacao de usuario por username
 - [SV-698](https://stakevault.atlassian.net/browse/SV-698) - Login deriva o tenant do dominio do e-mail (sem campo slug)
 - [SV-699](https://stakevault.atlassian.net/browse/SV-699) - CHANGELOG, vault e verificacao final
+- [SV-724](https://stakevault.atlassian.net/browse/SV-724) - Testcontainers: postgres:18-alpine
+- [SV-725](https://stakevault.atlassian.net/browse/SV-725) - Trocar a imagem do Testcontainers e rodar mvn verify
+- [SV-726](https://stakevault.atlassian.net/browse/SV-726) - CHANGELOG e verificacao final
 
 ## [0.1.0] - 2026-09-23
 
