@@ -56,4 +56,9 @@ class TenantSchemaNameTest {
 	void shouldDeriveSlugBackFromSchemaName() {
 		assertThat(TenantSchemaName.fromSlug("acme-corp").slug()).isEqualTo("acme-corp");
 	}
+
+	@Test
+	void shouldBuildEmailFromLocalPartAndSlug() {
+		assertThat(TenantSchemaName.fromSlug("acme-corp").emailFor("member")).isEqualTo("member@acme-corp");
+	}
 }

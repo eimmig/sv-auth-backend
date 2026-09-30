@@ -7,6 +7,18 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 
 ## [Unreleased]
 
+- Testes de integração do `auth-service` rodam em PostgreSQL 18 (`postgres:18-alpine`) (`feat-024`)
+- [SV-661](https://stakevault.atlassian.net/browse/SV-661) - Corrigir profundidade de heranca (java:S110) e fechar gap do gate SonarCloud em push
+- [SV-662](https://stakevault.atlassian.net/browse/SV-662) - Achatar hierarquia de InvalidTenantSlugException/TenantAlreadyProvisionedException
+- [SV-663](https://stakevault.atlassian.net/browse/SV-663) - Habilitar validacao SonarCloud em eventos push (nao bloqueante) + fechamento
+- [SV-696](https://stakevault.atlassian.net/browse/SV-696) - E-mail do usuario passa a ser sempre username@slug-do-tenant (por construcao)
+- [SV-697](https://stakevault.atlassian.net/browse/SV-697) - TenantSchemaName.emailFor() + criacao de usuario por username
+- [SV-698](https://stakevault.atlassian.net/browse/SV-698) - Login deriva o tenant do dominio do e-mail (sem campo slug)
+- [SV-699](https://stakevault.atlassian.net/browse/SV-699) - CHANGELOG, vault e verificacao final
+- [SV-724](https://stakevault.atlassian.net/browse/SV-724) - Testcontainers: postgres:18-alpine
+- [SV-725](https://stakevault.atlassian.net/browse/SV-725) - Trocar a imagem do Testcontainers e rodar mvn verify
+- [SV-726](https://stakevault.atlassian.net/browse/SV-726) - CHANGELOG e verificacao final
+
 ## [0.2.0] - 2026-09-24
 
 - Remover todos os comentários restantes do código, testes e configuração (convenção de zero comentário, `docs/convencoes.md`)

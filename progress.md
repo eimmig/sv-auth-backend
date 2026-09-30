@@ -2,8 +2,24 @@
 
 ## Estado Atual (Current State)
 
-**Última atualização:** 2026-09-17
-**Feature ativa:** nenhuma (`feat-001..018` todas `done`, backlog atual esgotado)
+**Última atualização:** 2026-09-29
+**Feature ativa:** nenhuma (`feat-001..023` todas `done`, backlog atual esgotado)
+
+## `feat-023` fechada — e-mail sempre `username@slug` (login volta a 2 campos) (2026-09-29)
+
+Story SV-696 (SV-697/698/699), PRs #88/#89/#90. Nasce de `apps/web epic-039/feat-062` ("login 3
+campos é contraprodutivo"). Investigação confirmou que a ambiguidade que impedia derivar o slug
+do e-mail era real: só o admin auto-provisionado (`CreateTenantService`) seguia o padrão
+`admin@slug`; usuário comum criado via `POST /api/v1/users` aceitava e-mail livre (confirmado por
+teste de integração real que criava o mesmo e-mail em 2 tenants diferentes). Decisão do usuário
+(sistema ainda não em produção, mudança de contrato aceita): generalizar o padrão pra todo
+usuário - `POST /api/v1/users` passa a receber `username` (servidor monta o e-mail completo via
+`TenantSchemaName.emailFor()`, também usado agora por `CreateTenantService`); `POST
+/api/v1/auth/login` perde o campo `slug` (deriva do domínio do próprio e-mail). Removido o teste
+que provava o cenário agora impossível (mesmo e-mail em tenants diferentes) - registrado como
+remoção deliberada. `DECISIONS-LOG.md` (repo raiz) ganhou entrada explicando por que isso não é a
+mesma coisa que a alternativa (tabela global e-mail→schema) já rejeitada em 2026-08-02. Pré-requisito
+de `apps/web feat-062` (login 2 campos), rastreado em `epic-040` da raiz.
 
 ## Status
 

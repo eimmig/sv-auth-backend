@@ -47,7 +47,7 @@ class CreateUserServiceTest {
 			when(passwordHasher.hash("raw-password")).thenReturn("hashed-password");
 			when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-			User result = service.createUser(ADMIN_ID, "Member", "member@acme", "raw-password");
+			User result = service.createUser(ADMIN_ID, "Member", "member", "raw-password");
 
 			assertThat(result.name()).isEqualTo("Member");
 			assertThat(result.email()).isEqualTo("member@acme");
@@ -60,7 +60,7 @@ class CreateUserServiceTest {
 
 	@Test
 	void shouldRejectWhenNoTenantContextIsOpen() {
-		assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Member", "member@acme", "raw-password"))
+		assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Member", "member", "raw-password"))
 				.isInstanceOf(MissingTenantContextException.class);
 
 		verifyNoInteractions(userRepository, passwordHasher);
@@ -71,7 +71,7 @@ class CreateUserServiceTest {
 		try (var _ = TenantContextScope.open(new TenantSchemaName("tenant_acme"))) {
 			when(userRepository.findById(ADMIN_ID)).thenReturn(Optional.empty());
 
-			assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Member", "member@acme", "raw-password"))
+			assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Member", "member", "raw-password"))
 					.isInstanceOf(AdminRoleRequiredException.class);
 
 			verifyNoInteractions(passwordHasher);
@@ -85,7 +85,7 @@ class CreateUserServiceTest {
 			User member = new User(ADMIN_ID, "Member", "member@acme", "hash", Role.MEMBER, false, Instant.now());
 			when(userRepository.findById(ADMIN_ID)).thenReturn(Optional.of(member));
 
-			assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Other", "other@acme", "raw-password"))
+			assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Other", "other", "raw-password"))
 					.isInstanceOf(AdminRoleRequiredException.class);
 
 			verifyNoInteractions(passwordHasher);
@@ -100,7 +100,7 @@ class CreateUserServiceTest {
 			when(passwordHasher.hash("raw-password")).thenReturn("hashed-password");
 			when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException("duplicate email"));
 
-			assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Member", "member@acme", "raw-password"))
+			assertThatThrownBy(() -> service.createUser(ADMIN_ID, "Member", "member", "raw-password"))
 					.isInstanceOf(EmailAlreadyRegisteredException.class);
 		}
 	}

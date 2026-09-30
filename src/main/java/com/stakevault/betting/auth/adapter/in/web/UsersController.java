@@ -43,7 +43,7 @@ public class UsersController {
 			@RequestHeader(value = CALLER_HEADER, required = false) String callerIdHeader,
 			@Valid @RequestBody CreateUserRequest request) {
 		UUID callerId = parseCallerId(callerIdHeader);
-		User created = createUser.createUser(callerId, request.name(), request.email(), request.password());
+		User created = createUser.createUser(callerId, request.name(), request.username(), request.password());
 		return ResponseEntity.status(HttpStatus.CREATED).body(new CreateUserResponse(created.id(), created.name(),
 				created.email(), created.role(), created.mustChangePassword(), created.createdAt()));
 	}

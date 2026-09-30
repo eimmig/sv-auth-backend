@@ -1,9 +1,16 @@
 package com.stakevault.betting.auth.domain.model;
 
-public class InvalidTenantSlugException extends SlugRelatedDomainException {
+public class InvalidTenantSlugException extends LocalizedRuntimeException {
+
+	private final String slug;
 
 	public InvalidTenantSlugException(String slug, Throwable cause) {
-		super("invalid tenant slug: " + slug, slug, cause);
+		super("invalid tenant slug: " + slug, cause, slug == null ? "" : slug);
+		this.slug = slug;
+	}
+
+	public String slug() {
+		return slug;
 	}
 
 	@Override
