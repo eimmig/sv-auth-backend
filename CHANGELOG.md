@@ -8,10 +8,6 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 ## [Unreleased]
 
 - Testes de integração do `auth-service` rodam em PostgreSQL 18 (`postgres:18-alpine`) (`feat-024`)
-- Remover todos os comentários restantes do código, testes e configuração (convenção de zero comentário, `docs/convencoes.md`)
-- [SV-585](https://stakevault.atlassian.net/browse/SV-585) - Extrair LocalizedRuntimeException (2o harness do epic-034 da raiz)
-- [SV-586](https://stakevault.atlassian.net/browse/SV-586) - Extrair LocalizedRuntimeException, migrar SlugRelatedDomainException e as 14 excecoes diretas
-- [SV-587](https://stakevault.atlassian.net/browse/SV-587) - CHANGELOG e verificacao final
 - [SV-661](https://stakevault.atlassian.net/browse/SV-661) - Corrigir profundidade de heranca (java:S110) e fechar gap do gate SonarCloud em push
 - [SV-662](https://stakevault.atlassian.net/browse/SV-662) - Achatar hierarquia de InvalidTenantSlugException/TenantAlreadyProvisionedException
 - [SV-663](https://stakevault.atlassian.net/browse/SV-663) - Habilitar validacao SonarCloud em eventos push (nao bloqueante) + fechamento
@@ -22,6 +18,13 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-724](https://stakevault.atlassian.net/browse/SV-724) - Testcontainers: postgres:18-alpine
 - [SV-725](https://stakevault.atlassian.net/browse/SV-725) - Trocar a imagem do Testcontainers e rodar mvn verify
 - [SV-726](https://stakevault.atlassian.net/browse/SV-726) - CHANGELOG e verificacao final
+
+## [0.2.0] - 2026-09-24
+
+- Remover todos os comentários restantes do código, testes e configuração (convenção de zero comentário, `docs/convencoes.md`)
+- [SV-585](https://stakevault.atlassian.net/browse/SV-585) - Extrair LocalizedRuntimeException (2o harness do epic-034 da raiz)
+- [SV-586](https://stakevault.atlassian.net/browse/SV-586) - Extrair LocalizedRuntimeException, migrar SlugRelatedDomainException e as 14 excecoes diretas
+- [SV-587](https://stakevault.atlassian.net/browse/SV-587) - CHANGELOG e verificacao final
 
 ## [0.1.0] - 2026-09-23
 
