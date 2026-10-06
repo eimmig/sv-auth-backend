@@ -7,6 +7,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-30
+
 - Testes de integração do `auth-service` rodam em PostgreSQL 18 (`postgres:18-alpine`) (`feat-024`)
 - [SV-661](https://stakevault.atlassian.net/browse/SV-661) - Corrigir profundidade de heranca (java:S110) e fechar gap do gate SonarCloud em push
 - [SV-662](https://stakevault.atlassian.net/browse/SV-662) - Achatar hierarquia de InvalidTenantSlugException/TenantAlreadyProvisionedException
