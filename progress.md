@@ -446,3 +446,11 @@ SV-549), PRs #73-75, CI+SonarCloud verdes.
 derrubar os processos (`AskUserQuestion`) - rodado `mvn test` (para antes do `package`) como
 verificação alternativa, EXIT=0. O gate real (CI no GitHub Actions, Linux, sem o lock) rodou `mvn
 verify` completo com sucesso, fechando o gap.
+
+## `feat-025` fechada — testar /actuator/health/liveness (2026-10-06)
+
+Mesma lacuna de `api-gateway feat-020` (achado do Delivery Reviewer de `infra feat-012`): nenhum teste
+cobria `/actuator/health/liveness`, usado pelos probes do Kubernetes. `HealthChecksTest` agora
+parametriza `/actuator/health` e `/actuator/health/liveness`; readiness segue separado por assertar
+`db`. Só `src/test`. Plan Reviewer: READY (reaproveitado). Delivery Reviewer e Test Suite Auditor:
+PASS, sem achado. `./init.sh` verde. Vault sem nota nova. Story SV-740, subtasks SV-741/742.

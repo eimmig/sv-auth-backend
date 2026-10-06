@@ -20,6 +20,9 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-724](https://stakevault.atlassian.net/browse/SV-724) - Testcontainers: postgres:18-alpine
 - [SV-725](https://stakevault.atlassian.net/browse/SV-725) - Trocar a imagem do Testcontainers e rodar mvn verify
 - [SV-726](https://stakevault.atlassian.net/browse/SV-726) - CHANGELOG e verificacao final
+- [SV-740](https://stakevault.atlassian.net/browse/SV-740) - Testar /actuator/health/liveness no HealthChecksTest
+- [SV-741](https://stakevault.atlassian.net/browse/SV-741) - Teste de GET /actuator/health/liveness
+- [SV-742](https://stakevault.atlassian.net/browse/SV-742) - CHANGELOG e verificacao final
 
 ## [0.2.0] - 2026-09-24
 
