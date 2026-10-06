@@ -7,6 +7,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-06
+
 ## [1.0.0] - 2026-09-30
 
 - Testes de integração do `auth-service` rodam em PostgreSQL 18 (`postgres:18-alpine`) (`feat-024`)
