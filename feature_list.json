@@ -1852,6 +1852,51 @@
           }
         ]
       }
+    },
+    {
+      "id": "feat-026",
+      "name": "Status do vinculo Telegram do usuario logado",
+      "goal": "O usuario logado consulta se a propria conta ja esta vinculada ao Telegram e desde quando, sem precisar mandar mensagem ao bot.",
+      "scope": "GET /api/v1/telegram-links/me (TelegramLinksController, X-User-Id e X-Tenant-Id injetados pelo api-gateway via PASETO; RouteConfig ja encaminha /api/v1/telegram-links/**). Resposta 200 {linked, linkedAt}. Use case novo GetTelegramLinkStatusUseCase. Fora: desvincular, expor o telegramUserId, mudanca no api-gateway.",
+      "description": "Parte auth-service do epic-052 (pedido do usuario, 2026-11-02). A tela /telegram-link do apps/web so gera codigo e nao mostra se o usuario ja esta vinculado; hoje so existe consulta por telegramUserId (GET /api/v1/telegram-accounts/{telegramUserId}, chamada pelo api-gateway com X-Service-Key). Definicao de pronto: rota com testes de usuario vinculado, nao vinculado, isolamento entre usuarios e tenants e vinculo sobrescrito por outro tenant; docs/contratos-de-api.md e docs/services/telegram-integration.md atualizados; evidencia aqui e no epic-052.",
+      "dependencies": [],
+      "status": "in-progress",
+      "plan_review": "2026-11-02, Plan Reviewer (risco medio por envolver autorizacao, auto-revisao sem subagente): READY WITH CONCERNS. Verificado no repositorio: RouteConfig do api-gateway encaminha /api/v1/telegram-links/** com PASETO (o gateway injeta X-User-Id e X-Tenant-Id); TelegramLinksController ja le X-User-Id com MissingCallerContextException (401); telegram_accounts fica no schema do tenant com user_id UNIQUE e TelegramAccountRepository.findByUserId ja existe; telegram_link (schema public) guarda o roteamento real do bot. Achado: confirmar o mesmo telegramUserId em outro tenant sobrescreve telegram_link e deixa a linha antiga em telegram_accounts do primeiro tenant (TelegramLinkFlowIntegrationTest.shouldOverwritePreviousLinkWhenSameTelegramUserIdConfirmsInAnotherTenant), entao olhar so telegram_accounts mostraria vinculado para quem o bot ja roteia para outro tenant. Emendas: (1) linked = conta em telegram_accounts E telegram_link do mesmo telegramUserId apontando para o mesmo tenant e usuario; (2) resposta sem telegramUserId (a tela nao precisa); (3) 200 nos dois estados, nunca 404, para a tela nao tratar estado normal como erro; (4) X-User-Id ausente ou invalido responde 401 como o POST; (5) testes HTTP com Testcontainers: nao vinculado, vinculado (data), outro usuario do mesmo tenant nao ve o vinculo, vinculo sobrescrito por outro tenant volta linked=false.",
+      "jira": "SV-794",
+      "subtasks": [
+        {
+          "id": "feat-026.1",
+          "name": "Rota GET /api/v1/telegram-links/me",
+          "status": "in-progress",
+          "jira": "SV-795",
+          "detail": "Use case que le o vinculo do usuario no tenant atual e confere o roteamento publico do bot.",
+          "checklist": [
+            "GetTelegramLinkStatusUseCase e servico com a regra das emendas (1) e (3).",
+            "GET /me em TelegramLinksController, resposta TelegramLinkStatusResponse {linked, linkedAt}.",
+            "Testes HTTP: nao vinculado, vinculado, isolamento entre usuarios, vinculo sobrescrito por outro tenant, 401 sem X-User-Id.",
+            "Testes unitarios do servico so se a regra pedir caso que o HTTP nao cobre."
+          ],
+          "validation": "mvn verify verde; teste do vinculo sobrescrito falha se a regra olhar so telegram_accounts.",
+          "owner": "agente"
+        },
+        {
+          "id": "feat-026.2",
+          "name": "CHANGELOG e verificacao final",
+          "status": "not-started",
+          "jira": "SV-796",
+          "detail": "Fechamento: contrato no vault, init.sh e skills de revisao.",
+          "checklist": [
+            "CHANGELOG.md com linhas em [Unreleased].",
+            "docs/contratos-de-api.md e docs/services/telegram-integration.md (passo do vinculo) atualizados (commit no sv-harness).",
+            "./init.sh do servico passa.",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor rodados.",
+            "Vault (docs/) revisado: alguma descoberta desta feature - mecanismo reaproveitavel, gotcha de lib/config, lacuna de especificacao, decisao que diverge do ja documentado - sem nota correspondente? Se sim, atualizar/criar a nota do assunto (nao docs/DECISIONS-LOG.md a menos que divirja do TCC 1) no mesmo commit"
+          ],
+          "validation": "init.sh verde e evidence preenchida.",
+          "owner": "agente"
+        }
+      ],
+      "evidence": ""
     }
   ]
 }
