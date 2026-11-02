@@ -1867,7 +1867,7 @@
         {
           "id": "feat-026.1",
           "name": "Rota GET /api/v1/telegram-links/me",
-          "status": "in-progress",
+          "status": "done",
           "jira": "SV-795",
           "detail": "Use case que le o vinculo do usuario no tenant atual e confere o roteamento publico do bot.",
           "checklist": [
@@ -1882,7 +1882,7 @@
         {
           "id": "feat-026.2",
           "name": "CHANGELOG e verificacao final",
-          "status": "not-started",
+          "status": "done",
           "jira": "SV-796",
           "detail": "Fechamento: contrato no vault, init.sh e skills de revisao.",
           "checklist": [
@@ -1896,7 +1896,35 @@
           "owner": "agente"
         }
       ],
-      "evidence": ""
+      "evidence": {
+      "resumo": "Fechada em 2026-11-02. GET /api/v1/telegram-links/me devolve {linked, linkedAt} do usuario logado, sem expor o telegramUserId.",
+      "secoes": [
+        {
+          "titulo": "O que foi feito",
+          "itens": [
+            "GetTelegramLinkStatusUseCase/Service: linked so quando ha linha em telegram_accounts do usuario no tenant atual E o telegram_link publico daquele telegramUserId aponta para o mesmo tenant e usuario; senao linked=false, linkedAt=null.",
+            "TelegramLinksController ganhou GET /me (mesmo parseCallerId do POST: 401 missing-caller-context sem X-User-Id valido). Sempre 200 nos dois estados.",
+            "Sem mudanca no api-gateway: RouteConfig ja encaminha /api/v1/telegram-links/** com PASETO e ResolvedIdentityRequestWrapper sobrescreve X-User-Id/X-Tenant-Id vindos do cliente.",
+            "Vault (sv-harness dde1e95): docs/contratos-de-api.md com o contrato e o motivo da checagem dupla; docs/services/telegram-integration.md cita a rota no passo do vinculo."
+          ]
+        },
+        {
+          "titulo": "Como foi verificado",
+          "itens": [
+            "TelegramLinkFlowIntegrationTest (Testcontainers, HTTP real): nao vinculado -> vinculado com data, colega do mesmo tenant continua linked=false, vinculo sobrescrito por outro tenant volta linked=false no primeiro e true no segundo, 401 sem X-User-Id. Os 3 testes novos falharam antes da rota existir.",
+            "Mutacao: trocar a checagem do telegram_link por true derruba shouldReportNotLinkedOnceTheSameTelegramAccountIsLinkedInAnotherTenant.",
+            "./init.sh (mvn verify, gate de cobertura) verde; CI do PR #98 verde.",
+            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor (auto-revisao): PASS."
+          ]
+        },
+        {
+          "titulo": "O que divergiu do plano",
+          "itens": [
+            "Nada. Achado do plan_review (linha antiga de telegram_accounts apos vinculo em outro tenant) virou a regra e um teste."
+          ]
+        }
+      ]
+    }
     }
   ]
 }
