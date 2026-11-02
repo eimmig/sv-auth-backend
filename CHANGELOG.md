@@ -6,6 +6,9 @@ formato `- [chave](url) - título` — sem prosa, sem categoria. Escrita automat
 por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de commit, não aqui.
 
 ## [Unreleased]
+- [SV-794](https://stakevault.atlassian.net/browse/SV-794) - Status do vinculo Telegram do usuario logado
+- [SV-795](https://stakevault.atlassian.net/browse/SV-795) - Rota GET /api/v1/telegram-links/me
+- [SV-796](https://stakevault.atlassian.net/browse/SV-796) - CHANGELOG e verificacao final
 
 ## [1.0.1] - 2026-10-06
 

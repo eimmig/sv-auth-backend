@@ -91,6 +91,16 @@ class TelegramLinkFlowIntegrationTest extends TenantSchemaIntegrationSupport {
 		return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 	}
 
+	private HttpResponse<String> linkStatus(String tenantSlugValue, String callerId) throws Exception {
+		HttpRequest.Builder builder = HttpRequest
+				.newBuilder(URI.create("http://localhost:" + port + "/api/v1/telegram-links/me")).GET()
+				.header("X-Tenant-Id", tenantSlugValue);
+		if (callerId != null) {
+			builder.header("X-User-Id", callerId);
+		}
+		return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+	}
+
 	private String extractCode(String responseBody) {
 		Matcher matcher = CODE_PATTERN.matcher(responseBody);
 		if (!matcher.find()) {
@@ -238,5 +248,55 @@ class TelegramLinkFlowIntegrationTest extends TenantSchemaIntegrationSupport {
 		} finally {
 			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + TenantSchemaName.fromSlug(otherSlug).value() + "\" CASCADE");
 		}
+	}
+
+	@Test
+	void shouldReportNotLinkedBeforeAndLinkedAfterConfirmingOnlyForTheCaller() throws Exception {
+		User caller = seedUser(tenantSlug);
+		User colleague = seedUser(tenantSlug);
+
+		HttpResponse<String> before = linkStatus(tenantSlug, caller.id().toString());
+		assertThat(before.statusCode()).isEqualTo(200);
+		assertThat(before.body()).contains("\"linked\":false").contains("\"linkedAt\":null");
+
+		String code = extractCode(generateCode(tenantSlug, caller.id().toString()).body());
+		assertThat(confirmLink("tg-" + UUID.randomUUID(), code).statusCode()).isEqualTo(201);
+
+		HttpResponse<String> after = linkStatus(tenantSlug, caller.id().toString());
+		assertThat(after.statusCode()).isEqualTo(200);
+		assertThat(after.body()).contains("\"linked\":true").containsPattern("\"linkedAt\":\"\\d{4}-");
+		assertThat(after.body()).doesNotContain("tg-");
+
+		assertThat(linkStatus(tenantSlug, colleague.id().toString()).body()).contains("\"linked\":false");
+	}
+
+	@Test
+	void shouldReportNotLinkedOnceTheSameTelegramAccountIsLinkedInAnotherTenant() throws Exception {
+		String otherSlug = "test-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+		provisionTenantSchema.ensureSchemaExists(otherSlug);
+
+		try {
+			User callerA = seedUser(tenantSlug);
+			User callerB = seedUser(otherSlug);
+			String telegramUserId = "tg-shared-" + UUID.randomUUID();
+
+			String codeA = extractCode(generateCode(tenantSlug, callerA.id().toString()).body());
+			assertThat(confirmLink(telegramUserId, codeA).statusCode()).isEqualTo(201);
+			String codeB = extractCode(generateCode(otherSlug, callerB.id().toString()).body());
+			assertThat(confirmLink(telegramUserId, codeB).statusCode()).isEqualTo(201);
+
+			assertThat(linkStatus(tenantSlug, callerA.id().toString()).body()).contains("\"linked\":false");
+			assertThat(linkStatus(otherSlug, callerB.id().toString()).body()).contains("\"linked\":true");
+		} finally {
+			jdbcTemplate.execute("DROP SCHEMA IF EXISTS \"" + TenantSchemaName.fromSlug(otherSlug).value() + "\" CASCADE");
+		}
+	}
+
+	@Test
+	void shouldReturn401WhenReadingLinkStatusWithoutCallerHeader() throws Exception {
+		HttpResponse<String> response = linkStatus(tenantSlug, null);
+
+		assertThat(response.statusCode()).isEqualTo(401);
+		assertThat(response.body()).contains("\"type\":\"https://docs/errors/missing-caller-context\"");
 	}
 }

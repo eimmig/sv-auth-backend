@@ -454,3 +454,13 @@ cobria `/actuator/health/liveness`, usado pelos probes do Kubernetes. `HealthChe
 parametriza `/actuator/health` e `/actuator/health/liveness`; readiness segue separado por assertar
 `db`. Só `src/test`. Plan Reviewer: READY (reaproveitado). Delivery Reviewer e Test Suite Auditor:
 PASS, sem achado. `./init.sh` verde. Vault sem nota nova. Story SV-740, subtasks SV-741/742.
+
+## `feat-026` fechada — status do vínculo Telegram do usuário logado (2026-11-02)
+
+Parte auth-service do `epic-052`. `GET /api/v1/telegram-links/me` devolve `{linked, linkedAt}` (sempre 200,
+401 sem `X-User-Id`), sem expor o `telegramUserId`. `linked` exige a linha em `telegram_accounts` **e** o
+`telegram_link` público apontando para o mesmo tenant e usuário: confirmar o mesmo Telegram em outro tenant
+sobrescreve `telegram_link` e deixa a linha antiga para trás. Testes HTTP (Testcontainers) falharam antes da
+rota; mutação da regra derruba o teste do vínculo sobrescrito. Plan Reviewer, Delivery Reviewer, Test Suite
+Auditor e Persistence Auditor por revisão direta. `./init.sh` verde. Vault: `docs/contratos-de-api.md`,
+`docs/services/telegram-integration.md`. Story SV-794, subtasks SV-795/796. Falta a tela em `apps/web`.
