@@ -1897,34 +1897,65 @@
         }
       ],
       "evidence": {
-      "resumo": "Fechada em 2026-11-02. GET /api/v1/telegram-links/me devolve {linked, linkedAt} do usuario logado, sem expor o telegramUserId.",
-      "secoes": [
+        "resumo": "Fechada em 2026-11-02. GET /api/v1/telegram-links/me devolve {linked, linkedAt} do usuario logado, sem expor o telegramUserId.",
+        "secoes": [
+          {
+            "titulo": "O que foi feito",
+            "itens": [
+              "GetTelegramLinkStatusUseCase/Service: linked so quando ha linha em telegram_accounts do usuario no tenant atual E o telegram_link publico daquele telegramUserId aponta para o mesmo tenant e usuario; senao linked=false, linkedAt=null.",
+              "TelegramLinksController ganhou GET /me (mesmo parseCallerId do POST: 401 missing-caller-context sem X-User-Id valido). Sempre 200 nos dois estados.",
+              "Sem mudanca no api-gateway: RouteConfig ja encaminha /api/v1/telegram-links/** com PASETO e ResolvedIdentityRequestWrapper sobrescreve X-User-Id/X-Tenant-Id vindos do cliente.",
+              "Vault (sv-harness dde1e95): docs/contratos-de-api.md com o contrato e o motivo da checagem dupla; docs/services/telegram-integration.md cita a rota no passo do vinculo."
+            ]
+          },
+          {
+            "titulo": "Como foi verificado",
+            "itens": [
+              "TelegramLinkFlowIntegrationTest (Testcontainers, HTTP real): nao vinculado -> vinculado com data, colega do mesmo tenant continua linked=false, vinculo sobrescrito por outro tenant volta linked=false no primeiro e true no segundo, 401 sem X-User-Id. Os 3 testes novos falharam antes da rota existir.",
+              "Mutacao: trocar a checagem do telegram_link por true derruba shouldReportNotLinkedOnceTheSameTelegramAccountIsLinkedInAnotherTenant.",
+              "./init.sh (mvn verify, gate de cobertura) verde; CI do PR #98 verde.",
+              "Delivery Reviewer, Test Suite Auditor e Persistence Auditor (auto-revisao): PASS."
+            ]
+          },
+          {
+            "titulo": "O que divergiu do plano",
+            "itens": [
+              "Nada. Achado do plan_review (linha antiga de telegram_accounts apos vinculo em outro tenant) virou a regra e um teste."
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "feat-027",
+      "name": "Exclusao da organizacao pelo admin",
+      "goal": "DELETE /api/v1/organization: o admin da organizacao apaga todos os dados dela (LGPD art. 18 VI, epic-065). O auth chama a rota admin de exclusao do bets e do stats e, so depois, apaga os vinculos do Telegram e o proprio schema.",
+      "scope": "DeleteOrganizationUseCase e servico (admin obrigatorio, 403 para membro); DownstreamTenantProvisioner.deleteBetsService/deleteStatsService; falha abaixo vira OrganizationDeletionFailedException (502, i18n nos 3 idiomas) sem apagar nada no auth; TelegramLinkRepository e PendingTelegramLinkRepository.deleteByTenantId; TenantSchemaGateway.drop; OrganizationController; testes unitarios e de integracao.",
+      "description": "",
+      "dependencies": [],
+      "plan_review": "2026-11-16, Plan Reviewer em auto-revisao curta (independencia reduzida, declarada), plano cross-service do epic-065 (exclusao da organizacao a pedido do admin, LGPD art. 18 VI, devolutiva de 2026-11-16). Veredito: READY WITH CONCERNS. Fluxo sincrono igual ao da criacao: auth valida admin, chama DELETE /api/v1/admin/tenants/{slug} no bets e no stats (X-Admin-Api-Key, idempotente, 204 mesmo sem schema) e so entao apaga o proprio schema e os vinculos do Telegram; falha em servico abaixo devolve 502 sem apagar nada no auth, e repetir e seguro. Riscos aceitos: (1) o cache de schema existente por instancia (feat-038 do bets) faz outras replicas responderem 500 a tokens antigos da organizacao ate reiniciar; nenhum dado volta, porque o schema so e criado pela rota admin. (2) Eventos em voo para o stats caem na DLQ por schema inexistente. (3) Historico de execucoes do n8n (ate 14 dias) nao e apagado.",
+      "status": "in-progress",
+      "subtasks": [
         {
-          "titulo": "O que foi feito",
-          "itens": [
-            "GetTelegramLinkStatusUseCase/Service: linked so quando ha linha em telegram_accounts do usuario no tenant atual E o telegram_link publico daquele telegramUserId aponta para o mesmo tenant e usuario; senao linked=false, linkedAt=null.",
-            "TelegramLinksController ganhou GET /me (mesmo parseCallerId do POST: 401 missing-caller-context sem X-User-Id valido). Sempre 200 nos dois estados.",
-            "Sem mudanca no api-gateway: RouteConfig ja encaminha /api/v1/telegram-links/** com PASETO e ResolvedIdentityRequestWrapper sobrescreve X-User-Id/X-Tenant-Id vindos do cliente.",
-            "Vault (sv-harness dde1e95): docs/contratos-de-api.md com o contrato e o motivo da checagem dupla; docs/services/telegram-integration.md cita a rota no passo do vinculo."
-          ]
-        },
-        {
-          "titulo": "Como foi verificado",
-          "itens": [
-            "TelegramLinkFlowIntegrationTest (Testcontainers, HTTP real): nao vinculado -> vinculado com data, colega do mesmo tenant continua linked=false, vinculo sobrescrito por outro tenant volta linked=false no primeiro e true no segundo, 401 sem X-User-Id. Os 3 testes novos falharam antes da rota existir.",
-            "Mutacao: trocar a checagem do telegram_link por true derruba shouldReportNotLinkedOnceTheSameTelegramAccountIsLinkedInAnotherTenant.",
-            "./init.sh (mvn verify, gate de cobertura) verde; CI do PR #98 verde.",
-            "Delivery Reviewer, Test Suite Auditor e Persistence Auditor (auto-revisao): PASS."
-          ]
-        },
-        {
-          "titulo": "O que divergiu do plano",
-          "itens": [
-            "Nada. Achado do plan_review (linha antiga de telegram_accounts apos vinculo em outro tenant) virou a regra e um teste."
-          ]
+          "id": "feat-027.1",
+          "name": "Rota DELETE da organizacao e testes",
+          "status": "in-progress",
+          "detail": "Rota DELETE da organizacao e testes",
+          "checklist": [
+            "Teste vermelho antes.",
+            "Admin obrigatorio; membro recebe 403.",
+            "Servicos abaixo antes do schema do auth; falha devolve 502 sem apagar.",
+            "Mensagens nos 3 idiomas.",
+            "CHANGELOG em [Unreleased].",
+            "Vault (docs/) revisado: services/auth-service.md e contratos-de-api."
+          ],
+          "validation": "./init.sh verde; CI e SonarCloud verdes.",
+          "owner": "agente",
+          "jira": "SV-869"
         }
-      ]
-    }
+      ],
+      "jira": "SV-868",
+      "evidence": ""
     }
   ]
 }
