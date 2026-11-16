@@ -7,6 +7,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-16
+
 ## [1.1.0] - 2026-11-02
 - [SV-794](https://stakevault.atlassian.net/browse/SV-794) - Status do vinculo Telegram do usuario logado
 - [SV-795](https://stakevault.atlassian.net/browse/SV-795) - Rota GET /api/v1/telegram-links/me
