@@ -11,6 +11,8 @@ por serviço"). O "porquê" de cada mudança vive na issue e na mensagem de comm
 - [SV-794](https://stakevault.atlassian.net/browse/SV-794) - Status do vinculo Telegram do usuario logado
 - [SV-795](https://stakevault.atlassian.net/browse/SV-795) - Rota GET /api/v1/telegram-links/me
 - [SV-796](https://stakevault.atlassian.net/browse/SV-796) - CHANGELOG e verificacao final
+- [SV-868](https://stakevault.atlassian.net/browse/SV-868) - Exclusao da organizacao pelo admin
+- [SV-869](https://stakevault.atlassian.net/browse/SV-869) - Rota DELETE da organizacao e testes
 
 ## [1.0.1] - 2026-10-06
 
