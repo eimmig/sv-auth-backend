@@ -9,6 +9,7 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.stakevault.betting.auth.domain.model.TenantSchemaName;
 import com.stakevault.betting.auth.domain.port.out.TenantSchemaGateway;
@@ -48,6 +49,18 @@ public class JdbcFlywayTenantSchemaGateway implements TenantSchemaGateway {
 		}
 		flywayFor(schema, false).migrate();
 		migratedSchemas.add(schema.value());
+	}
+
+	@Override
+	@Transactional
+	public void drop(TenantSchemaName schema) {
+		jdbcTemplate.update("DELETE FROM public.telegram_link WHERE tenant_id = ?", schema.slug());
+		jdbcTemplate.update("DELETE FROM public.pending_telegram_link WHERE tenant_id = ?", schema.slug());
+		if (exists(schema)) {
+			// o clean do Flyway apaga os objetos e o proprio schema, que foi criado por ele (createSchemas)
+			Flyway.configure().dataSource(dataSource).schemas(schema.value()).cleanDisabled(false).load().clean();
+		}
+		migratedSchemas.remove(schema.value());
 	}
 
 	private Flyway flywayFor(TenantSchemaName schema, boolean createSchemas) {

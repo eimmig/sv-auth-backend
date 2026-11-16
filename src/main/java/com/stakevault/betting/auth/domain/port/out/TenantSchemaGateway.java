@@ -9,4 +9,10 @@ public interface TenantSchemaGateway {
 	void createAndMigrate(TenantSchemaName schema);
 
 	void migrateExistingOnly(TenantSchemaName schema);
+
+	/**
+	 * Apaga o schema da organizacao (usuarios e contas do Telegram) e os vinculos e codigos pendentes do
+	 * Telegram dela no schema public (epic-065). Nao falha quando o schema nao existe.
+	 */
+	void drop(TenantSchemaName schema);
 }

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stakevault.betting.auth.domain.model.AdminRoleRequiredException;
+import com.stakevault.betting.auth.domain.model.OrganizationDeletionFailedException;
 import com.stakevault.betting.auth.domain.model.CallerNotFoundException;
 import com.stakevault.betting.auth.domain.model.CurrentPasswordMismatchException;
 import com.stakevault.betting.auth.domain.model.EmailAlreadyRegisteredException;
@@ -47,7 +48,7 @@ public class DomainExceptionHandler {
 			TelegramLinkCodeNotFoundException.class, TelegramLinkCodeExpiredException.class,
 			TelegramAccountAlreadyLinkedException.class, TelegramAccountNotFoundException.class,
 			UserNotFoundException.class, LastAdminCannotBeDemotedException.class,
-			CurrentPasswordMismatchException.class })
+			CurrentPasswordMismatchException.class, OrganizationDeletionFailedException.class })
 	public ProblemDetail handle(LocalizedDomainException exception, Locale locale, HttpServletRequest request) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
 				HttpStatus.valueOf(exception.httpStatusCode()),

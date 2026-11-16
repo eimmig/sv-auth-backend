@@ -54,6 +54,29 @@ public class RestClientDownstreamTenantProvisioner implements DownstreamTenantPr
 		provision(statsServiceClient, "stats-service", slug);
 	}
 
+	@Override
+	public void deleteFromBetsService(String slug) {
+		delete(betsServiceClient, "bets-service", slug);
+	}
+
+	@Override
+	public void deleteFromStatsService(String slug) {
+		delete(statsServiceClient, "stats-service", slug);
+	}
+
+	private void delete(RestClient client, String serviceName, String slug) {
+		try {
+			client.delete()
+					.uri(adminTenantsPath + "/{slug}", slug)
+					.header(ADMIN_API_KEY_HEADER, adminApiKey)
+					.retrieve()
+					.toBodilessEntity();
+		}
+		catch (RestClientException e) {
+			throw new DownstreamProvisioningException(serviceName, e);
+		}
+	}
+
 	private void provision(RestClient client, String serviceName, String slug) {
 		try {
 			client.post()
